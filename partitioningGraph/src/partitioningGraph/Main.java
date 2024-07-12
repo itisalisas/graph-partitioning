@@ -1,6 +1,5 @@
 package partitioningGraph;
 
-import partitioningGraph.Graph;
 
 public class Main {
 

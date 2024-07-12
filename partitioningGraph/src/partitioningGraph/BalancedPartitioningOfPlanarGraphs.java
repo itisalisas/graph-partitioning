@@ -1,6 +1,5 @@
 package partitioningGraph;
 
-import partitioningGraph.Graph;
 
 public abstract class BalancedPartitioningOfPlanarGraphs {
 	public abstract Graph[] balancedPartitionAlgorithm(Graph graph);

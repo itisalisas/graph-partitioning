@@ -1,7 +1,5 @@
 package partitioningGraph;
 
-import partitioningGraph.BalancedPartitioningOfPlanarGraphs;
-import partitioningGraph.Graph;
 
 public class BalabcedPartitoning {
 	private BalancedPartitioningOfPlanarGraphs bp;
