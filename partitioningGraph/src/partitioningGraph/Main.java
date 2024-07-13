@@ -1,11 +1,19 @@
 package partitioningGraph;
 
+import java.io.IOException;
 
 public class Main {
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 		Graph gph = new Graph();
-		gph.readGraphFromFile("input.txt");
+		/*
+		 * file format:
+		 * n (Vertices number)
+		 * name x y (of Vertex) n1 (Number of out edges) name1 x1 y1 (of out vertex) length1 (edge length) ...
+		 * int double x2		int						int double x2				double
+		 */
+		gph.readGraphFromFile("C:\\Users\\Lenovo\\eclipse-workspace\\graph-partitioning\\partitioningGraph\\src\\partitioningGraph\\input.txt");
+		gph.printGraphToFile("C:\\Users\\Lenovo\\eclipse-workspace\\graph-partitioning\\partitioningGraph\\src\\partitioningGraph\\output.txt");
 		/*
 		 * Graph[] resultBubblePartiton;
 		 * BalabcedPartitoning bubblePartition = new BalabcedPartitoning(*BubblePartitoning object*);
