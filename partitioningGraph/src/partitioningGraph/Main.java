@@ -12,8 +12,8 @@ public class Main {
 		 * name x y (of Vertex) n1 (Number of out edges) name1 x1 y1 (of out vertex) length1 (edge length) ...
 		 * int double x2		int						int double x2				double
 		 */
-		gph.readGraphFromFile("C:\\Users\\Lenovo\\eclipse-workspace\\graph-partitioning\\partitioningGraph\\src\\partitioningGraph\\input.txt");
-		gph.printGraphToFile("C:\\Users\\Lenovo\\eclipse-workspace\\graph-partitioning\\partitioningGraph\\src\\partitioningGraph\\output.txt");
+		gph.readGraphFromFile("src\\partitioningGraph\\input.txt");
+		gph.printGraphToFile("src\\partitioningGraph\\output.txt");
 		/*
 		 * Graph[] resultBubblePartiton;
 		 * BalabcedPartitoning bubblePartition = new BalabcedPartitoning(*BubblePartitoning object*);
