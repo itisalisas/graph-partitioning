@@ -40,6 +40,7 @@ public class Graph {
 		double yi = 0;
 		double length = 0;
 		Vertex vi;
+		Vertex vj;
 		for (int i = 0; i < n && sc.hasNext(); i++) {
 			//read Vertex..
 			namei = sc.nextInt();
@@ -47,13 +48,15 @@ public class Graph {
 			yi = sc.nextDouble();
 			ni = sc.nextInt();
 			vi = new Vertex(namei, new Point(xi, yi));
-			edges.put(vi, new HashMap<Vertex, Edge>());
+			vi = addVertex(vi);
 			for (int j = 0; j < ni && sc.hasNext(); j++) {
 				namei = sc.nextInt();
 				xi = sc.nextDouble();
-				yi = sc.nextDouble(); 
+				yi = sc.nextDouble();
+				vj = new Vertex(namei,  new Point(xi, yi));
 				length = sc.nextDouble();
-				edges.get(vi).put(new Vertex(namei,  new Point(xi, yi)), new Edge(length));
+				vj = addVertex(vj);
+				edges.get(vi).put(vj, new Edge(length));
 			}
 		}
 		sc.close();
@@ -77,22 +80,58 @@ public class Graph {
 	public void readGraphFromOSM(Point center, int dist) {
 		
 	}
-	public void addVertex(Vertex v) {
+	public Vertex addVertex(Vertex v) {
+		if (edges.containsKey(v)) return v;
+		for (Vertex vert : edges.keySet()) {
+			if (v.equals(vert)) {
+				return vert;
+			}
+		}
 		edges.put(v, new HashMap<Vertex, Edge>());
+		return v;
 	}
 	public void deleteVertex(Vertex v) {
-		edges.remove(v);
-		for (Vertex begin : edges.keySet()) {
-			edges.get(begin).remove(v);
+		if (edges.containsKey(v)) {
+			edges.remove(v);
+			for (Vertex begin : edges.keySet()) {
+				edges.get(begin).remove(v);
+			}
+		} else {
+			for (Vertex vert : edges.keySet()) {
+				if (v.equals(vert)) {
+					edges.remove(vert);
+					System.out.println(vert.getName());
+					for (Vertex begin : edges.keySet()) {
+						if (edges.get(begin).get(vert) != null) {
+							System.out.println(edges.get(begin).get(vert).getLength());
+						}
+						edges.get(begin).remove(vert);
+					}
+					break;
+				}
+			}
 		}
+		
 	}
 	public void addEdge(Vertex begin, Vertex end, double length) {
-		if (edges.get(begin) == null) {
-			edges.put(begin, new HashMap<Vertex,Edge>());
-		}
+		begin = addVertex(begin);
+		end = addVertex(end);
 		edges.get(begin).put(end, new Edge(length));
+		
 	}
 	public void deleteEdge(Vertex begin, Vertex end) {
+		int startSize = edges.size();
+		begin = addVertex(begin);
+		if (startSize != edges.size()) {
+			edges.remove(begin);
+			return;
+		}
+		startSize = edges.size();
+		end = addVertex(end);
+		if (startSize != edges.size()) {
+			edges.remove(end);
+			return;
+		}
 		edges.get(begin).remove(end);
 	}
 	public HashMap<Vertex, HashMap<Vertex, Edge>> getEdges() {

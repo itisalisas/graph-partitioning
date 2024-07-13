@@ -36,6 +36,9 @@ public class Vertex {
 	public ArrayList<Vertex> getContainedVertices() {
 		return containedVertices;
 	}
+	public boolean equals(Vertex v) {
+		return this.name == v.name && this.point.equals(v.point);
+	}
 	public void addContainedVertex(Vertex v) {
 		
 	}
