@@ -1,31 +1,22 @@
 package partitioningGraph;
 
-import java.util.ArrayList;
+import java.util.Objects;
 
 public class Vertex {
 	private int name;
 	private Point point;
-	private ArrayList<Vertex> containedVertices;
 	
 	public Vertex() {
 		this.name = -1;
 		this.point = new Point();
-		this.containedVertices = null;
 	}
 	public Vertex(int name) {
 		this.name = name;
 		this.point = new Point();
-		this.containedVertices = null;
 	}
 	public Vertex(int name, Point point) {
 		this.name = name;
 		this.point = point;
-		this.containedVertices = null;
-	}
-	public Vertex(int name, Point point, ArrayList<Vertex> contVer) {
-		this.name = name;
-		this.point = point;
-		this.containedVertices = contVer;
 	}
 	public int getName() {
 		return name;
@@ -33,16 +24,16 @@ public class Vertex {
 	public Point getPoint() {
 		return point;
 	}
-	public ArrayList<Vertex> getContainedVertices() {
-		return containedVertices;
+	@Override
+	public boolean equals(Object obj) {
+		if (obj == this) return true;
+		if ((obj == null) || (obj.getClass() != this.getClass())) return false;
+		Vertex v = (Vertex) obj;
+		return v.name == this.name && v.point.getX() == this.point.getX()
+				&& v.point.getY() == this.point.getY();
 	}
-	public boolean equals(Vertex v) {
-		return this.name == v.name && this.point.equals(v.point);
-	}
-	public void addContainedVertex(Vertex v) {
-		
-	}
-	public void deleteContainedVertex(Vertex v) {
-		
+	@Override
+	public int hashCode() {
+		return Objects.hash(name, point.getX(), point.getY());
 	}
 }
