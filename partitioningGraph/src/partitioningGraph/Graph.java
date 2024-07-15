@@ -1,6 +1,5 @@
 package partitioningGraph;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
 import java.io.File;
@@ -114,7 +113,16 @@ public class Graph {
 		}
 		return res;
 	}
+	public EdgeOfGraph[] edgesArray() {
+		int iter = 0;
+		EdgeOfGraph[] ans = new EdgeOfGraph[edgesNumber()];
+		for (Vertex begin : edges.keySet()) {
+			for (Vertex end : edges.get(begin).keySet()) {
+				ans[iter] = new EdgeOfGraph(begin, end, edges.get(begin).get(end).getLength());
+			}
+		}
+		return ans;
+	}
 	
-	//compare
 	//planаr
 }

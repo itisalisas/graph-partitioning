@@ -1,9 +1,9 @@
 package partitioningGraph;
 
 
-public class BalabcedPartitoning {
+public class BalancedPartitoning {
 	private BalancedPartitioningOfPlanarGraphs bp;
-	public BalabcedPartitoning(BalancedPartitioningOfPlanarGraphs bp) {
+	public BalancedPartitoning(BalancedPartitioningOfPlanarGraphs bp) {
 		this.bp = bp;
 	}
 	public Graph[] partition(Graph graph) {
