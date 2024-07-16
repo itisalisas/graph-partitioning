@@ -10,8 +10,6 @@ import java.io.IOException;
 public class Graph {
 	/*
 	 * vertices - keys for HashMap
-	 * normal graph vertices have positive coordinates as point and containVertices = null
-	 * dual graph vertices have point (-1,-1)
 	 */
 	private HashMap<Vertex, HashMap<Vertex, Edge>> edges;
 	
@@ -24,18 +22,18 @@ public class Graph {
 	{
 		this.edges = edges;
 	}
-	/*
-	 * file format:
-	 * n (Vertices number)
-	 * name x y (of Vertex) n1 (Number of out edges) name1 x1 y1 (of out vertex) length1 (edge length) ...
-	 * int double x2		int						int double x2				double
-	 */
 	public Vertex readVertex(Scanner sc) {
-		int name = sc.nextInt();
+		long name = sc.nextLong();
 		double x = sc.nextDouble();
 		double y = sc.nextDouble();
 		return addVertex(new Vertex(name, new Point(x, y)));
 	}
+	/*
+	 * file format:
+	 * n (Vertices number)
+	 * name x y (of Vertex) n1 (Number of out edges) name1 x1 y1 (of out vertex) length1 (edge length) ...
+	 * long double x2		long					long double x2				double
+	 */
 	public void readGraphFromFile(String inFilename) throws FileNotFoundException {
 		edges.clear();
 		Scanner sc = new Scanner(new File(inFilename));
