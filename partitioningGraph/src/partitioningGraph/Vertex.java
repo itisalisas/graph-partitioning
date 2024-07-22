@@ -3,22 +3,22 @@ package partitioningGraph;
 import java.util.Objects;
 
 public class Vertex {
-	private int name;
+	private long name;
 	private Point point;
 	
 	public Vertex() {
 		this.name = -1;
 		this.point = new Point();
 	}
-	public Vertex(int name) {
+	public Vertex(long name) {
 		this.name = name;
 		this.point = new Point();
 	}
-	public Vertex(int name, Point point) {
+	public Vertex(long name, Point point) {
 		this.name = name;
 		this.point = point;
 	}
-	public int getName() {
+	public long getName() {
 		return name;
 	}
 	public Point getPoint() {

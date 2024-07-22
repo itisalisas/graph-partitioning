@@ -1,6 +1,7 @@
 package partitioningGraph;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Scanner;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -31,7 +32,7 @@ public class Graph {
 	 * int double x2		int						int double x2				double
 	 */
 	public Vertex readVertex(Scanner sc) {
-		int name = sc.nextInt();
+		long name = sc.nextLong();
 		double x = sc.nextDouble();
 		double y = sc.nextDouble();
 		return addVertex(new Vertex(name, new Point(x, y)));
@@ -88,12 +89,19 @@ public class Graph {
 		}
 		
 	}
+
+	public void addEdge(Vertex begin, Vertex end, double length, int bandwidth) {
+		addVertex(begin);
+		addVertex(end);
+		edges.get(begin).put(end, new Edge(length, bandwidth));
+	}
+
 	public void addEdge(Vertex begin, Vertex end, double length) {
 		addVertex(begin);
 		addVertex(end);
 		edges.get(begin).put(end, new Edge(length));
-		
 	}
+
 	public void deleteEdge(Vertex begin, Vertex end) {
 		edges.get(begin).remove(end);
 	}
@@ -103,8 +111,8 @@ public class Graph {
 	public int verticesNumber() {
 		return edges.size();
 	}
-	public Vertex[] verticesArray(){
-		return (Vertex[]) edges.keySet().toArray();
+	public List<Vertex> verticesArray(){
+		return edges.keySet().stream().toList();
 	}
 	public int edgesNumber() {
 		int res = 0;
@@ -118,7 +126,7 @@ public class Graph {
 		EdgeOfGraph[] ans = new EdgeOfGraph[edgesNumber()];
 		for (Vertex begin : edges.keySet()) {
 			for (Vertex end : edges.get(begin).keySet()) {
-				ans[iter] = new EdgeOfGraph(begin, end, edges.get(begin).get(end).getLength());
+				ans[iter++] = new EdgeOfGraph(begin, end, edges.get(begin).get(end).getLength(), edges.get(begin).get(end).flow, edges.get(begin).get(end).getBandwidth());
 			}
 		}
 		return ans;
