@@ -10,7 +10,7 @@ public class Main {
 		 * file format:
 		 * n (Vertices number)
 		 * name x y (of Vertex) n1 (Number of out edges) name1 x1 y1 (of out vertex) length1 (edge length) ...
-		 * int double x2		int						int double x2				double
+		 * long double x2		long					long double x2				double
 		 */
 		gph.readGraphFromFile("src\\partitioningGraph\\input.txt");
 		gph.printGraphToFile("src\\partitioningGraph\\output.txt");
