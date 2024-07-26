@@ -3,6 +3,7 @@ package partitioningGraph;
 import java.util.ArrayList; 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Scanner;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -92,6 +93,14 @@ public class Graph {
 
 	}
 
+
+	public void addEdge(Vertex begin, Vertex end, double length, int bandwidth) {
+		addVertex(begin);
+		addVertex(end);
+		edges.get(begin).put(end, new Edge(length, bandwidth));
+	}
+
+
 	public void addEdge(Vertex begin, Vertex end, double length) {
 		addVertex(begin);
 		addVertex(end);
@@ -111,8 +120,9 @@ public class Graph {
 		return edges.size();
 	}
 
-	public Vertex[] verticesArray() {
-		return (Vertex[]) edges.keySet().toArray();
+
+	public List<Vertex> verticesArray(){
+		return edges.keySet().stream().toList();
 	}
 
 	public int edgesNumber() {
@@ -128,7 +138,7 @@ public class Graph {
 		EdgeOfGraph[] ans = new EdgeOfGraph[edgesNumber()];
 		for (Vertex begin : edges.keySet()) {
 			for (Vertex end : edges.get(begin).keySet()) {
-				ans[iter] = new EdgeOfGraph(begin, end, edges.get(begin).get(end).getLength());
+				ans[iter++] = new EdgeOfGraph(begin, end, edges.get(begin).get(end).getLength(), edges.get(begin).get(end).flow, edges.get(begin).get(end).getBandwidth());
 			}
 		}
 		return ans;
