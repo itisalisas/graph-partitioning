@@ -1,6 +1,6 @@
 package partitioningGraph;
 
-import java.util.ArrayList;
+import java.util.ArrayList; 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Scanner;
@@ -14,27 +14,26 @@ public class Graph {
 	 * vertices - keys for HashMap
 	 */
 	private HashMap<Vertex, HashMap<Vertex, Edge>> edges;
-	
-	
-	public Graph()
-	{
-		this.edges = new HashMap<Vertex, HashMap<Vertex,Edge>>();
+
+	public Graph() {
+		this.edges = new HashMap<Vertex, HashMap<Vertex, Edge>>();
 	}
-	public Graph(HashMap<Vertex, HashMap<Vertex, Edge>> edges)
-	{
+
+	public Graph(HashMap<Vertex, HashMap<Vertex, Edge>> edges) {
 		this.edges = edges;
 	}
+
 	public Vertex readVertex(Scanner sc) {
 		long name = sc.nextLong();
 		double x = sc.nextDouble();
 		double y = sc.nextDouble();
 		return addVertex(new Vertex(name, new Point(x, y)));
 	}
+
 	/*
-	 * file format:
-	 * n (Vertices number)
-	 * name x y (of Vertex) n1 (Number of out edges) name1 x1 y1 (of out vertex) length1 (edge length) ...
-	 * long double x2		long					long double x2				double
+	 * file format: n (Vertices number) name x y (of Vertex) n1 (Number of out
+	 * edges) name1 x1 y1 (of out vertex) length1 (edge length) ... long double x2
+	 * long long double x2 double
 	 */
 	public void readGraphFromFile(String inFilename) throws FileNotFoundException {
 		edges.clear();
@@ -46,7 +45,7 @@ public class Graph {
 		Vertex vi;
 		Vertex vj;
 		for (int i = 0; i < n && sc.hasNext(); i++) {
-			//read Vertex..
+			// read Vertex..
 			vi = readVertex(sc);
 			ni = sc.nextInt();
 			for (int j = 0; j < ni && sc.hasNext(); j++) {
@@ -57,55 +56,65 @@ public class Graph {
 		}
 		sc.close();
 	}
+
 	public void printGraphToFile(String outFileName) throws IOException {
 		FileWriter out = new FileWriter(outFileName, false);
 		out.write(String.format("%d %n", edges.size()));
 		for (Vertex begin : edges.keySet()) {
-			out.write(String.format("%d %f %f %d ", begin.getName(), begin.getPoint().getX(),
-					begin.getPoint().getY(), edges.get(begin).size()));
+			out.write(String.format("%d %f %f %d ", begin.getName(), begin.getPoint().getX(), begin.getPoint().getY(),
+					edges.get(begin).size()));
 			for (Vertex end : edges.get(begin).keySet()) {
-				out.write(String.format("%d %f %f %f", end.getName(), end.getPoint().getX(),
-						end.getPoint().getY(), edges.get(begin).get(end).getLength()));
+				out.write(String.format("%d %f %f %f", end.getName(), end.getPoint().getX(), end.getPoint().getY(),
+						edges.get(begin).get(end).getLength()));
 			}
 			out.append('\n');
 		}
 		out.close();
-		
+
 	}
+
 	public void readGraphFromOSM(Point center, int dist) {
-		
+
 	}
+
 	public Vertex addVertex(Vertex v) {
 		if (!edges.containsKey(v)) {
 			edges.put(v, new HashMap<Vertex, Edge>());
 		}
 		return v;
 	}
+
 	public void deleteVertex(Vertex v) {
 		edges.remove(v);
 		for (Vertex begin : edges.keySet()) {
 			edges.get(begin).remove(v);
 		}
-		
+
 	}
+
 	public void addEdge(Vertex begin, Vertex end, double length) {
 		addVertex(begin);
 		addVertex(end);
 		edges.get(begin).put(end, new Edge(length));
-		
+
 	}
+
 	public void deleteEdge(Vertex begin, Vertex end) {
 		edges.get(begin).remove(end);
 	}
+
 	public HashMap<Vertex, HashMap<Vertex, Edge>> getEdges() {
 		return edges;
 	}
+
 	public int verticesNumber() {
 		return edges.size();
 	}
-	public Vertex[] verticesArray(){
+
+	public Vertex[] verticesArray() {
 		return (Vertex[]) edges.keySet().toArray();
 	}
+
 	public int edgesNumber() {
 		int res = 0;
 		for (Vertex begin : edges.keySet()) {
@@ -113,6 +122,7 @@ public class Graph {
 		}
 		return res;
 	}
+
 	public EdgeOfGraph[] edgesArray() {
 		int iter = 0;
 		EdgeOfGraph[] ans = new EdgeOfGraph[edgesNumber()];
@@ -123,22 +133,24 @@ public class Graph {
 		}
 		return ans;
 	}
-	
+
 	public boolean isPlanar() {
-		//split for connectivity components
+		// split for connectivity components
 		ArrayList<HashSet<Vertex>> component = this.splitForConnectivityComponents();
-		//check each component
+		// check each component
 		int n = component.size();
-		//make undirected
+		// make undirected
 		Graph undirGraph = makeUndirectedGraph();
 		for (int i = 0; i < n; i++) {
-			if (!componentIsPlanar(undirGraph, component.get(i))) return false;
+			if (!componentIsPlanar(undirGraph, component.get(i)))
+				return false;
 		}
 		return true;
 	}
+
 	private boolean componentIsPlanar(Graph undirGraph, HashSet<Vertex> vertexInComponent) {
-		//make new components if there is bridge an check them
-		//check component
+		// make new components if there is bridge an check them
+		// check component
 		int edgesNumber = 0;
 		for (Vertex begin : vertexInComponent) {
 			for (Vertex end : undirGraph.edges.get(begin).keySet()) {
@@ -147,9 +159,10 @@ public class Graph {
 				}
 			}
 		}
-		//component = tree
-		if (edgesNumber == (vertexInComponent.size() - 1) * 2) return true;
-		
+		// component = tree
+		if (edgesNumber == (vertexInComponent.size() - 1) * 2)
+			return true;
+
 		cutBridges(undirGraph, vertexInComponent);
 		ArrayList<HashSet<Vertex>> componentsWithoutBridges = new ArrayList<HashSet<Vertex>>();
 		HashSet<Vertex> visited = new HashSet<Vertex>();
@@ -165,20 +178,23 @@ public class Graph {
 				actualComp = new HashSet<Vertex>();
 			}
 		}
-		//checking components which connective & not tree & without bridge 
+		// checking components which connective & not tree & without bridge
 		for (int i = 0; i < componentsWithoutBridges.size(); i++) {
-			if (!gammaAlgorithm(componentsWithoutBridges.get(i), undirGraph)) return false;
+			if (!gammaAlgorithm(componentsWithoutBridges.get(i), undirGraph))
+				return false;
 		}
 		return true;
 	}
+
 	private boolean gammaAlgorithm(HashSet<Vertex> component, Graph undirGraph) {
 		HashSet<Vertex> verticesOnPlane = new HashSet<Vertex>();
 		ArrayList<Graph> faces = new ArrayList<Graph>();
-		if (findСycle(undirGraph, component, faces)) return true;
+		if (findСycle(undirGraph, component, faces))
+			return true;
 		for (Vertex inCycle : faces.get(0).edges.keySet()) {
 			verticesOnPlane.add(inCycle);
 		}
-		//edges not on plane (f)
+		// edges not on plane (f)
 		Graph remains = new Graph();
 		for (Vertex begin : component) {
 			for (Vertex end : component) {
@@ -193,15 +209,17 @@ public class Graph {
 			}
 		}
 		for (Vertex begin : component) {
-			if (remains.edges.get(begin).isEmpty()) return true;
+			if (remains.edges.get(begin).isEmpty())
+				return true;
 		}
-		//find segment (f)
+		// find segment (f)
 		HashSet<Vertex> visited = new HashSet<Vertex>();
 		int segmentNumber = -1;
 		int allSegmentsNumber = 0;
 		ArrayList<Graph> segment = new ArrayList<Graph>();
 		for (Vertex begin : component) {
-			if (visited.contains(begin)) continue;
+			if (visited.contains(begin))
+				continue;
 			allSegmentsNumber++;
 			segmentNumber++;
 			segment.add(new Graph());
@@ -209,10 +227,152 @@ public class Graph {
 			visited.add(begin);
 			remains.dfsFindSegments(begin, segmentNumber, allSegmentsNumber, visited, verticesOnPlane, segment);
 		}
-		int[] fasesNumberForSegment = new int[segment.size()];
-		//count connection vertex & fasesNumberForSegment
+		while (segment.size() > 0) {
+			int[] fasesNumberForSegment = new int[segment.size()];
+			//
+			// count connection vertex & fasesNumberForSegment
+			HashSet<Vertex> connectedVertexInSegment = new HashSet<Vertex>();
+			int minFacesNumber = 0;
+			int iterMinFacesNumber = 0;
+			boolean vertexInFace = true;
+			for (int i = 0; i < segment.size(); i++) {
+				for (Vertex conVertex : segment.get(i).edges.keySet()) {
+					if (verticesOnPlane.contains(conVertex)) {
+						connectedVertexInSegment.add(conVertex);
+					}
+				}
+				fasesNumberForSegment[i] = 0;
+				fasesNumberForSegment[i] = 0;
+				for (int j = 0; j < faces.size(); j++) {
+					vertexInFace = true;
+					for (Vertex ver : connectedVertexInSegment) {
+						if (!faces.get(j).edges.containsKey(ver))
+							vertexInFace = false;
+					}
+					if (vertexInFace)
+						fasesNumberForSegment[i]++;
+				}
+				if (fasesNumberForSegment[i] == 0)
+					return false;
+				if (minFacesNumber == 0)
+					minFacesNumber = fasesNumberForSegment[i];
+				if (minFacesNumber > fasesNumberForSegment[i]) {
+					minFacesNumber = fasesNumberForSegment[i];
+					iterMinFacesNumber = i;
+				}
+				connectedVertexInSegment.clear();
+			}
+			Graph actualSegment = segment.get(iterMinFacesNumber);
+			Graph actualFace = null;
+			segment.remove(iterMinFacesNumber);
+
+			for (int j = 0; j < faces.size(); j++) {
+				vertexInFace = true;
+				for (Vertex ver : connectedVertexInSegment) {
+					if (!faces.get(j).edges.containsKey(ver))
+						vertexInFace = false;
+				}
+				if (vertexInFace) {
+					actualFace = faces.get(j);
+					faces.remove(j);
+					break;
+				}
+			}
+			Vertex chainStart = null;
+			Vertex chainEnd = null;
+			findVertexForChain(verticesOnPlane, actualSegment, chainStart, chainEnd);
+			if (chainStart == null || chainEnd == null)
+				System.out.println("260");
+			ArrayList<Vertex> chain = new ArrayList<Vertex>();
+			dfsFindChain(chainStart, chainEnd, actualSegment, chain, false);
+			// add chain
+			Graph newFace1 = actualFace;
+			Graph newFace2 = new Graph();
+			Vertex tmp = chainStart;
+			HashSet<Vertex> prev = new HashSet<Vertex>();
+			while (tmp != chainEnd) {
+				prev.add(tmp);
+				for (Vertex end : actualFace.edges.get(tmp).keySet()) {
+					if (prev.contains(end)) {
+						continue;
+					}
+					newFace1.deleteEdge(tmp, end);
+					newFace1.deleteEdge(end, tmp);
+					newFace2.addEdge(tmp, end, actualFace.edges.get(tmp).get(end).getLength());
+					newFace2.addEdge(end, tmp, actualFace.edges.get(tmp).get(end).getLength());
+					tmp = end;
+					break;
+				}
+			}
+			for (int i = 0; i < chain.size() - 1; i++) {
+				verticesOnPlane.add(chain.get(i));
+				newFace1.addEdge(chain.get(i), chain.get(i + 1),
+						actualSegment.edges.get(chain.get(i)).get(chain.get(i + 1)).getLength());
+				newFace1.addEdge(chain.get(i + 1), chain.get(i),
+						actualSegment.edges.get(chain.get(i)).get(chain.get(i + 1)).getLength());
+				newFace2.addEdge(chain.get(i), chain.get(i + 1),
+						actualSegment.edges.get(chain.get(i)).get(chain.get(i + 1)).getLength());
+				newFace2.addEdge(chain.get(i + 1), chain.get(i),
+						actualSegment.edges.get(chain.get(i)).get(chain.get(i + 1)).getLength());
+
+			}
+			faces.add(newFace1);
+			faces.add(newFace2);
+			// upd segments
+			visited = new HashSet<Vertex>();
+			allSegmentsNumber = segment.size();
+			segmentNumber = segment.size() - 1;
+			for (Vertex begin : actualSegment.edges.keySet()) {
+				if (visited.contains(begin))
+					continue;
+				allSegmentsNumber++;
+				segmentNumber++;
+				segment.add(new Graph());
+				segment.get(segmentNumber).addVertex(begin);
+				visited.add(begin);
+				actualSegment.dfsFindSegments(begin, segmentNumber, allSegmentsNumber, visited, verticesOnPlane,
+						segment);
+			}
+		}
 		return false;
 	}
+
+	private void dfsFindChain(Vertex begin, Vertex chainEnd, Graph actualSegment, ArrayList<Vertex> chain,
+			boolean done) {
+		if (done) return;
+		chain.add(begin);
+		for (Vertex end : actualSegment.edges.get(begin).keySet()) {
+			if (end.equals(chainEnd)) {
+				chain.add(end);
+				done = true;
+			}
+			if (chain.contains(end)) {
+				continue;
+			} else {
+				dfsFindChain(end, chainEnd, actualSegment, chain, done);
+			}
+			if (done)
+				return;
+		}
+		chain.remove(chain.size() - 1);
+		
+	}
+
+	private void findVertexForChain(HashSet<Vertex> verticesOnPlane, Graph actualSegment, Vertex chainStart,
+			Vertex chainEnd) {
+		for (Vertex v : actualSegment.edges.keySet()) {
+			if (verticesOnPlane.contains(v)) {
+				if (chainStart == null) {
+					chainStart = v;
+				} else {
+					chainEnd = v;
+					return;
+				}
+			}
+		}
+		
+	}
+
 	private void dfsFindSegments(Vertex begin, int segmentNumber, int allSegmentsNumber, HashSet<Vertex> visited,
 			HashSet<Vertex> verticesOnPlane, ArrayList<Graph> segment) {
 		for (Vertex end : edges.get(begin).keySet()) {
@@ -228,12 +388,13 @@ public class Graph {
 					segment.get(allSegmentsNumber - 1).addVertex(end);
 					dfsFindSegments(begin, allSegmentsNumber - 1, allSegmentsNumber, visited, verticesOnPlane, segment);
 				} else {
-					dfsFindSegments(begin, segmentNumber,allSegmentsNumber, visited, verticesOnPlane, segment);
+					dfsFindSegments(begin, segmentNumber, allSegmentsNumber, visited, verticesOnPlane, segment);
 				}
 			}
 		}
-		
+
 	}
+
 	boolean findСycle(Graph undirGraph, HashSet<Vertex> component, ArrayList<Graph> faces) {
 		HashMap<Vertex, Integer> used = new HashMap<Vertex, Integer>();
 		boolean cycle = false;
@@ -241,14 +402,17 @@ public class Graph {
 		for (Vertex begin : component) {
 			if (!used.containsKey(begin)) {
 				dfsFindCycle(undirGraph, component, used, path, cycle, begin);
-				if (cycle) break;
+				if (cycle)
+					break;
 			}
-			
+
 		}
-		if (!cycle) return false;
+		if (!cycle)
+			return false;
 		int cycleIter = path.size() - 2;
 		Vertex to = path.get(path.size() - 1);
-		while (path.get(cycleIter) != to) cycleIter--;
+		while (path.get(cycleIter) != to)
+			cycleIter--;
 		Graph gph = new Graph();
 		gph.addVertex(to);
 		for (; cycleIter < path.size() - 2; cycleIter--) {
@@ -260,11 +424,13 @@ public class Graph {
 		faces.add(gph);
 		faces.add(gph);
 		return true;
-		
+
 	}
+
 	private void dfsFindCycle(Graph undirGraph, HashSet<Vertex> component, HashMap<Vertex, Integer> used,
 			ArrayList<Vertex> path, boolean cycle, Vertex begin) {
-		if (cycle) return;
+		if (cycle)
+			return;
 		used.put(begin, 0);
 		path.add(begin);
 		for (Vertex end : undirGraph.edges.get(begin).keySet()) {
@@ -275,12 +441,14 @@ public class Graph {
 			} else {
 				dfsFindCycle(undirGraph, component, used, path, cycle, end);
 			}
-			if (cycle) return;
+			if (cycle)
+				return;
 		}
 		used.replace(begin, 0, 1);
 		path.remove(path.size() - 1);
-		
+
 	}
+
 	private void dfsCompanentsWithoutBridges(Graph undirGraph, HashSet<Vertex> vertexInComponent, Vertex begin,
 			HashSet<Vertex> actualComp, HashSet<Vertex> visited) {
 		for (Vertex end : vertexInComponent) {
@@ -292,29 +460,33 @@ public class Graph {
 				this.dfsCompanentsWithoutBridges(undirGraph, vertexInComponent, end, actualComp, visited);
 			}
 		}
-		
+
 	}
+
 	private void cutBridges(Graph undirGraph, HashSet<Vertex> vertexInComponent) {
 		int timer = 0;
 		HashMap<Vertex, Integer> tin = new HashMap<Vertex, Integer>();
 		HashMap<Vertex, Integer> fup = new HashMap<Vertex, Integer>();
-		HashSet<Vertex> used =  new HashSet<Vertex>();
+		HashSet<Vertex> used = new HashSet<Vertex>();
 		for (Vertex begin : vertexInComponent) {
 			if (!used.contains(begin)) {
 				dfsBridges(undirGraph, vertexInComponent, begin, null, used, timer, tin, fup);
 			}
 		}
-		
+
 	}
-	private void dfsBridges(Graph undirGraph, HashSet<Vertex> vertexInComponent, Vertex begin, Vertex prev, HashSet<Vertex> used, int timer,
-			HashMap<Vertex, Integer> tin, HashMap<Vertex, Integer> fup) {
+
+	private void dfsBridges(Graph undirGraph, HashSet<Vertex> vertexInComponent, Vertex begin, Vertex prev,
+			HashSet<Vertex> used, int timer, HashMap<Vertex, Integer> tin, HashMap<Vertex, Integer> fup) {
 		used.add(begin);
 		timer++;
 		tin.put(begin, timer);
 		fup.put(begin, timer);
 		for (Vertex out : undirGraph.edges.get(begin).keySet()) {
-			if (vertexInComponent.contains(out)) continue;
-			if (out.equals(prev)) continue;
+			if (vertexInComponent.contains(out))
+				continue;
+			if (out.equals(prev))
+				continue;
 			if (used.contains(out)) {
 				if (tin.containsKey(out) && tin.get(out) < fup.get(begin)) {
 					fup.replace(begin, fup.get(begin), tin.get(out));
@@ -324,18 +496,17 @@ public class Graph {
 				if (fup.containsKey(out) && fup.get(out) < fup.get(begin)) {
 					fup.replace(begin, fup.get(begin), fup.get(out));
 					if (fup.containsKey(out) && tin.get(begin) < fup.get(out)) {
-						//delete bridge
+						// delete bridge
 						deleteEdge(begin, out);
 						deleteEdge(out, begin);
 					}
 				}
 			}
-			
 		}
-		
 	}
+
 	private ArrayList<HashSet<Vertex>> splitForConnectivityComponents() {
-		//make undirected
+		// make undirected
 		Graph undirGraph = makeUndirectedGraph();
 		ArrayList<HashSet<Vertex>> component = new ArrayList<HashSet<Vertex>>();
 		HashSet<Vertex> visited = new HashSet<Vertex>();
@@ -353,6 +524,7 @@ public class Graph {
 		}
 		return component;
 	}
+
 	private void dfsCompanents(Vertex begin, HashSet<Vertex> actualComp, HashSet<Vertex> visited) {
 		for (Vertex end : edges.get(begin).keySet()) {
 			if (visited.contains(end)) {
@@ -363,8 +535,9 @@ public class Graph {
 				this.dfsCompanents(end, actualComp, visited);
 			}
 		}
-		
+
 	}
+
 	public Graph makeUndirectedGraph() {
 		Graph graph = new Graph();
 		for (Vertex begin : edges.keySet()) {
