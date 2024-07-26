@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 
 public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs {
 
-    private final List<Graph> partition = new ArrayList<>();
+    private final ArrayList<HashSet<Vertex>> partition = new ArrayList<>();
 
     private final double PARAMETER;
 
@@ -59,7 +59,8 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             );
 
     @Override
-    public List<Graph> balancedPartitionAlgorithm(Graph graph) {
+    public ArrayList<HashSet<Vertex>> balancedPartitionAlgorithm(Graph graph, int maxVerticesNumber,
+                                                            int maxSumVerticesWeight) {
         balancedPartitionAlgorithmHelper(graph);
         return partition;
     }
@@ -68,7 +69,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
         List<Vertex> vertices = new ArrayList<>(graph.verticesArray());
         if (graph.verticesNumber() < MAX_VERTICES_NUMBER) {
-            partition.add(graph);
+            partition.add(new HashSet<>(graph.verticesArray()));
             return;
         }
         long maxIndex = vertices.stream().max(Comparator.comparingLong(Vertex::getName)).get().getName();

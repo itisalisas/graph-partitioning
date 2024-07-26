@@ -2,27 +2,43 @@ package partitioningGraph;
 
 import java.util.Objects;
 
+
 public class Vertex {
+
 	private long name;
 	private Point point;
+	private int weight;
 	
 	public Vertex() {
 		this.name = -1;
 		this.point = new Point();
+		this.weight = ((int) Math.random() * 30 ) + 10;
 	}
 	public Vertex(long name) {
 		this.name = name;
 		this.point = new Point();
+		this.weight = ((int) Math.random() * 30 ) + 10;
 	}
 	public Vertex(long name, Point point) {
 		this.name = name;
 		this.point = point;
+		this.weight = ((int) Math.random() * 30 ) + 10;
 	}
+
+	public Vertex(long name, Point point, int weight) {
+		this.name = name;
+		this.point = point;
+		this.weight = weight;
+	}
+
 	public long getName() {
 		return name;
 	}
 	public Point getPoint() {
 		return point;
+	}
+	public int getWeight() {
+		return weight;
 	}
 	@Override
 	public boolean equals(Object obj) {
