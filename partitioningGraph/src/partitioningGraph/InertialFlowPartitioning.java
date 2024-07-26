@@ -10,9 +10,17 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
     private final List<Graph> partition = new ArrayList<>();
 
-    private final double PARAMETER = 0.25;
+    private final double PARAMETER;
 
     private final int MAX_VERTICES_NUMBER = 1000;
+
+    public InertialFlowPartitioning() {
+        this.PARAMETER = 0.25;
+    }
+
+    public InertialFlowPartitioning(double parameter) {
+        this.PARAMETER = parameter;
+    }
 
     // lines kx - y = 0
     private static class Line {
