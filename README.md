@@ -20,3 +20,4 @@ The project considers algorithms "Inertial Flow" and "Bubble algorithm" and/or t
 
 ## License
 
+[MIT License](https://choosealicense.com/licenses/mit/)
