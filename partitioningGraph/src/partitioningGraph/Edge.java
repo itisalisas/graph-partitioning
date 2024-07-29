@@ -15,6 +15,17 @@ public class Edge {
 		this.bandwidth = 1;
 		this.flow = 0;
 	}
+
+	public Edge(double length, int bandwidth) {
+		this.length = length;
+		this.bandwidth = bandwidth;
+		this.flow = 0;
+	}
+	public Edge(double length, double flow, int bandwidth) {
+		this.length = length;
+		this.bandwidth = bandwidth;
+		this.flow = flow;
+	}
 	public double getLength() {
 		return length;
 	}

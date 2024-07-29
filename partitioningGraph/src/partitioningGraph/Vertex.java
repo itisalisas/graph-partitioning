@@ -4,7 +4,7 @@ import java.util.Objects;
 
 
 public class Vertex {
-	
+
 	private long name;
 	private Point point;
 	private int weight;
@@ -24,11 +24,13 @@ public class Vertex {
 		this.point = point;
 		this.weight = ((int) Math.random() * 30 ) + 10;
 	}
+
 	public Vertex(long name, Point point, int weight) {
 		this.name = name;
 		this.point = point;
 		this.weight = weight;
 	}
+
 	public long getName() {
 		return name;
 	}
