@@ -265,7 +265,7 @@ public class Graph {
 		
 		//
 		while (segment.size() > 0) {
-			
+			System.out.println(segment.size());
 			// count connection vertex & fasesNumberForSegment
 			//find min number of faces for segment
 			//if min number == 0 => not planar
@@ -291,7 +291,7 @@ public class Graph {
 					iterMinFacesNumber = i;
 				}
 			}
-
+			System.out.println("init actual face segment" );
 			//init actual segment
 			Graph actualSegment = segment.get(iterMinFacesNumber);
 			segment.remove(iterMinFacesNumber);
@@ -306,7 +306,8 @@ public class Graph {
 				return false;
 			}
 			
-			
+
+			System.out.println("find chain" );
 			//init and find chain
 			Vertex chainStart = null;
 			Vertex chainEnd = null;
@@ -315,7 +316,8 @@ public class Graph {
 			if (chainStart == null || chainEnd == null)
 				return false;
 			ArrayList<Vertex> chain = new ArrayList<Vertex>();
-			dfsFindChain(chainStart, chainEnd, actualSegment, chain, false, null);
+			HashSet<Vertex> visited = new HashSet<Vertex>();
+			dfsFindChain(chainStart, chainEnd, actualSegment, chain, false, null, visited);
 
 
 			// add chain
@@ -324,6 +326,8 @@ public class Graph {
 			newFace1 = actualFace.clone();
 			Graph newFace2 = new Graph();
 
+
+			System.out.println("split face" );
 			//split actualFace
 			actualFace.splitActualFace(chainStart, chainEnd, newFace1, newFace2);
 
@@ -341,6 +345,8 @@ public class Graph {
 			
 			//upd segments
 			//upd remains
+
+			System.out.println("upd remains" );
 			remains.deleteNewEdgesOnPlane(chain);
 //			for (Vertex begin : actualSegment.edges.keySet()) {
 //				for (Vertex end : actualSegment.edges.keySet()) {
@@ -364,6 +370,8 @@ public class Graph {
 			
 			//find segment
 			segment.clear();
+
+			System.out.println("upd segments" );
 			findSegments(segment, remains, verticesOnPlane);
 			
 		}
@@ -497,8 +505,9 @@ public class Graph {
 	}
 
 	private boolean dfsFindChain(Vertex begin, Vertex chainEnd, Graph actualSegment, ArrayList<Vertex> chain,
-			boolean done, Vertex prev) {
+			boolean done, Vertex prev, HashSet<Vertex> visited) {
 		chain.add(begin);
+		visited.add(begin);
 		for (Vertex end : actualSegment.edges.get(begin).keySet()) {
 			if (end.equals(prev)) {
 				continue;
@@ -508,10 +517,10 @@ public class Graph {
 				done = true;
 				return true;
 			}
-			if (chain.contains(end)) {
+			if (chain.contains(end) || visited.contains(end)) {
 				continue;
 			} else {
-				done = dfsFindChain(end, chainEnd, actualSegment, chain, done, begin);
+				done = dfsFindChain(end, chainEnd, actualSegment, chain, done, begin, visited);
 				if (done)
 					return done;
 			}
@@ -644,20 +653,28 @@ public class Graph {
 		HashMap<Vertex, Integer> tin = new HashMap<Vertex, Integer>();
 		HashMap<Vertex, Integer> fup = new HashMap<Vertex, Integer>();
 		HashSet<Vertex> used = new HashSet<Vertex>();
+		ArrayList<EdgeOfGraph> bridges = new ArrayList<EdgeOfGraph>();
 		for (Vertex begin : vertexInComponent) {
 			if (!used.contains(begin)) {
-				dfsBridges(undirGraph, vertexInComponent, begin, null, used, timer, tin, fup);
+				dfsBridges(undirGraph, vertexInComponent, begin, null, used, timer, tin, fup, bridges);
 			}
+		}
+		for (int i = 0 ; i < bridges.size(); i++) {
+			undirGraph.deleteEdge(bridges.get(i).getBegin(), bridges.get(i).getEnd());
+			undirGraph.deleteEdge(bridges.get(i).getEnd(), bridges.get(i).getBegin());
 		}
 
 	}
 
 	private void dfsBridges(Graph undirGraph, HashSet<Vertex> vertexInComponent, Vertex begin, Vertex prev,
-			HashSet<Vertex> used, int timer, HashMap<Vertex, Integer> tin, HashMap<Vertex, Integer> fup) {
+			HashSet<Vertex> used, int timer, HashMap<Vertex, Integer> tin, HashMap<Vertex, Integer> fup, ArrayList<EdgeOfGraph> bridges) {
 		used.add(begin);
 		timer++;
 		tin.put(begin, timer);
 		fup.put(begin, timer);
+		if (undirGraph.edges.get(begin) == null) {
+			return;
+		}
 		for (Vertex out : undirGraph.edges.get(begin).keySet()) {
 			if (!vertexInComponent.contains(out))
 				continue;
@@ -668,14 +685,15 @@ public class Graph {
 					fup.replace(begin, fup.get(begin), tin.get(out));
 				}
 			} else {
-				dfsBridges(undirGraph, vertexInComponent, out, begin, used, timer, tin, fup);
+				dfsBridges(undirGraph, vertexInComponent, out, begin, used, timer, tin, fup, bridges);
 				if (fup.containsKey(out) && fup.get(out) < fup.get(begin)) {
 					fup.replace(begin, fup.get(begin), fup.get(out));
 				}
 				if (!fup.containsKey(out) || (fup.containsKey(out) && tin.get(begin) < fup.get(out))) {
 					// delete bridge
-					undirGraph.deleteEdge(begin, out);
-					undirGraph.deleteEdge(out, begin);
+					bridges.add(new EdgeOfGraph(begin, out, undirGraph.edges.get(begin).get(out).getLength()));
+//					undirGraph.deleteEdge(begin, out);
+//					undirGraph.deleteEdge(out, begin);
 				}
 
 			}
