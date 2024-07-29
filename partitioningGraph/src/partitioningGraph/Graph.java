@@ -175,20 +175,24 @@ public class Graph {
 		// make new components if there is bridge an check them
 		// check component
 		//undir - edgesNumber x2
-		int edgesNumber = 0;
-		for (Vertex begin : vertexInComponent) {
-			if (undirGraph.edges.get(begin) == null)
-				continue;
-			for (Vertex end : undirGraph.edges.get(begin).keySet()) {
-				if (vertexInComponent.contains(end)) {
-					edgesNumber++;
-				}
-			}
-		}
+		int edgesNumber = undirGraph.edgesNumberInCompanentUndirGraph(vertexInComponent);
 		// component = tree
-		if (edgesNumber == (vertexInComponent.size() - 1) * 2)
+		if (this.undirTree(edgesNumber, vertexInComponent.size()))
 			return true;
+		//cutBridges for new component
 		cutBridges(undirGraph, vertexInComponent);
+		ArrayList<HashSet<Vertex>> componentsWithoutBridges = makeNewComponentsWithoutBridges(undirGraph, vertexInComponent);
+		
+		// checking components which connective & not tree & without bridge
+		for (int i = 0; i < componentsWithoutBridges.size(); i++) {
+			if (!gammaAlgorithm(componentsWithoutBridges.get(i), undirGraph))
+				return false;
+		}
+		return true;
+	}
+
+	private ArrayList<HashSet<Vertex>> makeNewComponentsWithoutBridges(Graph undirGraph,
+			HashSet<Vertex> vertexInComponent) {
 		ArrayList<HashSet<Vertex>> componentsWithoutBridges = new ArrayList<HashSet<Vertex>>();
 		HashSet<Vertex> visited = new HashSet<Vertex>();
 		HashSet<Vertex> actualComp = new HashSet<Vertex>();
@@ -203,87 +207,74 @@ public class Graph {
 				actualComp = new HashSet<Vertex>();
 			}
 		}
-		// checking components which connective & not tree & without bridge
-		for (int i = 0; i < componentsWithoutBridges.size(); i++) {
-			if (!gammaAlgorithm(componentsWithoutBridges.get(i), undirGraph))
-				return false;
-		}
-		return true;
+		return componentsWithoutBridges;
 	}
 
-	private boolean gammaAlgorithm(HashSet<Vertex> component, Graph undirGraph) throws IOException {
-		if (component.size() < 2) {
-			return true;
-		}
-		HashSet<Vertex> verticesOnPlane = new HashSet<Vertex>();
-		ArrayList<Graph> faces = new ArrayList<Graph>();
-		if (!findСycle(undirGraph, component, faces))
-			return true;
-		for (Vertex inCycle : faces.get(0).edges.keySet()) {
-			verticesOnPlane.add(inCycle);
-		}
-		// edges not on plane (f)
-		Graph remains = new Graph();
-		for (Vertex begin : component) {
-			for (Vertex end : component) {
-				for (int i = 0; i < faces.size(); i++) {
-					
-					if (faces.get(i).edges.get(begin) != null && faces.get(i).edges.get(begin).containsKey(end)) {
-						continue;
-					}
-					if (undirGraph.edges.get(begin).containsKey(end)) {
-						remains.addEdge(begin, end, undirGraph.edges.get(begin).get(end).getLength());
-					}
+	private boolean undirTree(int edgesNumber, int size) {
+		return edgesNumber == (size - 1) * 2;
+	}
+
+	private int edgesNumberInCompanentUndirGraph(HashSet<Vertex> vertexInComponent) {
+		int edgesNumber = 0;
+		for (Vertex begin : vertexInComponent) {
+			if (edges.get(begin) == null)
+				continue;
+			for (Vertex end : edges.get(begin).keySet()) {
+				if (vertexInComponent.contains(end)) {
+					edgesNumber++;
 				}
 			}
 		}
-		
-		for (Vertex begin : component) {
-			if (remains.edges.get(begin) == null) continue;
-			if (remains.edges.get(begin).isEmpty())
-				return true;
-		}
-		// find segment (f)
-		HashSet<Vertex> visited = new HashSet<Vertex>();
-		int segmentNumber = -1;
-		int allSegmentsNumber = 0;
-		ArrayList<Graph> segment = new ArrayList<Graph>();
-		for (Vertex begin : remains.edges.keySet()) {
-			if (visited.contains(begin))
-				continue;
-			allSegmentsNumber++;
-			segmentNumber++;
-			segment.add(new Graph());
-			segment.get(segmentNumber).addVertex(begin);
-			visited.add(begin);
-			remains.dfsFindSegments(begin, segmentNumber, allSegmentsNumber, visited, verticesOnPlane, segment, null);
-		}
+		return edgesNumber;
+	}
 
+	private boolean gammaAlgorithm(HashSet<Vertex> component, Graph undirGraph) throws IOException {
+		//small component, number of vertices less 4 => trivial go on Plane
+		if (component.size() <= 3) {
+			return true;
+		}
+		
+		//init gammaAlgorithm
+		HashSet<Vertex> verticesOnPlane = new HashSet<Vertex>();
+		ArrayList<Graph> faces = new ArrayList<Graph>();
+		
+		//no cycle = > tree => trivial go on Plane
+		//add cycle to first 2 faces
+		boolean cycle = findСycle(undirGraph, component, faces);
+		if (!cycle)
+			return true;
+		
+		//add vertices in face on plane
+		for (Vertex inCycle : faces.get(0).edges.keySet()) {
+			verticesOnPlane.add(inCycle);
+		}
+		
+		// edges not on plane
+		Graph remains = new Graph();
+		remains.addEdgesNotOnPlane(component, faces, undirGraph);
+		
+//		for (Vertex begin : component) {
+//			if (remains.edges.get(begin) == null) continue;
+//			if (remains.edges.get(begin).isEmpty())
+//				return true;
+//		}
+		
+		// init segments and find segment (f)
+		ArrayList<Graph> segment = new ArrayList<Graph>();
+		findSegments(segment, remains, verticesOnPlane);
+		
+		//
 		while (segment.size() > 0) {
-			int[] fasesNumberForSegment = new int[segment.size()];
-			//
+			
 			// count connection vertex & fasesNumberForSegment
-			HashSet<Vertex> connectedVertexInSegment = new HashSet<Vertex>();
+			//find min number of faces for segment
+			//if min number == 0 => not planar
 			int minFacesNumber = 0;
 			int iterMinFacesNumber = 0;
-			boolean vertexInFace = true;
+			int facesNumber = 0;;
 			for (int i = 0; i < segment.size(); i++) {
-				for (Vertex conVertex : segment.get(i).edges.keySet()) {
-					if (verticesOnPlane.contains(conVertex)) {
-						connectedVertexInSegment.add(conVertex);
-					}
-				}
-				fasesNumberForSegment[i] = 0;
-				for (int j = 0; j < faces.size(); j++) {
-					vertexInFace = true;
-					for (Vertex ver : connectedVertexInSegment) {
-						if (!faces.get(j).edges.containsKey(ver))
-							vertexInFace = false;
-					}
-					if (vertexInFace)
-						fasesNumberForSegment[i]++;
-				}
-				if (fasesNumberForSegment[i] == 0) {
+				facesNumber = facesNumberOfSegment(segment.get(i), verticesOnPlane, faces);
+				if (facesNumber == 0) {
 					System.out.println("No face for segment with contact vertices:");
 					for (Vertex v : segment.get(i).edges.keySet()) {
 						if (verticesOnPlane.contains(v)) {
@@ -294,41 +285,29 @@ public class Graph {
 					return false;
 				}
 				if (minFacesNumber == 0)
-					minFacesNumber = fasesNumberForSegment[i];
-				if (minFacesNumber > fasesNumberForSegment[i]) {
-					minFacesNumber = fasesNumberForSegment[i];
+					minFacesNumber = facesNumber;
+				if (minFacesNumber > facesNumber) {
+					minFacesNumber = facesNumber;
 					iterMinFacesNumber = i;
 				}
-				connectedVertexInSegment.clear();
 			}
 
-			connectedVertexInSegment.clear();
+			//init actual segment
 			Graph actualSegment = segment.get(iterMinFacesNumber);
-			Graph actualFace = null;
 			segment.remove(iterMinFacesNumber);
-			for (Vertex v : actualSegment.edges.keySet()) {
-				if (verticesOnPlane.contains(v)) {
-					connectedVertexInSegment.add(v);
-				}
-			}
-			if (connectedVertexInSegment.isEmpty()) {
+			
+			//init actual face 
+			Graph actualFace = null;
+			int actualFaceNum = findActualFace(actualSegment, verticesOnPlane, faces);	
+			if (actualFaceNum != -1) {
+				actualFace = faces.get(actualFaceNum);
+				faces.remove(actualFaceNum);
+			} else {
 				return false;
 			}
-			for (int j = 0; j < faces.size(); j++) {
-				vertexInFace = true;
-				for (Vertex ver : connectedVertexInSegment) {
-					if (!faces.get(j).edges.containsKey(ver))
-						vertexInFace = false;
-				}
-				if (vertexInFace) {
-					actualFace = faces.get(j);
-					faces.remove(j);
-					break;
-				}
-			}		
-			if (actualFace == null) {
-				return false;
-			}
+			
+			
+			//init and find chain
 			Vertex chainStart = null;
 			Vertex chainEnd = null;
 			chainStart = findVertexForChain(verticesOnPlane, actualSegment, chainStart, chainEnd);
@@ -340,99 +319,181 @@ public class Graph {
 
 
 			// add chain
+			//init new faces
 			Graph newFace1 = new Graph();
 			newFace1 = actualFace.clone();
 			Graph newFace2 = new Graph();
-			Vertex tmp = chainStart;
-			HashSet<Vertex> prev = new HashSet<Vertex>();
-			while (tmp != chainEnd) {
-				prev.add(tmp);
-				for (Vertex end : actualFace.edges.get(tmp).keySet()) {
-					if (prev.contains(end)) {
-						continue;
-					}
-					newFace2.addEdge(tmp, end, actualFace.edges.get(tmp).get(end).getLength());
-					newFace2.addEdge(end, tmp, actualFace.edges.get(tmp).get(end).getLength());
-					newFace1.deleteEdge(tmp, end);
-					newFace1.deleteEdge(end, tmp);
-					tmp = end;
-					break;
-				}
-			}
+
+			//split actualFace
+			actualFace.splitActualFace(chainStart, chainEnd, newFace1, newFace2);
 
 			//check empty Vertex
-			ArrayList<Vertex> deleteV = new ArrayList<Vertex>();
-			for (Vertex v : newFace1.edges.keySet()) {
-				if (newFace1.edges.get(v).isEmpty()) 
-					deleteV.add(v);
-			}
-			for (int i = 0; i < deleteV.size(); i++) {
-				newFace1.deleteVertex(deleteV.get(i));
-			}
-			deleteV.clear();
-			for (Vertex v : newFace2.edges.keySet()) {
-				if (newFace2.edges.get(v).isEmpty()) 
-					deleteV.add(v);
-			}
-			for (int i = 0; i < deleteV.size(); i++) {
-				newFace2.deleteVertex(deleteV.get(i));
-			}
+			newFace1.deleteEmptyVertexUndirGraph();
+			newFace2.deleteEmptyVertexUndirGraph();
 			
-			for (int i = 0; i < chain.size() - 1; i++) {
-				verticesOnPlane.add(chain.get(i));
-				newFace1.addEdge(chain.get(i), chain.get(i + 1),
-						actualSegment.edges.get(chain.get(i)).get(chain.get(i + 1)).getLength());
-				newFace1.addEdge(chain.get(i + 1), chain.get(i),
-						actualSegment.edges.get(chain.get(i)).get(chain.get(i + 1)).getLength());
-				newFace2.addEdge(chain.get(i), chain.get(i + 1),
-						actualSegment.edges.get(chain.get(i)).get(chain.get(i + 1)).getLength());
-				newFace2.addEdge(chain.get(i + 1), chain.get(i),
-						actualSegment.edges.get(chain.get(i)).get(chain.get(i + 1)).getLength());
-
-			}
+			//add chain to new faces
+			newFace1.addChain(verticesOnPlane, chain, actualSegment);
+			newFace2.addChain(verticesOnPlane, chain, actualSegment);
 			
+			//add new faces on plane
 			faces.add(newFace1);
 			faces.add(newFace2);
-			// upd segments
-			visited = new HashSet<Vertex>();
-			allSegmentsNumber = segment.size();
-			segmentNumber = segment.size() - 1;
-			for (Vertex begin : actualSegment.edges.keySet()) {
-				for (Vertex end : actualSegment.edges.keySet()) {
-					for (int i = 0; i < faces.size(); i++) {
-						if (faces.get(i).edges.get(begin) != null) {
-							if (faces.get(i).edges.get(begin).containsKey(end)) {
-								remains.deleteEdge(begin, end);
-								break;
-							}
-						}
-					}
-
-				}
-			}
+			
+			//upd segments
+			//upd remains
+			remains.deleteNewEdgesOnPlane(chain);
+//			for (Vertex begin : actualSegment.edges.keySet()) {
+//				for (Vertex end : actualSegment.edges.keySet()) {
+//					for (int i = 0; i < faces.size(); i++) {
+//						if (faces.get(i).edges.get(begin) != null) {
+//							if (faces.get(i).edges.get(begin).containsKey(end)) {
+//								remains.deleteEdge(begin, end);
+//								break;
+//							}
+//						}
+//					}
+//
+//				}
+//			}
 			
 //			for (Vertex begin : actualSegment.edges.keySet()) {
-//				if (remains.edges.get(begin) == null) continue;
-//				if (remains.edges.get(begin).isEmpty())
-//					return true;
+//			if (remains.edges.get(begin) == null) continue;
+//			if (remains.edges.get(begin).isEmpty())
+//				return true;
 //			}
+			
+			//find segment
 			segment.clear();
-			allSegmentsNumber = segment.size();
-			segmentNumber = allSegmentsNumber - 1;
-			for (Vertex begin : remains.edges.keySet()) {
-				if (visited.contains(begin) || remains.edges.get(begin).isEmpty())
-					continue;
-				allSegmentsNumber++;
-				segmentNumber++;
-				segment.add(new Graph());
-				segment.get(segmentNumber).addVertex(begin);
-				visited.add(begin);
-				remains.dfsFindSegments(begin, segmentNumber, allSegmentsNumber, visited, verticesOnPlane,
-						segment, null);
-			}
+			findSegments(segment, remains, verticesOnPlane);
 			
 		}
 		return true;
+	}
+
+	private void deleteNewEdgesOnPlane(ArrayList<Vertex> chain) {
+		for (int i = 0; i < chain.size() - 1; i++) {
+			this.deleteEdge(chain.get(i), chain.get(i + 1));
+			this.deleteEdge(chain.get(i + 1), chain.get(i));
+		}
+		
+	}
+
+	private void addChain(HashSet<Vertex> verticesOnPlane, ArrayList<Vertex> chain, Graph actualSegment) {
+		for (int i = 0; i < chain.size() - 1; i++) {
+			verticesOnPlane.add(chain.get(i));
+			this.addEdge(chain.get(i), chain.get(i + 1),
+					actualSegment.edges.get(chain.get(i)).get(chain.get(i + 1)).getLength());
+			this.addEdge(chain.get(i + 1), chain.get(i),
+					actualSegment.edges.get(chain.get(i)).get(chain.get(i + 1)).getLength());
+		}
+		
+	}
+
+	private void deleteEmptyVertexUndirGraph() {
+		ArrayList<Vertex> deleteV = new ArrayList<Vertex>();
+		for (Vertex v : this.edges.keySet()) {
+			if (this.edges.get(v).isEmpty()) 
+				deleteV.add(v);
+		}
+		for (int i = 0; i < deleteV.size(); i++) {
+			this.deleteVertex(deleteV.get(i));
+		}
+		
+	}
+
+	private void splitActualFace(Vertex chainStart, Vertex chainEnd, Graph newFace1, Graph newFace2) {
+		Vertex tmp = chainStart;
+		HashSet<Vertex> prev = new HashSet<Vertex>();
+		while (tmp != chainEnd) {
+			prev.add(tmp);
+			for (Vertex end : this.edges.get(tmp).keySet()) {
+				if (prev.contains(end)) {
+					continue;
+				}
+				newFace2.addEdge(tmp, end, this.edges.get(tmp).get(end).getLength());
+				newFace2.addEdge(end, tmp, this.edges.get(tmp).get(end).getLength());
+				newFace1.deleteEdge(tmp, end);
+				newFace1.deleteEdge(end, tmp);
+				tmp = end;
+				break;
+			}
+		}
+		
+	}
+
+	private int findActualFace(Graph actualSegment, HashSet<Vertex> verticesOnPlane, ArrayList<Graph> faces) {
+		HashSet<Vertex> connectedVertexInSegment = new HashSet<Vertex>();
+		boolean vertexInFace = true;
+		for (Vertex v : actualSegment.edges.keySet()) {
+			if (verticesOnPlane.contains(v)) {
+				connectedVertexInSegment.add(v);
+			}
+		}
+		for (int j = 0; j < faces.size(); j++) {
+			vertexInFace = true;
+			for (Vertex ver : connectedVertexInSegment) {
+				if (!faces.get(j).edges.containsKey(ver))
+					vertexInFace = false;
+			}
+			if (vertexInFace) {
+				return j;
+			}
+		}		
+		return -1;
+	}
+
+	private int facesNumberOfSegment(Graph segment, HashSet<Vertex> verticesOnPlane,
+			ArrayList<Graph> faces) {
+		int ans = 0;
+		boolean vertexInFace = true;
+		HashSet<Vertex> connectedVertexInSegment = new HashSet<Vertex>();
+		for (Vertex conVertex : segment.edges.keySet()) {
+			if (verticesOnPlane.contains(conVertex)) {
+				connectedVertexInSegment.add(conVertex);
+			}
+		}
+		for (int j = 0; j < faces.size(); j++) {
+			vertexInFace = true;
+			for (Vertex ver : connectedVertexInSegment) {
+				if (!faces.get(j).edges.containsKey(ver))
+					vertexInFace = false;
+			}
+			if (vertexInFace)
+				ans++;
+		}
+		return ans;
+	}
+
+	private void findSegments(ArrayList<Graph> segment, Graph remains, HashSet<Vertex> verticesOnPlane) {
+		HashSet<Vertex> visited = new HashSet<Vertex>();
+		int segmentNumber = segment.size() - 1;
+		int allSegmentsNumber = segment.size();
+		for (Vertex begin : remains.edges.keySet()) {
+			if (visited.contains(begin) || remains.edges.get(begin).isEmpty())
+				continue;
+			allSegmentsNumber++;
+			segmentNumber++;
+			segment.add(new Graph());
+			segment.get(segmentNumber).addVertex(begin);
+			visited.add(begin);
+			remains.dfsFindSegments(begin, segmentNumber, allSegmentsNumber, visited, verticesOnPlane, segment, null);
+		}
+	}
+
+	private void addEdgesNotOnPlane(HashSet<Vertex> component, ArrayList<Graph> faces, Graph undirGraph) {
+		for (Vertex begin : component) {
+			for (Vertex end : component) {
+				for (int i = 0; i < faces.size(); i++) {
+					
+					if (faces.get(i).edges.get(begin) != null && faces.get(i).edges.get(begin).containsKey(end)) {
+						continue;
+					}
+					if (undirGraph.edges.get(begin).containsKey(end)) {
+						this.addEdge(begin, end, undirGraph.edges.get(begin).get(end).getLength());
+					}
+				}
+			}
+		}
 	}
 
 	private boolean dfsFindChain(Vertex begin, Vertex chainEnd, Graph actualSegment, ArrayList<Vertex> chain,
