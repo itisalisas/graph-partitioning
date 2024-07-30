@@ -93,6 +93,10 @@ public class Graph {
 
 	}
 
+	public long verticesWeight() {
+		return verticesArray().stream().mapToLong(Vertex::getWeight).sum();
+	}
+
 
 	public void addEdge(Vertex begin, Vertex end, double length, int bandwidth) {
 		addVertex(begin);

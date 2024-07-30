@@ -1,9 +1,12 @@
 package partitioningGraph;
 
 import java.util.Objects;
+import java.util.Random;
 
 
 public class Vertex {
+
+	static private final Random random = new Random();
 
 	private long name;
 	private Point point;
@@ -12,17 +15,17 @@ public class Vertex {
 	public Vertex() {
 		this.name = -1;
 		this.point = new Point();
-		this.weight = ((int) Math.random() * 30 ) + 10;
+		this.weight = random.nextInt(10, 40);
 	}
 	public Vertex(long name) {
 		this.name = name;
 		this.point = new Point();
-		this.weight = ((int) Math.random() * 30 ) + 10;
+		this.weight = random.nextInt(10, 40);
 	}
 	public Vertex(long name, Point point) {
 		this.name = name;
 		this.point = point;
-		this.weight = ((int) Math.random() * 30 ) + 10;
+		this.weight = random.nextInt(10, 40);
 	}
 
 	public Vertex(long name, Point point, int weight) {
