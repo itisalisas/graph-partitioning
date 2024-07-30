@@ -42,6 +42,7 @@ public class Graph {
 		}
 		return result;
 	}
+
 	/*
 	 * file format: n (Vertices number) name x y (of Vertex) n1 (Number of out
 	 * edges) name1 x1 y1 (of out vertex) length1 (edge length) ... long double x2
@@ -104,13 +105,11 @@ public class Graph {
 
 	}
 
-
 	public void addEdge(Vertex begin, Vertex end, double length, int bandwidth) {
 		addVertex(begin);
 		addVertex(end);
 		edges.get(begin).put(end, new Edge(length, bandwidth));
 	}
-
 
 	public void addEdge(Vertex begin, Vertex end, double length) {
 		addVertex(begin);
@@ -133,8 +132,7 @@ public class Graph {
 		return edges.size();
 	}
 
-
-	public List<Vertex> verticesArray(){
+	public List<Vertex> verticesArray() {
 		return edges.keySet().stream().toList();
 	}
 
@@ -151,7 +149,8 @@ public class Graph {
 		EdgeOfGraph[] ans = new EdgeOfGraph[edgesNumber()];
 		for (Vertex begin : edges.keySet()) {
 			for (Vertex end : edges.get(begin).keySet()) {
-				ans[iter++] = new EdgeOfGraph(begin, end, edges.get(begin).get(end).getLength(), edges.get(begin).get(end).flow, edges.get(begin).get(end).getBandwidth());
+				ans[iter++] = new EdgeOfGraph(begin, end, edges.get(begin).get(end).getLength(),
+						edges.get(begin).get(end).flow, edges.get(begin).get(end).getBandwidth());
 			}
 		}
 		return ans;
@@ -174,15 +173,16 @@ public class Graph {
 	private boolean componentIsPlanar(Graph undirGraph, HashSet<Vertex> vertexInComponent) throws IOException {
 		// make new components if there is bridge an check them
 		// check component
-		//undir - edgesNumber x2
+		// undir - edgesNumber x2
 		int edgesNumber = undirGraph.edgesNumberInCompanentUndirGraph(vertexInComponent);
 		// component = tree
 		if (this.undirTree(edgesNumber, vertexInComponent.size()))
 			return true;
-		//cutBridges for new component
+		// cutBridges for new component
 		cutBridges(undirGraph, vertexInComponent);
-		ArrayList<HashSet<Vertex>> componentsWithoutBridges = makeNewComponentsWithoutBridges(undirGraph, vertexInComponent);
-		
+		ArrayList<HashSet<Vertex>> componentsWithoutBridges = makeNewComponentsWithoutBridges(undirGraph,
+				vertexInComponent);
+
 		// checking components which connective & not tree & without bridge
 		for (int i = 0; i < componentsWithoutBridges.size(); i++) {
 			if (!gammaAlgorithm(componentsWithoutBridges.get(i), undirGraph))
@@ -229,49 +229,50 @@ public class Graph {
 	}
 
 	private boolean gammaAlgorithm(HashSet<Vertex> component, Graph undirGraph) throws IOException {
-		//small component, number of vertices less 4 => trivial go on Plane
+		// small component, number of vertices less 4 => trivial go on Plane
 		if (component.size() <= 3) {
 			return true;
 		}
-		
-		//init gammaAlgorithm
+
+		// init gammaAlgorithm
 		HashSet<Vertex> verticesOnPlane = new HashSet<Vertex>();
 		ArrayList<Graph> faces = new ArrayList<Graph>();
-		
-		//no cycle = > tree => trivial go on Plane
-		//add cycle to first 2 faces
+
+		// no cycle = > tree => trivial go on Plane
+		// add cycle to first 2 faces
 		boolean cycle = findСycle(undirGraph, component, faces);
 		if (!cycle)
 			return true;
-		
-		//add vertices in face on plane
+
+		// add vertices in face on plane
 		for (Vertex inCycle : faces.get(0).edges.keySet()) {
 			verticesOnPlane.add(inCycle);
 		}
-		
+
 		// edges not on plane
 		Graph remains = new Graph();
 		remains.addEdgesNotOnPlane(component, faces, undirGraph);
-		
+
 //		for (Vertex begin : component) {
 //			if (remains.edges.get(begin) == null) continue;
 //			if (remains.edges.get(begin).isEmpty())
 //				return true;
 //		}
-		
+
 		// init segments and find segment (f)
 		ArrayList<Graph> segment = new ArrayList<Graph>();
 		findSegments(segment, remains, verticesOnPlane);
-		
+
 		//
 		while (segment.size() > 0) {
 			System.out.println(segment.size());
 			// count connection vertex & fasesNumberForSegment
-			//find min number of faces for segment
-			//if min number == 0 => not planar
+			// find min number of faces for segment
+			// if min number == 0 => not planar
 			int minFacesNumber = 0;
 			int iterMinFacesNumber = 0;
-			int facesNumber = 0;;
+			int facesNumber = 0;
+			;
 			for (int i = 0; i < segment.size(); i++) {
 				facesNumber = facesNumberOfSegment(segment.get(i), verticesOnPlane, faces);
 				if (facesNumber == 0) {
@@ -291,24 +292,23 @@ public class Graph {
 					iterMinFacesNumber = i;
 				}
 			}
-			System.out.println("init actual face segment" );
-			//init actual segment
+			System.out.println("init actual face segment");
+			// init actual segment
 			Graph actualSegment = segment.get(iterMinFacesNumber);
 			segment.remove(iterMinFacesNumber);
-			
-			//init actual face 
+
+			// init actual face
 			Graph actualFace = null;
-			int actualFaceNum = findActualFace(actualSegment, verticesOnPlane, faces);	
+			int actualFaceNum = findActualFace(actualSegment, verticesOnPlane, faces);
 			if (actualFaceNum != -1) {
 				actualFace = faces.get(actualFaceNum);
 				faces.remove(actualFaceNum);
 			} else {
 				return false;
 			}
-			
 
-			System.out.println("find chain" );
-			//init and find chain
+			System.out.println("find chain");
+			// init and find chain
 			Vertex chainStart = null;
 			Vertex chainEnd = null;
 			chainStart = findVertexForChain(verticesOnPlane, actualSegment, chainStart, chainEnd);
@@ -319,34 +319,32 @@ public class Graph {
 			HashSet<Vertex> visited = new HashSet<Vertex>();
 			dfsFindChain(chainStart, chainEnd, actualSegment, chain, false, null, visited);
 
-
 			// add chain
-			//init new faces
+			// init new faces
 			Graph newFace1 = new Graph();
 			newFace1 = actualFace.clone();
 			Graph newFace2 = new Graph();
 
-
-			System.out.println("split face" );
-			//split actualFace
+			System.out.println("split face");
+			// split actualFace
 			actualFace.splitActualFace(chainStart, chainEnd, newFace1, newFace2);
 
-			//check empty Vertex
+			// check empty Vertex
 			newFace1.deleteEmptyVertexUndirGraph();
 			newFace2.deleteEmptyVertexUndirGraph();
-			
-			//add chain to new faces
+
+			// add chain to new faces
 			newFace1.addChain(verticesOnPlane, chain, actualSegment);
 			newFace2.addChain(verticesOnPlane, chain, actualSegment);
-			
-			//add new faces on plane
+
+			// add new faces on plane
 			faces.add(newFace1);
 			faces.add(newFace2);
-			
-			//upd segments
-			//upd remains
 
-			System.out.println("upd remains" );
+			// upd segments
+			// upd remains
+
+			System.out.println("upd remains");
 			remains.deleteNewEdgesOnPlane(chain);
 //			for (Vertex begin : actualSegment.edges.keySet()) {
 //				for (Vertex end : actualSegment.edges.keySet()) {
@@ -361,19 +359,19 @@ public class Graph {
 //
 //				}
 //			}
-			
+
 //			for (Vertex begin : actualSegment.edges.keySet()) {
 //			if (remains.edges.get(begin) == null) continue;
 //			if (remains.edges.get(begin).isEmpty())
 //				return true;
 //			}
-			
-			//find segment
+
+			// find segment
 			segment.clear();
 
-			System.out.println("upd segments" );
+			System.out.println("upd segments");
 			findSegments(segment, remains, verticesOnPlane);
-			
+
 		}
 		return true;
 	}
@@ -383,7 +381,7 @@ public class Graph {
 			this.deleteEdge(chain.get(i), chain.get(i + 1));
 			this.deleteEdge(chain.get(i + 1), chain.get(i));
 		}
-		
+
 	}
 
 	private void addChain(HashSet<Vertex> verticesOnPlane, ArrayList<Vertex> chain, Graph actualSegment) {
@@ -394,19 +392,19 @@ public class Graph {
 			this.addEdge(chain.get(i + 1), chain.get(i),
 					actualSegment.edges.get(chain.get(i)).get(chain.get(i + 1)).getLength());
 		}
-		
+
 	}
 
 	private void deleteEmptyVertexUndirGraph() {
 		ArrayList<Vertex> deleteV = new ArrayList<Vertex>();
 		for (Vertex v : this.edges.keySet()) {
-			if (this.edges.get(v).isEmpty()) 
+			if (this.edges.get(v).isEmpty())
 				deleteV.add(v);
 		}
 		for (int i = 0; i < deleteV.size(); i++) {
 			this.deleteVertex(deleteV.get(i));
 		}
-		
+
 	}
 
 	private void splitActualFace(Vertex chainStart, Vertex chainEnd, Graph newFace1, Graph newFace2) {
@@ -417,16 +415,17 @@ public class Graph {
 			for (Vertex end : this.edges.get(tmp).keySet()) {
 				if (prev.contains(end)) {
 					continue;
+				} else {
+					newFace2.addEdge(tmp, end, this.edges.get(tmp).get(end).getLength());
+					newFace2.addEdge(end, tmp, this.edges.get(tmp).get(end).getLength());
+					newFace1.deleteEdge(tmp, end);
+					newFace1.deleteEdge(end, tmp);
+					tmp = end;
+					break;
 				}
-				newFace2.addEdge(tmp, end, this.edges.get(tmp).get(end).getLength());
-				newFace2.addEdge(end, tmp, this.edges.get(tmp).get(end).getLength());
-				newFace1.deleteEdge(tmp, end);
-				newFace1.deleteEdge(end, tmp);
-				tmp = end;
-				break;
 			}
 		}
-		
+
 	}
 
 	private int findActualFace(Graph actualSegment, HashSet<Vertex> verticesOnPlane, ArrayList<Graph> faces) {
@@ -446,12 +445,11 @@ public class Graph {
 			if (vertexInFace) {
 				return j;
 			}
-		}		
+		}
 		return -1;
 	}
 
-	private int facesNumberOfSegment(Graph segment, HashSet<Vertex> verticesOnPlane,
-			ArrayList<Graph> faces) {
+	private int facesNumberOfSegment(Graph segment, HashSet<Vertex> verticesOnPlane, ArrayList<Graph> faces) {
 		int ans = 0;
 		boolean vertexInFace = true;
 		HashSet<Vertex> connectedVertexInSegment = new HashSet<Vertex>();
@@ -492,7 +490,7 @@ public class Graph {
 		for (Vertex begin : component) {
 			for (Vertex end : component) {
 				for (int i = 0; i < faces.size(); i++) {
-					
+
 					if (faces.get(i).edges.get(begin) != null && faces.get(i).edges.get(begin).containsKey(end)) {
 						continue;
 					}
@@ -537,7 +535,7 @@ public class Graph {
 				if (chainStart == null) {
 					chainStart = v;
 					return chainStart;
-				} else if (!v.equals(chainStart)){
+				} else if (!v.equals(chainStart)) {
 					chainEnd = v;
 					return chainEnd;
 				}
@@ -551,7 +549,8 @@ public class Graph {
 	private void dfsFindSegments(Vertex begin, int segmentNumber, int allSegmentsNumber, HashSet<Vertex> visited,
 			HashSet<Vertex> verticesOnPlane, ArrayList<Graph> segment, Vertex prev) {
 		visited.add(begin);
-		if (edges.get(begin) == null) return;
+		if (edges.get(begin) == null)
+			return;
 		for (Vertex end : edges.get(begin).keySet()) {
 			segment.get(segmentNumber).addEdge(begin, end, edges.get(begin).get(end).getLength());
 			segment.get(segmentNumber).addEdge(end, begin, edges.get(begin).get(end).getLength());
@@ -582,7 +581,7 @@ public class Graph {
 			}
 			if (cycle)
 				break;
-			
+
 			break;
 
 		}
@@ -611,7 +610,7 @@ public class Graph {
 		if (cycle)
 			return true;
 		if (prev != null)
-		used.put(begin, 0);
+			used.put(begin, 0);
 		path.add(begin);
 		for (Vertex end : undirGraph.edges.get(begin).keySet()) {
 			if (end.equals(prev)) {
@@ -635,7 +634,8 @@ public class Graph {
 
 	private void dfsCompanentsWithoutBridges(Graph undirGraph, HashSet<Vertex> vertexInComponent, Vertex begin,
 			HashSet<Vertex> actualComp, HashSet<Vertex> visited) {
-		if (undirGraph.edges.get(begin) == null) return; 
+		if (undirGraph.edges.get(begin) == null)
+			return;
 		for (Vertex end : undirGraph.edges.get(begin).keySet()) {
 			if (visited.contains(end)) {
 				continue;
@@ -659,7 +659,7 @@ public class Graph {
 				dfsBridges(undirGraph, vertexInComponent, begin, null, used, timer, tin, fup, bridges);
 			}
 		}
-		for (int i = 0 ; i < bridges.size(); i++) {
+		for (int i = 0; i < bridges.size(); i++) {
 			undirGraph.deleteEdge(bridges.get(i).getBegin(), bridges.get(i).getEnd());
 			undirGraph.deleteEdge(bridges.get(i).getEnd(), bridges.get(i).getBegin());
 		}
@@ -667,7 +667,8 @@ public class Graph {
 	}
 
 	private void dfsBridges(Graph undirGraph, HashSet<Vertex> vertexInComponent, Vertex begin, Vertex prev,
-			HashSet<Vertex> used, int timer, HashMap<Vertex, Integer> tin, HashMap<Vertex, Integer> fup, ArrayList<EdgeOfGraph> bridges) {
+			HashSet<Vertex> used, int timer, HashMap<Vertex, Integer> tin, HashMap<Vertex, Integer> fup,
+			ArrayList<EdgeOfGraph> bridges) {
 		used.add(begin);
 		timer++;
 		tin.put(begin, timer);

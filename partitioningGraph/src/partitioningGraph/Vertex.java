@@ -40,6 +40,9 @@ public class Vertex {
 	public int getWeight() {
 		return weight;
 	}
+	public void setWeight(int weight) {
+		this.weight = weight;
+	}
 	@Override
 	public boolean equals(Object obj) {
 		if (obj == this) return true;

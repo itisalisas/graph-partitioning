@@ -8,7 +8,7 @@ public class EdgeOfGraph extends Edge {
 		this.begin = begin;
 		this.end = end;
 	}
-	public EdgeOfGraph(Vertex begin,Vertex end, double length, double flow, int bandwidth) {
+	public EdgeOfGraph(Vertex begin, Vertex end, double length, double flow, int bandwidth) {
 		super(length, flow, bandwidth);
 		this.begin = begin;
 		this.end = end;
