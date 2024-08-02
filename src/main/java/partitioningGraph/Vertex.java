@@ -15,17 +15,17 @@ public class Vertex {
 	public Vertex() {
 		this.name = -1;
 		this.point = new Point();
-		this.weight = random.nextInt(10, 40);
+		this.weight = random.nextInt(10, 11);
 	}
 	public Vertex(long name) {
 		this.name = name;
 		this.point = new Point();
-		this.weight = random.nextInt(10, 40);
+		this.weight = random.nextInt(10, 11);
 	}
 	public Vertex(long name, Point point) {
 		this.name = name;
 		this.point = point;
-		this.weight = random.nextInt(10, 40);
+		this.weight = random.nextInt(10, 11);
 	}
 
 	public Vertex(long name, Point point, int weight) {
