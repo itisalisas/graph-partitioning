@@ -43,6 +43,9 @@ public class Vertex {
 	public int getWeight() {
 		return weight;
 	}
+	public void setWeight(int weight) {
+		this.weight = weight;
+	}
 	@Override
 	public boolean equals(Object obj) {
 		if (obj == this) return true;
@@ -54,5 +57,8 @@ public class Vertex {
 	@Override
 	public int hashCode() {
 		return Objects.hash(name, point.getX(), point.getY());
+	}
+	public double getLength(Vertex v) {
+		return Math.sqrt(Math.pow(this.getPoint().getX() - v.getPoint().getX(), 2) + Math.pow(this.getPoint().getY() - v.getPoint().getY(), 2));
 	}
 }
