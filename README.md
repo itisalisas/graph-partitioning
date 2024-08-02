@@ -22,7 +22,7 @@ The program takes the following arguments in the command line:
 
 - `algorithm-name`: The type of the algorithm to use for partitioning. Currently, the supported algorithm is "Inertial Flow", which can be specified as `IF`.
 
-- `path-to-file`: The path to the input file that describes the graph to be partitioned. The file should be in the following format: `<vertex-id> <x-coordinate> <y-coordinate> <number-of-edges> <edge-1-id> <edge-1-x-coordinate> <edge-1-y-coordinate> <edge-1-weight> ...`
+- `path-to-file`: The path to the input file that describes the graph to be partitioned.
 
 - `max-sum-vertices-weight`: The maximum total weight of the vertices in the partition parts.
 
