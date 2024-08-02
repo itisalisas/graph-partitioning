@@ -1,10 +1,7 @@
 package partitioningGraph;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
@@ -26,8 +23,10 @@ public class Graph {
 
 	public Vertex readVertex(Scanner sc) {
 		long name = sc.nextLong();
-		double x = sc.nextDouble();
-		double y = sc.nextDouble();
+		String xStr = sc.next().replace(',', '.');
+		String yStr = sc.next().replace(',', '.');
+		double x = Double.parseDouble(xStr);
+		double y = Double.parseDouble(yStr);
 		return addVertex(new Vertex(name, new Point(x, y)));
 	}
 
@@ -63,7 +62,8 @@ public class Graph {
 			ni = sc.nextInt();
 			for (int j = 0; j < ni && sc.hasNext(); j++) {
 				vj = readVertex(sc);
-				length = sc.nextDouble();
+				String lengthStr = sc.next().replace(',', '.');
+				length = Double.parseDouble(lengthStr);
 				edges.get(vi).put(vj, new Edge(length));
 			}
 		}
@@ -86,6 +86,15 @@ public class Graph {
 
 	}
 
+	public void writePartitionToFile(HashSet<Vertex> partition, File outFile) throws IOException {
+		FileWriter out = new FileWriter(outFile, false);
+		out.write(String.format("%d\n", partition.size()));
+		for (Vertex v : partition) {
+			out.write(String.format("%d %f %f %d\n", v.getName(), v.getPoint().getX(), v.getPoint().getY(), v.getWeight()));
+		}
+		out.close();
+	}
+
 	public void readGraphFromOSM(Point center, int dist) {
 
 	}
@@ -104,6 +113,11 @@ public class Graph {
 		}
 
 	}
+
+	public long verticesWeight() {
+		return verticesArray().stream().mapToLong(Vertex::getWeight).sum();
+	}
+
 
 	public void addEdge(Vertex begin, Vertex end, double length, int bandwidth) {
 		addVertex(begin);
