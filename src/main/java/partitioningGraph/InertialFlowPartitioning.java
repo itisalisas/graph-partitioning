@@ -12,7 +12,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
     private final double PARAMETER;
 
-    private final int MAX_VERTICES_NUMBER = 1000;
+    private int MAX_SUM_VERTICES_WEIGHT;
 
     public InertialFlowPartitioning() {
         this.PARAMETER = 0.25;
@@ -59,8 +59,8 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             );
 
     @Override
-    public ArrayList<HashSet<Vertex>> balancedPartitionAlgorithm(Graph graph, int maxVerticesNumber,
-                                                            int maxSumVerticesWeight) {
+    public ArrayList<HashSet<Vertex>> balancedPartitionAlgorithm(Graph graph, int maxSumVerticesWeight) {
+        this.MAX_SUM_VERTICES_WEIGHT = maxSumVerticesWeight;
         balancedPartitionAlgorithmHelper(graph);
         return partition;
     }
@@ -68,10 +68,11 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
     private void balancedPartitionAlgorithmHelper(Graph graph) {
 
         List<Vertex> vertices = new ArrayList<>(graph.verticesArray());
-        if (graph.verticesNumber() < MAX_VERTICES_NUMBER) {
+        if (graph.verticesWeight() < MAX_SUM_VERTICES_WEIGHT) {
             partition.add(new HashSet<>(graph.verticesArray()));
             return;
         }
+
         long maxIndex = vertices.stream().max(Comparator.comparingLong(Vertex::getName)).get().getName();
         List<FlowResult> results = new ArrayList<>();
 
@@ -82,11 +83,28 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                 return line.isVertical ? projected.getY() : projected.getX();
             }));
 
-            int sourceLimit = (int) (PARAMETER * vertices.size());
-            int sinkLimit = vertices.size() - sourceLimit;
+            int totalWeight = vertices.stream().mapToInt(Vertex::getWeight).sum();
 
-            Set<Vertex> sourceSet = new HashSet<>(vertices.subList(0, sourceLimit));
-            Set<Vertex> sinkSet = new HashSet<>(vertices.subList(sinkLimit, vertices.size()));
+            int targetWeight = (int) (PARAMETER * totalWeight);
+            int sourceLimit = 0;
+            int sinkLimit = vertices.size() - 1;
+
+            Set<Vertex> sourceSet = new HashSet<>();
+            Set<Vertex> sinkSet = new HashSet<>();
+
+            int sourceWeight = 0, sinkWeight = 0;
+            while (sourceWeight + vertices.get(sourceLimit).getWeight() <= targetWeight) {
+                sourceSet.add(vertices.get(sourceLimit));
+                sourceLimit++;
+                sourceWeight += vertices.get(sourceLimit - 1).getWeight();
+            }
+
+            while (sinkWeight + vertices.get(sinkLimit).getWeight() <= targetWeight) {
+                sinkSet.add(vertices.get(sinkLimit));
+                sinkLimit--;
+                sinkWeight += vertices.get(sinkLimit + 1).getWeight();
+            }
+
             Vertex source = new Vertex(maxIndex + 1);
             Vertex sink = new Vertex(maxIndex + 2);
 
@@ -248,9 +266,6 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                     double pushed = dfs(to, Math.min(flow, edge.getBandwidth() - edge.flow));
                     if (pushed > 0) {
                         edge.flow += pushed;
-                        if (graph.getEdges().get(to).containsKey(vertex)) {
-                            graph.getEdges().get(to).get(vertex).flow -= pushed;
-                        }
                         return pushed;
                     }
                 }
