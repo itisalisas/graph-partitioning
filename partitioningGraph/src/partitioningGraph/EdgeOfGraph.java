@@ -33,16 +33,16 @@ public class EdgeOfGraph extends Edge {
 		return Objects.hash(begin, end);
 	}
 	public boolean intersect(EdgeOfGraph edge) {
-		return intrsectForOneCoordinate(this.begin.getPoint().getX(), this.end.getPoint().getX(), edge.begin.getPoint().getX(), edge.end.getPoint().getX()) 
-				&& intrsectForOneCoordinate(this.begin.getPoint().getY(), this.end.getPoint().getY(), edge.begin.getPoint().getY(), edge.end.getPoint().getY())
-				&& this.area(edge.begin.getPoint()) * this.area(edge.end.getPoint()) <= 0
-				&& edge.area(this.begin.getPoint()) * edge.area(this.end.getPoint()) <= 0;
+		return intersectForOneCoordinate(this.begin.getPoint().getX(), this.end.getPoint().getX(), edge.begin.getPoint().getX(), edge.end.getPoint().getX()) 
+				&& intersectForOneCoordinate(this.begin.getPoint().getY(), this.end.getPoint().getY(), edge.begin.getPoint().getY(), edge.end.getPoint().getY())
+				&& this.area(edge.begin.getPoint()) * this.area(edge.end.getPoint()) < 0
+				&& edge.area(this.begin.getPoint()) * edge.area(this.end.getPoint()) < 0;
 	}
 	private double area(Point point) {
 		return (this.end.getPoint().getX() - this.begin.getPoint().getX()) * (point.getY() - this.begin.getPoint().getY())
 				- (this.end.getPoint().getY() - this.begin.getPoint().getY()) * (point.getX() - this.begin.getPoint().getX());
 	}
-	private boolean intrsectForOneCoordinate(double bx1, double ex1,double bx2, double ex2) {
+	private boolean intersectForOneCoordinate(double bx1, double ex1,double bx2, double ex2) {
 		double tmp = 0;
 		if (bx1 > ex1) {
 			tmp = bx1;
@@ -57,7 +57,7 @@ public class EdgeOfGraph extends Edge {
 		return Math.max(bx1, bx2) <= Math.min(ex1, ex2);
 	}
 	public Vertex intersectionPoint(EdgeOfGraph edge) {
-		if (intersect(edge)) return null;
+		if (!intersect(edge)) return null;
 		if (this.getBegin().getPoint().getX() == this.getEnd().getPoint().getX() && edge.getBegin().getPoint().getX() == edge.getEnd().getPoint().getX()) {
 			if (this.getBegin().getPoint().getX() != edge.getBegin().getPoint().getX() ||
 					(Math.max(this.getBegin().getPoint().getY(), this.getEnd().getPoint().getY()) < Math.min(edge.getBegin().getPoint().getY(), edge.getEnd().getPoint().getY())

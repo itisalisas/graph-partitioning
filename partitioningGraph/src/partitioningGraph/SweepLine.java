@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.TreeSet;
 
 public class SweepLine {
 	double inaccuracy;
@@ -39,15 +38,16 @@ public class SweepLine {
 				Vertex end1 = minEnd(intersectionPoint.getPoint().getX(), edgesVertices.get(edgesList[i]));
 				Vertex end2 = minEnd(edgesList[i].getBegin().getPoint().getX() < edgesList[i].getEnd().getPoint().getX() ? edgesList[i].getBegin().getPoint().getX() : edgesList[i].getEnd().getPoint().getX(),
 						edgesVertices.get(intersectionPoints.get(i).get(j)));
+
 				edgesVertices.get(edgesList[i]).add(intersectionPoint);
 				edgesVertices.get(intersectionPoints.get(i).get(j)).add(intersectionPoint);
 				gph.addVertex(intersectionPoint);
-				if (edgesList[i].getBegin().getPoint().getX() > edgesList[i].getBegin().getPoint().getX()) {
+				if (edgesList[i].getBegin().getPoint().getX() > edgesList[i].getEnd().getPoint().getX()) {
 					Vertex tmp = begin1;
 					begin1 = end1;
 					end1 = tmp;
 				}
-				if (intersectionPoints.get(i).get(j).getBegin().getPoint().getX() > intersectionPoints.get(i).get(j).getBegin().getPoint().getX()) {
+				if (intersectionPoints.get(i).get(j).getBegin().getPoint().getX() > intersectionPoints.get(i).get(j).getEnd().getPoint().getX()) {
 					Vertex tmp = begin2;
 					begin2 = end2;
 					end2 = tmp;
@@ -66,10 +66,10 @@ public class SweepLine {
 		if (arrayList.isEmpty()) return null;
 		Vertex ans = new Vertex(0, new Point(-1, -1));
 		for (int i = 0; i < arrayList.size(); i++) {
-			if (x < arrayList.get(i).getPoint().getX() && arrayList.get(i).getPoint().getX() == -1) {
+			if (x < arrayList.get(i).getPoint().getX() && ans.getPoint().getX() == -1) {
 				ans = arrayList.get(i);
 			}
-			if (x < arrayList.get(i).getPoint().getX() && arrayList.get(i).getPoint().getX() < ans.getPoint().getX()) {
+			if ( ans.getPoint().getX() != -1 && x < arrayList.get(i).getPoint().getX() && arrayList.get(i).getPoint().getX() < ans.getPoint().getX()) {
 				ans = arrayList.get(i);
 			}	
 		}
@@ -85,7 +85,7 @@ public class SweepLine {
 		}
 		return ans;
 	}
-	private HashMap<Integer, ArrayList<EdgeOfGraph>> findPointsOfIntersection(EdgeOfGraph[] edgesList) {
+	public HashMap<Integer, ArrayList<EdgeOfGraph>> findPointsOfIntersection(EdgeOfGraph[] edgesList) {
 		HashMap<Integer, ArrayList<EdgeOfGraph>> intersectionPoints = new HashMap <Integer, ArrayList<EdgeOfGraph>>();
 		ArrayList<Action> actions = initActions(edgesList);
 		Collections.sort(actions, new Comparator<Action>() {
@@ -114,14 +114,14 @@ public class SweepLine {
 				actualEdge.add(edgesList[actions.get(i).getEdgeNum()]);
 			} else {
 				actualEdge.remove(edgesList[actions.get(i).getEdgeNum()]);
-				for (EdgeOfGraph edge : actualEdge) {				
-					if (edgesList[actions.get(i).getEdgeNum()].intersect(edge)) {
-						intersectionPoints.get(actions.get(i).getEdgeNum()).add(edge);
-					}
-				}
+//				for (EdgeOfGraph edge : actualEdge) {				
+//					if (edgesList[actions.get(i).getEdgeNum()].intersect(edge)) {
+//						intersectionPoints.get(actions.get(i).getEdgeNum()).add(edge);
+//					}
+//				}
 			}
 		}
-		return null;
+		return intersectionPoints;
 	}
 	
 
