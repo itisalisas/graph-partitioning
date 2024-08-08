@@ -19,4 +19,4 @@ test {
     useJUnitPlatform()
 }
 
-mainClassName = 'partitioningGraph.Main'
+mainClassName = 'Main'
