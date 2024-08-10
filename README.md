@@ -21,8 +21,6 @@ file format: 	n (Vertices number)
 		long double x2		long 			long double x2		 double
 ```
 
-Graphs 
-
 ## Usage
 
 
