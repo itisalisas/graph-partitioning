@@ -2,6 +2,7 @@
 
 ## Table of Contents
 - [Description](#description)
+- [File format](#file format)
 - [Usage](#usage)
 - [License](#license)
 
@@ -10,6 +11,17 @@
 
 This is an application designed for balanced partitioning of planar graphs using various algorithms.
 The project considers algorithms "Inertial Flow" and "Bubble algorithm" and/or their modifications.
+
+## File format
+
+Input or output files with graphs in the format:
+```bash
+file format: 	n (Vertices number)
+		name x y (of Vertex) n1 (Number of outedges) name1 x1 y1 (of out vertex) length1 (edge length) ...
+		long double x2		long 			long double x2		 double
+```
+
+Graphs 
 
 ## Usage
 
