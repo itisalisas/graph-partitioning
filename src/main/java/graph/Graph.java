@@ -261,7 +261,7 @@ public class Graph {
 	}
 
 
-	public ArrayList<HashSet<Vertex>> splitForConnectivityComponents() {
+	public ArrayList<HashSet<Vertex>> splitForСonnectedComponents() {
 		// make undirected
 		Graph undirGraph = makeUndirectedGraph();
 		ArrayList<HashSet<Vertex>> component = new ArrayList<HashSet<Vertex>>();
@@ -305,5 +305,39 @@ public class Graph {
 			}
 		}
 		return graph;
+	}
+	public void dfsBridges(HashSet<Vertex> vertexInComponent, Vertex begin, Vertex prev,
+			HashSet<Vertex> used, int timer, HashMap<Vertex, Integer> inTime, HashMap<Vertex, Integer> returnTime,
+			ArrayList<EdgeOfGraph> bridges) {
+		used.add(begin);
+		timer++;
+		inTime.put(begin, timer);
+		returnTime.put(begin, timer);
+		if (edges.get(begin) == null) {
+			return;
+		}
+		for (Vertex out : edges.get(begin).keySet()) {
+			if (!vertexInComponent.contains(out))
+				continue;
+			if (out.equals(prev))
+				continue;
+			if (used.contains(out)) {
+				if (inTime.containsKey(out) && inTime.get(out) < returnTime.get(begin)) {
+					returnTime.replace(begin, returnTime.get(begin), inTime.get(out));
+				}
+			} else {
+				this.dfsBridges(vertexInComponent, out, begin, used, timer, inTime, returnTime, bridges);
+				if (returnTime.containsKey(out) && returnTime.get(out) < returnTime.get(begin)) {
+					returnTime.replace(begin, returnTime.get(begin), returnTime.get(out));
+				}
+				if (!returnTime.containsKey(out) || (returnTime.containsKey(out) && inTime.get(begin) < returnTime.get(out))) {
+					// delete bridge
+					bridges.add(new EdgeOfGraph(begin, out, edges.get(begin).get(out).getLength()));
+//					undirGraph.deleteEdge(begin, out);
+//					undirGraph.deleteEdge(out, begin);
+				}
+
+			}
+		}
 	}
 }

@@ -40,7 +40,7 @@ public class Main {
         Graph graph = new Graph();
 
 		try {
-			graph.readGraphFromFile(pathToFile);
+			graph.readGraphFromFile("src\\main\\resources\\" + pathToFile);
 		} catch (Exception e) {
 			throw new RuntimeException("Can't read graph from file");
 		}
@@ -58,7 +58,7 @@ public class Main {
 
 		String outputDirectory = args[3];
 
-		File outputDirectoryFile = new File(outputDirectory);
+		File outputDirectoryFile = new File("src\\main\\output\\" + outputDirectory);
 		if (!outputDirectoryFile.exists()) {
 			if (!outputDirectoryFile.mkdirs()) {
 				throw new RuntimeException("Can't create output directory");
@@ -66,7 +66,7 @@ public class Main {
 		}
 
 		for (int i = 0; i < partitionResult.size(); i++) {
-			File outputFile = new File(outputDirectory + File.separator + "partition_" + i + ".txt");
+			File outputFile = new File("src\\main\\output\\" + outputDirectory + File.separator + "partition_" + i + ".txt");
 			try {
 				outputFile.createNewFile();
 			} catch (IOException e) {
