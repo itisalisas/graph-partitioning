@@ -2,7 +2,7 @@
 
 ## Table of Contents
 - [Description](#description)
-- [File format](#file format)
+- [File format](#fileformat)
 - [Usage](#usage)
 - [License](#license)
 
