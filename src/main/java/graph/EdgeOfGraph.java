@@ -35,8 +35,8 @@ public class EdgeOfGraph extends Edge {
 	public boolean intersect(EdgeOfGraph edge) {
 		return intersectForOneCoordinate(this.begin.getPoint().getX(), this.end.getPoint().getX(), edge.begin.getPoint().getX(), edge.end.getPoint().getX()) 
 				&& intersectForOneCoordinate(this.begin.getPoint().getY(), this.end.getPoint().getY(), edge.begin.getPoint().getY(), edge.end.getPoint().getY())
-				&& this.area(edge.begin.getPoint()) * this.area(edge.end.getPoint()) < 0
-				&& edge.area(this.begin.getPoint()) * edge.area(this.end.getPoint()) < 0;
+				&& this.area(edge.begin.getPoint()) * this.area(edge.end.getPoint()) <= 0
+				&& edge.area(this.begin.getPoint()) * edge.area(this.end.getPoint()) <= 0;
 	}
 	private double area(Point point) {
 		return (this.end.getPoint().getX() - this.begin.getPoint().getX()) * (point.getY() - this.begin.getPoint().getY())
@@ -90,5 +90,17 @@ public class EdgeOfGraph extends Edge {
 		if (this.getBegin().getPoint().getX() == this.getEnd().getPoint().getX()) return this.getBegin().getPoint().getY();
 		return this.getBegin().getPoint().getY() + (this.getEnd().getPoint().getY() - this.getBegin().getPoint().getY()) 
 				* (x - this.getBegin().getPoint().getX()) / (this.getEnd().getPoint().getX() - this.getBegin().getPoint().getX()) ;
+	}
+	public boolean vertical() {
+		return this.getBegin().getPoint().getX() == this.getEnd().getPoint().getX();
+	}
+	public boolean includeForY(Vertex vert) {
+		return (vert.getPoint().getY() - this.begin.getPoint().getY()) * (vert.getPoint().getY() - this.end.getPoint().getY()) < 0;
+	}
+	public boolean horizontal() {
+		return this.getBegin().getPoint().getY() == this.getEnd().getPoint().getY();
+	}
+	public boolean includeForX(Vertex vert) {
+		return (vert.getPoint().getX() - this.begin.getPoint().getX()) * (vert.getPoint().getX() - this.end.getPoint().getX()) < 0;
 	}
 }

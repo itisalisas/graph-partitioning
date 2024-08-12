@@ -19,4 +19,11 @@ public class Point {
 	public double getY() {
 		return y;
 	}
+	@Override
+	public boolean equals(Object obj) {
+		if (obj == this) return true;
+		if ((obj == null) || (obj.getClass() != this.getClass())) return false;
+		Point v = (Point) obj;
+		return v.getX() == this.getX() && v.getY() == this.getY();
+	}
 }
