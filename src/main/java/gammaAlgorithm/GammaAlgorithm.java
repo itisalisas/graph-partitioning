@@ -12,7 +12,7 @@ public class GammaAlgorithm {
 	}
 	public boolean isPlanar(Graph gph) throws IOException {
 		// split for connectivity components
-		ArrayList<HashSet<Vertex>> component = gph.splitForСonnectedComponents();
+		ArrayList<HashSet<Vertex>> component = gph.splitForConnectedComponents();
 		// check each component
 		int n = component.size();
 		// make undirected

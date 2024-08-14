@@ -1,10 +1,8 @@
 package sweepLine;
 
 import graph.*;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
+
+import java.util.*;
 
 public class SweepLine {
 	double inaccuracy;
@@ -15,13 +13,13 @@ public class SweepLine {
 
 	public void makePlanar(Graph gph) {
 		EdgeOfGraph[] edgesList = gph.edgesArray();
-		ArrayList<ArrayList<Vertex>> intersectionPoints = findPointsOfIntersection(edgesList);
+		ArrayList<LinkedList<Vertex>> intersectionPoints = findPointsOfIntersection(edgesList);
 		addIntersectionPoints(gph, edgesList, intersectionPoints);
 
 	}
 
 	private void addIntersectionPoints(Graph gph, EdgeOfGraph[] edgesList,
-			ArrayList<ArrayList<Vertex>> intersectionPoints) {
+			ArrayList<LinkedList<Vertex>> intersectionPoints) {
 		for (int i = 0; i < edgesList.length; i++) {
 			if (intersectionPoints.get(i) == null
 					|| (intersectionPoints.get(i) != null && intersectionPoints.get(i).size() == 0)) {
@@ -132,10 +130,10 @@ public class SweepLine {
 
 	}
 
-	public ArrayList<ArrayList<Vertex>> findPointsOfIntersection(EdgeOfGraph[] edgesList) {
-		ArrayList<ArrayList<Vertex>> intersectionPoints = new ArrayList<ArrayList<Vertex>>();
+	public ArrayList<LinkedList<Vertex>> findPointsOfIntersection(EdgeOfGraph[] edgesList) {
+		ArrayList<LinkedList<Vertex>> intersectionPoints = new ArrayList<LinkedList<Vertex>>();
 		for (int i = 0; i < edgesList.length; i++) {
-			intersectionPoints.add(new ArrayList<Vertex>());
+			intersectionPoints.add(new LinkedList<Vertex>());
 		}
 		ArrayList<Action> actions = initActions(edgesList);
 		Collections.sort(actions, new Comparator<Action>() {

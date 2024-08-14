@@ -36,7 +36,9 @@ public class Graph {
 		for (Vertex begin : this.edges.keySet()) {
 			result.edges.put(begin, new HashMap<Vertex, Edge>());
 			for (Vertex end : this.edges.get(begin).keySet()) {
-				result.edges.get(begin).put(end, this.edges.get(begin).get(end));
+				Edge originalEdge = this.edges.get(begin).get(end);
+				Edge copyOfEdge = new Edge(originalEdge.getLength(), originalEdge.getBandwidth());
+				result.edges.get(begin).put(end, copyOfEdge);
 			}
 		}
 		return result;
@@ -261,7 +263,7 @@ public class Graph {
 	}
 
 
-	public ArrayList<HashSet<Vertex>> splitForСonnectedComponents() {
+	public ArrayList<HashSet<Vertex>> splitForConnectedComponents() {
 		// make undirected
 		Graph undirGraph = makeUndirectedGraph();
 		ArrayList<HashSet<Vertex>> component = new ArrayList<HashSet<Vertex>>();
@@ -340,4 +342,31 @@ public class Graph {
 			}
 		}
 	}
+
+	public Graph createSubgraph(Set<Vertex> verticesOfSubgraph) {
+		Graph subgraph = new Graph();
+		List<EdgeOfGraph> edges = Arrays.stream(edgesArray()).toList();
+		List<Vertex> vertices = new ArrayList<>(verticesArray());
+
+		for (Vertex vertex : vertices) {
+			if (verticesOfSubgraph.contains(vertex)) {
+				subgraph.addVertex(new Vertex(vertex.getName(), vertex.getPoint()));
+			}
+		}
+
+		for (EdgeOfGraph edge : edges) {
+			EdgeOfGraph newEdge;
+			if (verticesOfSubgraph.contains(edge.getBegin()) && verticesOfSubgraph.contains(edge.getEnd())) {
+				newEdge = new EdgeOfGraph(edge.getBegin(), edge.getEnd(), edge.getLength());
+				subgraph.addEdge(newEdge.getBegin(), newEdge.getEnd(), newEdge.getLength());
+			}
+		}
+
+		return subgraph;
+	}
+
+	boolean isConnected() {
+		return splitForConnectedComponents().size() == 1;
+	}
+
 }
