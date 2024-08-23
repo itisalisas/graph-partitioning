@@ -4,6 +4,7 @@
 - [Description](#description)
 - [File format](#fileformat)
 - [Usage](#usage)
+- [Scripts](#scripts)
 - [License](#license)
 
 
@@ -53,11 +54,15 @@ cd graph-partitioning
 Example:
 
 ```bash
-C:\Users\Lenovo\eclipse-workspace\graph-partitioning>gradlew build
-
-C:\Users\Lenovo\eclipse-workspace\graph-partitioning> gradlew run --args="IF dataExample\\graph_59.93893094417527_30.32268115454809_1500.txt 1000 59.93893094417527_30.32268115454809_1500"
+./ gradlew run --args="IF dataExample\\graph_59.93893094417527_30.32268115454809_1500.txt 1000 59.93893094417527_30.32268115454809_1500"
 
 ```
+
+##Scripts
+
+### AdjacencyListFromOSM
+
+This is an application for getting the adjacency list of a graph from OpenStreetMaps. It is necessary to select the coordinates of the center and the distance around to determine the area from where information about the graph is extracted. The graph format is an adjacency list, see the "file format" for more details.
 
 ## License
 
