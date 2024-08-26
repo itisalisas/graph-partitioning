@@ -1,9 +1,6 @@
 package partitioning;
 
-import graph.Edge;
-import graph.Graph;
-import graph.Point;
-import graph.Vertex;
+import graph.*;
 import org.junit.jupiter.api.Assertions;
 
 import java.util.*;

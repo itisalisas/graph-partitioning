@@ -88,8 +88,9 @@ public class Graph {
 
 	}
 
-	public void writePartitionToFile(HashSet<Vertex> partition, File outFile) throws IOException {
+	public void writePartitionToFile(HashSet<Vertex> partition, Double cutWeight, File outFile) throws IOException {
 		FileWriter out = new FileWriter(outFile, false);
+		out.write(String.format("%f\n", cutWeight));
 		out.write(String.format("%d\n", partition.size()));
 		for (Vertex v : partition) {
 			out.write(String.format("%d %f %f %d\n", v.getName(), v.getPoint().getX(), v.getPoint().getY(), v.getWeight()));
