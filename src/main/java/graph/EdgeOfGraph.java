@@ -62,7 +62,8 @@ public class EdgeOfGraph extends Edge {
 			if (this.getBegin().getPoint().getX() != edge.getBegin().getPoint().getX() ||
 					(Math.max(this.getBegin().getPoint().getY(), this.getEnd().getPoint().getY()) < Math.min(edge.getBegin().getPoint().getY(), edge.getEnd().getPoint().getY())
 							|| Math.min(this.getBegin().getPoint().getY(), this.getEnd().getPoint().getY()) > Math.max(edge.getBegin().getPoint().getY(), edge.getEnd().getPoint().getY()))) {
-				return new Vertex(0, new Point(-1, -1));
+				//System.out.println("one edge higher then other");
+				return null;
 			}
 			return new Vertex(0, new Point(this.getBegin().getPoint().getX(), 
 					Math.max(this.getBegin().getPoint().getY(), this.getEnd().getPoint().getY()) 
@@ -82,7 +83,8 @@ public class EdgeOfGraph extends Edge {
 		double b2 = edge.getBegin().getPoint().getY() - k2 * edge.getBegin().getPoint().getX();		
 		
 		if (k1 == k2) {
-			return new Vertex(0, new Point(-1, -1));
+			//System.out.println("parallel");
+			return null;
 		}
 		return new Vertex(0, new Point((b2 - b1) / (k1 - k2), this.getYForEdge((b2 - b1) / (k1 - k2))));
 	}
