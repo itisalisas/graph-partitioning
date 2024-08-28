@@ -1,4 +1,4 @@
-package gammaAlgorithm;
+package graphPreparation;
 
 import graph.*;
 import java.io.IOException;

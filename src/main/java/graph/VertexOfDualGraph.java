@@ -4,15 +4,16 @@ import java.util.HashSet;
 
 public class VertexOfDualGraph extends Vertex{
 	private HashSet<Vertex> verticesOfFace;
-	boolean clockwise;
 	public VertexOfDualGraph(Vertex center, int weightSum, HashSet<Vertex> verticesOfFace) {
 		super(center.getName(), center.getPoint(), weightSum);
-		this.verticesOfFace = verticesOfFace;
+		this.verticesOfFace = new HashSet<Vertex>();
+		this.verticesOfFace.addAll(verticesOfFace);
 	}
 	
 	public VertexOfDualGraph(long name, Vertex center, int weightSum, HashSet<Vertex> verticesOfFace) {
 		super(name, center.getPoint(), weightSum);
-		this.verticesOfFace = verticesOfFace;
+		this.verticesOfFace = new HashSet<Vertex>();
+		this.verticesOfFace.addAll(verticesOfFace);
 	}
 
 	public static Vertex findCenter(HashSet<Vertex> vertexIn) {
@@ -41,6 +42,11 @@ public class VertexOfDualGraph extends Vertex{
 		for (Vertex v : vertexIn) {
 			sum = sum + v.getWeight();
 		}
-		return 0;
+		return sum;
 	}
+
+	public HashSet<Vertex> getVerticesOfFace() {
+		return verticesOfFace;
+	}
+
 }

@@ -1,4 +1,4 @@
-package makingDualGraph;
+package graphPreparation;
 
 import java.util.Comparator;
 import java.util.HashMap;
@@ -12,10 +12,15 @@ import graph.Vertex;
 import graph.VertexOfDualGraph;
 
 public class MakingDualGraph {
+	private HashMap<Vertex, VertexOfDualGraph> comparison;
 	public MakingDualGraph() {
-
+		this.comparison = new HashMap<Vertex, VertexOfDualGraph>();
 	}
 
+	public HashMap<Vertex, VertexOfDualGraph> getComparison() {
+		return this.comparison;
+	}
+	
 	public Graph buildDualGraph(Graph gph) {
 		Graph res = new Graph();
 		Graph undir = gph.makeUndirectedGraph();
@@ -61,6 +66,7 @@ public class MakingDualGraph {
 			VertexOfDualGraph vert = new VertexOfDualGraph(vertName, VertexOfDualGraph.findCenter(verticesOfFace),
 					VertexOfDualGraph.sumVertexWeight(verticesOfFace), verticesOfFace);
 			res.addVertex(vert);
+			comparison.put(vert, vert);
 			for (EdgeOfGraph edge : inActualFace) {
 				inFace.put(edge, vert);
 			}
@@ -80,7 +86,6 @@ public class MakingDualGraph {
 		sortedGraph.get(prev).remove(firstEdge);
 		while (!(begin.equals(firstEdge.getBegin()) && !prev.equals(firstEdge.getEnd()))) {
 			if (sortedGraph.get(begin).isEmpty()) {
-				System.out.println("no possible edges in face finding");
 				return;
 			}
 			EdgeOfGraph back = new EdgeOfGraph(begin, prev, begin.getLength(prev));
