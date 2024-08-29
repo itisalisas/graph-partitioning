@@ -344,30 +344,35 @@ public class Graph {
 		}
 	}
 	
-	public Graph createSubgraph(Set<Vertex> verticesOfSubgraph) {
-		Graph subgraph = new Graph();
-		List<EdgeOfGraph> edges = Arrays.stream(edgesArray()).toList();
-		List<Vertex> vertices = new ArrayList<>(verticesArray());
+	  public Graph createSubgraph(Set<Vertex> verticesOfSubgraph) {
+		    Graph subgraph = new Graph();
+		    List<EdgeOfGraph> edges = Arrays.stream(edgesArray()).toList();
+		    List<Vertex> vertices = new ArrayList<>(verticesArray());
 
-		for (Vertex vertex : vertices) {
-			if (verticesOfSubgraph.contains(vertex)) {
-				subgraph.addVertex(new Vertex(vertex.getName(), vertex.getPoint()));
-			}
-		}
+		    for (Vertex vertex : vertices) {
+		      if (verticesOfSubgraph.contains(vertex)) {
+		        boolean flag = false;
+		        for (Vertex v : getEdges().get(vertex).keySet()) {
+		          if (verticesOfSubgraph.contains(v)) {
+		            flag = true;
+		            break;
+		          }
+		        }
+		        if (!flag) {
+		          subgraph.addVertex(new Vertex(vertex.getName(), vertex.getPoint(), vertex.getWeight()));
+		        }
+		      }
+		    }
 
-		for (EdgeOfGraph edge : edges) {
-			EdgeOfGraph newEdge;
-			if (verticesOfSubgraph.contains(edge.getBegin()) && verticesOfSubgraph.contains(edge.getEnd())) {
-				newEdge = new EdgeOfGraph(edge.getBegin(), edge.getEnd(), edge.getLength());
-				subgraph.addEdge(newEdge.getBegin(), newEdge.getEnd(), newEdge.getLength());
-			}
-		}
+		    for (EdgeOfGraph edge : edges) {
+		      EdgeOfGraph newEdge;
+		      if (verticesOfSubgraph.contains(edge.getBegin()) && verticesOfSubgraph.contains(edge.getEnd())) {
+		        newEdge = new EdgeOfGraph(edge.getBegin(), edge.getEnd(), edge.getLength());
+		        subgraph.addEdge(newEdge.getBegin(), newEdge.getEnd(), newEdge.getLength());
+		      }
+		    }
 
-		return subgraph;
-	}
-
-	boolean isConnected() {
-		return splitForConnectedComponents().size() == 1;
-	}
+		    return subgraph;
+		  }
 
 }
