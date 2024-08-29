@@ -1,18 +1,15 @@
 package partitioning;
 
-import org.junit.jupiter.api.Assertions;
 import graph.*;
+import org.junit.jupiter.api.Assertions;
+
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs {
 
-    private final ArrayList<HashSet<Vertex>> partition = new ArrayList<>();
-
     private final double PARAMETER;
-
-    private int MAX_SUM_VERTICES_WEIGHT;
 
     public InertialFlowPartitioning() {
         this.PARAMETER = 0.25;
@@ -23,6 +20,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
     }
 
     // lines kx - y = 0
+    // TODO : change to Direction
     private static class Line {
         Point secondPoint;
         boolean isVertical;
@@ -56,74 +54,117 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             new Line(new Point(1, 0)),
             new Line(new Point(1, 1)),
             new Line(new Point(1, -1))
-            );
+    );
 
-    @Override
-    public ArrayList<HashSet<Vertex>> balancedPartitionAlgorithm(Graph graph, int maxSumVerticesWeight) {
-        this.MAX_SUM_VERTICES_WEIGHT = maxSumVerticesWeight;
-        balancedPartitionAlgorithmHelper(graph);
-        return partition;
+    private Graph getLargestConnectedComponent(Graph graph) {
+        List<HashSet<Vertex>> connectivityComponents = graph.makeUndirectedGraph().splitForConnectedComponents();
+        HashSet<Vertex> largestComponent = connectivityComponents.stream().max(Comparator.comparingInt(HashSet::size)).orElseThrow();
+        return graph.createSubgraph(largestComponent);
     }
 
-    private void balancedPartitionAlgorithmHelper(Graph graph) {
+    @Override
+    public void balancedPartitionAlgorithm(Graph graph, int maxSumVerticesWeight) {
 
-        List<Vertex> vertices = new ArrayList<>(graph.verticesArray());
-        if (graph.verticesWeight() < MAX_SUM_VERTICES_WEIGHT) {
-            partition.add(new HashSet<>(graph.verticesArray()));
-            return;
-        }
+        Stack<Graph> stack = new Stack<>();
+        graph = getLargestConnectedComponent(graph);
+        this.graph = graph;
 
-        long maxIndex = vertices.stream().max(Comparator.comparingLong(Vertex::getName)).get().getName();
-        List<FlowResult> results = new ArrayList<>();
+        stack.push(graph);
 
-        for (Line line : lines) {
+        while (!stack.isEmpty()) {
+            Graph currentGraph = stack.pop().makeUndirectedGraph();
+
+            List<Vertex> vertices = new ArrayList<>(currentGraph.verticesArray());
+            if (currentGraph.verticesWeight() < maxSumVerticesWeight) {
+                partition.add(new HashSet<>(currentGraph.verticesArray()));
+                continue;
+            }
+
+            Line bestLine = null;
+            double maxStretch = -1;
+
+            for (Line line : lines) {
+                vertices.sort(Comparator.comparing(v -> {
+                    Point p = v.getPoint();
+                    Point projected = line.projectPoint(p);
+                    return line.isVertical ? projected.getY() : projected.getX();
+                }));
+
+                double minProjection = line.isVertical
+                        ? line.projectPoint(vertices.get(0).getPoint()).getY()
+                        : line.projectPoint(vertices.get(0).getPoint()).getX();
+
+                double maxProjection = line.isVertical
+                        ? line.projectPoint(vertices.get(vertices.size() - 1).getPoint()).getY()
+                        : line.projectPoint(vertices.get(vertices.size() - 1).getPoint()).getX();
+
+                double stretch = maxProjection - minProjection;
+                if (stretch > maxStretch) {
+                    maxStretch = stretch;
+                    bestLine = line;
+                }
+            }
+
+            Line finalBestLine = bestLine;
             vertices.sort(Comparator.comparing(v -> {
                 Point p = v.getPoint();
-                Point projected = line.projectPoint(p);
-                return line.isVertical ? projected.getY() : projected.getX();
+                Point projected = finalBestLine.projectPoint(p);
+                return finalBestLine.isVertical ? projected.getY() : projected.getX();
             }));
 
+
             int totalWeight = vertices.stream().mapToInt(Vertex::getWeight).sum();
-
             int targetWeight = (int) (PARAMETER * totalWeight);
-            int sourceLimit = 0;
-            int sinkLimit = vertices.size() - 1;
 
-            Set<Vertex> sourceSet = new HashSet<>();
-            Set<Vertex> sinkSet = new HashSet<>();
-
-            int sourceWeight = 0, sinkWeight = 0;
-            while (sourceWeight + vertices.get(sourceLimit).getWeight() <= targetWeight) {
-                sourceSet.add(vertices.get(sourceLimit));
-                sourceLimit++;
-                sourceWeight += vertices.get(sourceLimit - 1).getWeight();
-            }
-
-            while (sinkWeight + vertices.get(sinkLimit).getWeight() <= targetWeight) {
-                sinkSet.add(vertices.get(sinkLimit));
-                sinkLimit--;
-                sinkWeight += vertices.get(sinkLimit + 1).getWeight();
-            }
+            long maxIndex = vertices.stream().max(Comparator.comparingLong(Vertex::getName)).get().getName();
 
             Vertex source = new Vertex(maxIndex + 1);
             Vertex sink = new Vertex(maxIndex + 2);
 
-            Graph copyGraph = copyGraph(graph, sourceSet, source, sinkSet, sink);
-            Assertions.assertEquals(graph.verticesNumber() + 2, copyGraph.verticesNumber());
+            Set<Vertex> sourceSet = selectVerticesForSet(vertices, 0, targetWeight, new HashSet<>(), currentGraph);
+            Set<Vertex> sinkSet = new HashSet<>();
+            int cnt = 1;
+            while (sinkSet.isEmpty()) {
+                sinkSet = selectVerticesForSet(vertices, vertices.size() - cnt, targetWeight, sourceSet, currentGraph);
+                cnt++;
+            }
+
+            Graph copyGraph = createGraphWithSourceSink(currentGraph, sourceSet, source, sinkSet, sink);
+            Assertions.assertEquals(currentGraph.verticesNumber() + 2, copyGraph.verticesNumber());
 
             MaxFlow maxFlow = new MaxFlow(copyGraph, source, sink);
-            FlowResult flowResult = maxFlow.dinic(line);
-            results.add(flowResult);
+            FlowResult flowResult = maxFlow.dinic();
+
+            List<Graph> subpartition = partitionGraph(flowResult);
+
+            for (Graph subgraph : subpartition) {
+                stack.push(subgraph);
+            }
         }
 
-        FlowResult bestFlow = results.stream().max(Comparator.comparing(FlowResult::getFlowSize)).orElseThrow();
+    }
 
-        List<Graph> subpartition = partitionGraph(bestFlow);
+    private Set<Vertex> selectVerticesForSet(List<Vertex> vertices, int startIndex, int targetWeight, Set<Vertex> dontUse, Graph graph) {
+        Set<Vertex> vertexSet = new HashSet<>();
+        int currentWeight = 0;
+        Queue<Vertex> queue = new LinkedList<>();
+        Vertex startVertex = vertices.get(startIndex);
+        queue.add(startVertex);
 
-        for (Graph subgraph : subpartition) {
-            balancedPartitionAlgorithmHelper(subgraph);
+        while (!queue.isEmpty() && currentWeight < targetWeight) {
+            Vertex current = queue.poll();
+            if (!vertexSet.contains(current) && !dontUse.contains(current) && Math.abs(vertices.indexOf(current) - startIndex) < vertices.size() / 2) {
+                vertexSet.add(current);
+                currentWeight += current.getWeight();
+                for (Vertex neighbor : graph.getEdges().get(current).keySet()) {
+                    if (!vertexSet.contains(neighbor) && !dontUse.contains(current)) {
+                        queue.add(neighbor);
+                    }
+                }
+            }
         }
 
+        return vertexSet;
     }
 
     private List<Graph> partitionGraph(FlowResult flow) {
@@ -132,25 +173,15 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
         List<Vertex> vertices = graph.verticesArray();
         Map<Vertex, Boolean> isConnectedWithSource = vertices.stream().collect(Collectors.toMap(Function.identity(), v -> Boolean.FALSE));
 
-        markComponent(graph, flow.source, isConnectedWithSource);
+        markComponent(graph, flow.source, isConnectedWithSource, flow.sink);
 
         graph.deleteVertex(flow.source);
         graph.deleteVertex(flow.sink);
-        subpartition.add(new Graph());
-        subpartition.add(new Graph());
-
-        for (Vertex vertex : graph.verticesArray()) {
-            subpartition.get(isConnectedWithSource.get(vertex) ? 1 : 0).addVertex(vertex);
-        }
 
         for (int i = 0; i < 2; i++) {
-            for (Vertex vertex : subpartition.get(i).verticesArray()) {
-                for (Map.Entry<Vertex, Edge> entry : graph.getEdges().get(vertex).entrySet()) {
-                        if (isConnectedWithSource.get(entry.getKey()) == isConnectedWithSource.get(vertex)) {
-                            subpartition.get(i).addEdge(vertex, entry.getKey(), entry.getValue().getLength());
-                        }
-                }
-            }
+            subpartition.add(graph.createSubgraph(i == 0 ?
+                    isConnectedWithSource.keySet().stream().filter(isConnectedWithSource::get).collect(Collectors.toSet()) :
+                    isConnectedWithSource.keySet().stream().filter(v -> !isConnectedWithSource.get(v)).collect(Collectors.toSet())));
         }
 
         Assertions.assertEquals(graph.verticesNumber(), subpartition.get(0).verticesNumber() + subpartition.get(1).verticesNumber());
@@ -158,14 +189,16 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
         return subpartition;
     }
 
-    void markComponent(Graph graph, Vertex source, Map<Vertex, Boolean> isConnectedWithSource) {
+
+    void markComponent(Graph graph, Vertex source, Map<Vertex, Boolean> isConnectedWithSource, Vertex sink) {
         LinkedList<Vertex> queue = new LinkedList<>();
         queue.add(source);
         isConnectedWithSource.put(source, true);
         while (!queue.isEmpty()) {
             Vertex vertex = queue.poll();
             for (Map.Entry<Vertex, Edge> connectedVertex : graph.getEdges().get(vertex).entrySet()) {
-                if (!isConnectedWithSource.get(connectedVertex.getKey()) && connectedVertex.getValue().flow != connectedVertex.getValue().getBandwidth()) {
+                if (!isConnectedWithSource.get(connectedVertex.getKey()) &&
+                        connectedVertex.getValue().flow < connectedVertex.getValue().getBandwidth()) {
                     isConnectedWithSource.put(connectedVertex.getKey(), true);
                     queue.add(connectedVertex.getKey());
                 }
@@ -174,124 +207,20 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
     }
 
-    public Graph copyGraph(Graph graph, Set<Vertex> sourceSet, Vertex source, Set<Vertex> sinkSet, Vertex sink) {
-        Graph newGraph = new Graph();
-        List<EdgeOfGraph> edges = Arrays.stream(graph.edgesArray()).toList();
-        List<Vertex> vertices = new ArrayList<>(graph.verticesArray());
-
-        for (Vertex vertex : vertices) {
-            newGraph.addVertex(new Vertex(vertex.getName(), vertex.getPoint()));
-        }
-
-        for (EdgeOfGraph edge : edges) {
-            EdgeOfGraph newEdge;
-            newEdge = new EdgeOfGraph(edge.getBegin(), edge.getEnd(), edge.getLength());
-            newGraph.addEdge(newEdge.getBegin(), newEdge.getEnd(), newEdge.getLength());
-        }
+    public Graph createGraphWithSourceSink(Graph graph, Set<Vertex> sourceSet, Vertex source, Set<Vertex> sinkSet, Vertex sink) {
+        Graph newGraph = graph.clone();
 
         for (Vertex s : sourceSet) {
             newGraph.addEdge(source, s, 0, Integer.MAX_VALUE);
+            newGraph.addEdge(s, source, 0, Integer.MAX_VALUE);
         }
 
         for (Vertex t : sinkSet) {
             newGraph.addEdge(t, sink, 0, Integer.MAX_VALUE);
+            newGraph.addEdge(sink, t, 0, Integer.MAX_VALUE);
         }
 
         return newGraph;
-
-    }
-
-    private static class MaxFlow {
-        Graph graph;
-        HashMap<Vertex, Integer> ptr;
-        Vertex source;
-        Vertex sink;
-        double flow;
-        HashMap<Vertex, Integer> level;
-        Queue<Vertex> queue;
-
-        public MaxFlow(Graph graph, Vertex source, Vertex sink) {
-            this.graph = graph;
-            this.source = source;
-            this.sink = sink;
-            this.ptr = new HashMap<>();
-            for (Vertex vertex : graph.verticesArray()) {
-                ptr.put(vertex, 0);
-            }
-            this.flow = 0;
-            this.level = new HashMap<>();
-            this.queue = new LinkedList<>();
-        }
-
-
-        public FlowResult dinic(Line line) {
-            while (bfs()) {
-                ptr.replaceAll((vertex, integer) -> 0);
-                double pushed;
-                while ((pushed = dfs(source, Integer.MAX_VALUE)) != 0) {
-                    flow += pushed;
-                }
-            }
-            return new FlowResult(line, flow, graph, source, sink);
-        }
-
-        private boolean bfs() {
-            for (Vertex v : graph.verticesArray()) {
-                level.put(v, Integer.MAX_VALUE);
-            }
-            level.put(source, 0);
-            queue.add(source);
-            while (!queue.isEmpty()) {
-                Vertex u = queue.peek();
-                queue.remove();
-                for (Map.Entry<Vertex, Edge> edge : graph.getEdges().get(u).entrySet()) {
-                    if (edge.getValue().flow < edge.getValue().getBandwidth() && level.get(edge.getKey()) == Integer.MAX_VALUE) {
-                        level.put(edge.getKey(), level.get(u) + 1);
-                        queue.add(edge.getKey());
-                    }
-                }
-            }
-            return level.get(sink) != Integer.MAX_VALUE;
-        }
-
-        private double dfs(Vertex vertex, double flow) {
-            if (vertex == sink || flow == 0) {
-                return flow;
-            }
-            for (; ptr.get(vertex) < graph.getEdges().get(vertex).size(); ptr.replace(vertex, ptr.get(vertex), ptr.get(vertex) + 1)) {
-                Map.Entry<Vertex, Edge> entry = graph.getEdges().get(vertex).entrySet().stream().toList().get(ptr.get(vertex));
-                Vertex to = entry.getKey();
-                Edge edge = entry.getValue();
-                if (level.get(to) == level.get(vertex) + 1 && edge.flow < edge.getBandwidth()) {
-                    double pushed = dfs(to, Math.min(flow, edge.getBandwidth() - edge.flow));
-                    if (pushed > 0) {
-                        edge.flow += pushed;
-                        return pushed;
-                    }
-                }
-            }
-            return 0;
-        }
-    }
-
-    private static class FlowResult {
-        Line line;
-        double flowSize;
-        Graph graphWithFlow;
-        Vertex source;
-        Vertex sink;
-
-        public FlowResult(Line line, double flow, Graph graph, Vertex source, Vertex sink) {
-            this.line = line;
-            this.flowSize = flow;
-            this.graphWithFlow = graph;
-            this.source = source;
-            this.sink = sink;
-        }
-
-        public double getFlowSize() {
-            return flowSize;
-        }
     }
 
 }

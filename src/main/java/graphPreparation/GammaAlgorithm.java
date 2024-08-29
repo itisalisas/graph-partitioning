@@ -10,9 +10,9 @@ public class GammaAlgorithm {
 	public GammaAlgorithm() {
 		
 	}
-	public boolean isPlanar(Graph gph) throws IOException {
+	public boolean isPlanar(Graph gph){
 		// split for connectivity components
-		ArrayList<HashSet<Vertex>> component = gph.splitForСonnectedComponents();
+		ArrayList<HashSet<Vertex>> component = gph.splitForConnectedComponents();
 		// check each component
 		int n = component.size();
 		// make undirected
@@ -24,7 +24,7 @@ public class GammaAlgorithm {
 		return true;
 	}
 	
-	private boolean componentIsPlanar(Graph undirGraph, HashSet<Vertex> vertexInComponent) throws IOException {
+	private boolean componentIsPlanar(Graph undirGraph, HashSet<Vertex> vertexInComponent) {
 		// make new components if there is bridge an check them
 		// check component
 		// undir - edgesNumber x2
@@ -98,7 +98,7 @@ public class GammaAlgorithm {
 		}
 
 	}
-	private boolean gammaAlgorithm(HashSet<Vertex> component, Graph undirGraph) throws IOException {
+	private boolean gammaAlgorithm(HashSet<Vertex> component, Graph undirGraph) {
 		// small component, number of vertices less 4 => trivial go on Plane
 		if (component.size() <= 3) {
 			return true;
