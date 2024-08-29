@@ -276,7 +276,7 @@ public class Graph {
 			} else {
 				actualComp.add(begin);
 				visited.add(begin);
-				undirGraph.dfsCompanents(begin, actualComp, visited);
+				undirGraph.dfsComponents(begin, actualComp, visited);
 				component.add(actualComp);
 				actualComp = new HashSet<Vertex>();
 			}
@@ -284,19 +284,24 @@ public class Graph {
 		return component;
 	}
 
-	private void dfsCompanents(Vertex begin, HashSet<Vertex> actualComp, HashSet<Vertex> visited) {
-		if (edges.get(begin) == null)
-			return;
-		for (Vertex end : edges.get(begin).keySet()) {
-			if (visited.contains(end)) {
-				continue;
-			} else {
-				actualComp.add(end);
-				visited.add(end);
-				this.dfsCompanents(end, actualComp, visited);
+	private void dfsComponents(Vertex begin, HashSet<Vertex> actualComp, HashSet<Vertex> visited) {
+		Stack<Vertex> stack = new Stack<>();
+		stack.push(begin);
+		visited.add(begin);
+
+		while (!stack.isEmpty()) {
+			Vertex current = stack.pop();
+			actualComp.add(current);
+
+			if (edges.get(current) != null) {
+				for (Vertex neighbor : edges.get(current).keySet()) {
+					if (!visited.contains(neighbor)) {
+						stack.push(neighbor);
+						visited.add(neighbor);
+					}
+				}
 			}
 		}
-
 	}
 
 	public Graph makeUndirectedGraph() {

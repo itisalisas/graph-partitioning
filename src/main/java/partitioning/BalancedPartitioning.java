@@ -124,11 +124,11 @@ public class BalancedPartitioning {
 			writer.write("MIN = " + minSumWeight + "\n");
 			writer.write("MAX = " + maxSumWeight + "\n");
 			writer.write("AVERAGE = " + wMean + "\n");
-			writer.write("VARIANCE = " + wVariance + "\n");
+			writer.write("VARIANCE = " + wStandardDeviation + "\n");
 			writer.write("CV = " + wStandardDeviation / wMean + "\n");
 			writer.write("TOTAL CUT LENGTH = " + calculateTotalCutEdgesLength() + "\n");
 			writer.write("AVERAGE CUT LENGTH = " + cutMean + "\n");
-			writer.write("VARIANCE CUT LENGTH = " + cutVariance + "\n");
+			writer.write("VARIANCE CUT LENGTH = " + cutStandardDeviation + "\n");
 			writer.write("CV CUT LENGTH = " + cutStandardDeviation / cutMean + "\n");
 			writer.write("TIME = " + partitioningTime + "\n");
 			writer.flush();
