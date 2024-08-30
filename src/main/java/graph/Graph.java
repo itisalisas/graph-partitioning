@@ -276,7 +276,7 @@ public class Graph {
 			} else {
 				actualComp.add(begin);
 				visited.add(begin);
-				undirGraph.dfsCompanents(begin, actualComp, visited);
+				undirGraph.dfsComponents(begin, actualComp, visited);
 				component.add(actualComp);
 				actualComp = new HashSet<Vertex>();
 			}
@@ -284,19 +284,24 @@ public class Graph {
 		return component;
 	}
 
-	private void dfsCompanents(Vertex begin, HashSet<Vertex> actualComp, HashSet<Vertex> visited) {
-		if (edges.get(begin) == null)
-			return;
-		for (Vertex end : edges.get(begin).keySet()) {
-			if (visited.contains(end)) {
-				continue;
-			} else {
-				actualComp.add(end);
-				visited.add(end);
-				this.dfsCompanents(end, actualComp, visited);
+	private void dfsComponents(Vertex begin, HashSet<Vertex> actualComp, HashSet<Vertex> visited) {
+		Stack<Vertex> stack = new Stack<>();
+		stack.push(begin);
+		visited.add(begin);
+
+		while (!stack.isEmpty()) {
+			Vertex current = stack.pop();
+			actualComp.add(current);
+
+			if (edges.get(current) != null) {
+				for (Vertex neighbor : edges.get(current).keySet()) {
+					if (!visited.contains(neighbor)) {
+						stack.push(neighbor);
+						visited.add(neighbor);
+					}
+				}
 			}
 		}
-
 	}
 
 	public Graph makeUndirectedGraph() {
@@ -344,35 +349,39 @@ public class Graph {
 		}
 	}
 	
-	  public Graph createSubgraph(Set<Vertex> verticesOfSubgraph) {
-		    Graph subgraph = new Graph();
-		    List<EdgeOfGraph> edges = Arrays.stream(edgesArray()).toList();
-		    List<Vertex> vertices = new ArrayList<>(verticesArray());
+	public Graph createSubgraph(Set<Vertex> verticesOfSubgraph) {
+		Graph subgraph = new Graph();
+		List<EdgeOfGraph> edges = Arrays.stream(edgesArray()).toList();
+		List<Vertex> vertices = new ArrayList<>(verticesArray());
 
-		    for (Vertex vertex : vertices) {
-		      if (verticesOfSubgraph.contains(vertex)) {
-		        boolean flag = false;
-		        for (Vertex v : getEdges().get(vertex).keySet()) {
-		          if (verticesOfSubgraph.contains(v)) {
-		            flag = true;
-		            break;
-		          }
-		        }
-		        if (!flag) {
-		          subgraph.addVertex(new Vertex(vertex.getName(), vertex.getPoint(), vertex.getWeight()));
-		        }
-		      }
-		    }
+		for (Vertex vertex : vertices) {
+		   if (verticesOfSubgraph.contains(vertex)) {
+			   boolean flag = false;
+		       for (Vertex v : getEdges().get(vertex).keySet()) {
+		           if (verticesOfSubgraph.contains(v)) {
+					   flag = true;
+		               break;
+				   }
+			   }
+			   if (!flag) {
+				   subgraph.addVertex(new Vertex(vertex.getName(), vertex.getPoint(), vertex.getWeight()));
+			   }
+		   }
+		}
 
-		    for (EdgeOfGraph edge : edges) {
-		      EdgeOfGraph newEdge;
-		      if (verticesOfSubgraph.contains(edge.getBegin()) && verticesOfSubgraph.contains(edge.getEnd())) {
-		        newEdge = new EdgeOfGraph(edge.getBegin(), edge.getEnd(), edge.getLength());
+		for (EdgeOfGraph edge : edges) {
+			EdgeOfGraph newEdge;
+			if (verticesOfSubgraph.contains(edge.getBegin()) && verticesOfSubgraph.contains(edge.getEnd())) {
+				newEdge = new EdgeOfGraph(edge.getBegin(), edge.getEnd(), edge.getLength());
 		        subgraph.addEdge(newEdge.getBegin(), newEdge.getEnd(), newEdge.getLength());
-		      }
-		    }
+			}
+		}
 
-		    return subgraph;
-		  }
+		return subgraph;
+	}
+
+	boolean isConnected() {
+		return splitForConnectedComponents().size() == 1;
+	}
 
 }

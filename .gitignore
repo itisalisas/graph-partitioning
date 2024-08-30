@@ -6,4 +6,5 @@
 .gradle
 build
 /partitioningGraph/
+out/
 src/main/output/*

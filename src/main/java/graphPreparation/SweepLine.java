@@ -2,11 +2,15 @@ package graphPreparation;
 
 import graph.*;
 
+<<<<<<< HEAD:src/main/java/graphPreparation/SweepLine.java
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedList;
+=======
+import java.util.*;
+>>>>>>> inertial-flow:src/main/java/sweepLine/SweepLine.java
 
 public class SweepLine {
 	double inaccuracy;
