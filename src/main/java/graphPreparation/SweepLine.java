@@ -1,12 +1,16 @@
-package sweepLine;
+package graphPreparation;
 
 import graph.*;
+
 
 import java.util.*;
 
 public class SweepLine {
 	double inaccuracy;
 
+	public SweepLine() {
+		this.inaccuracy = 0.00000000000001;
+	}
 	public SweepLine(double inaccuracy) {
 		this.inaccuracy = inaccuracy;
 	}
@@ -113,7 +117,6 @@ public class SweepLine {
 						gph.addEdge(intersectionPoints.get(i).get(j - uselessPointsNum - 1), edgesList[i].getEnd(),
 								intersectionPoints.get(i).get(j - uselessPointsNum - 1)
 										.getLength(edgesList[i].getEnd()));
-						System.out.println(1 + " " + uselessPointsNum);
 						break;
 
 					} else {
@@ -187,8 +190,10 @@ public class SweepLine {
 						} else {
 							Vertex intersecPoint = edgesList[actions.get(i).getEdgeNum()]
 									.intersectionPoint(actualEdge.get(edgeNum));
-							intersectionPoints.get(actions.get(i).getEdgeNum()).add(intersecPoint);
-							intersectionPoints.get(edgeNum).add(intersecPoint);
+							if (intersecPoint != null) {
+								intersectionPoints.get(actions.get(i).getEdgeNum()).add(intersecPoint);
+								intersectionPoints.get(edgeNum).add(intersecPoint);
+							}
 						}
 					}
 				}

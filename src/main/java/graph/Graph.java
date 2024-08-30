@@ -122,7 +122,7 @@ public class Graph {
 	}
 
 
-	public void addEdge(Vertex begin, Vertex end, double length, int bandwidth) {
+	public void addEdge(Vertex begin, Vertex end, double length, double bandwidth) {
 		addVertex(begin);
 		addVertex(end);
 		edges.get(begin).put(end, new Edge(length, bandwidth));
@@ -348,23 +348,32 @@ public class Graph {
 			}
 		}
 	}
-
+	
 	public Graph createSubgraph(Set<Vertex> verticesOfSubgraph) {
 		Graph subgraph = new Graph();
 		List<EdgeOfGraph> edges = Arrays.stream(edgesArray()).toList();
 		List<Vertex> vertices = new ArrayList<>(verticesArray());
 
 		for (Vertex vertex : vertices) {
-			if (verticesOfSubgraph.contains(vertex)) {
-				subgraph.addVertex(new Vertex(vertex.getName(), vertex.getPoint(), vertex.getWeight()));
-			}
+		   if (verticesOfSubgraph.contains(vertex)) {
+			   boolean flag = false;
+		       for (Vertex v : getEdges().get(vertex).keySet()) {
+		           if (verticesOfSubgraph.contains(v)) {
+					   flag = true;
+		               break;
+				   }
+			   }
+			   if (!flag) {
+				   subgraph.addVertex(new Vertex(vertex.getName(), vertex.getPoint(), vertex.getWeight()));
+			   }
+		   }
 		}
 
 		for (EdgeOfGraph edge : edges) {
 			EdgeOfGraph newEdge;
 			if (verticesOfSubgraph.contains(edge.getBegin()) && verticesOfSubgraph.contains(edge.getEnd())) {
 				newEdge = new EdgeOfGraph(edge.getBegin(), edge.getEnd(), edge.getLength());
-				subgraph.addEdge(newEdge.getBegin(), newEdge.getEnd(), newEdge.getLength());
+		        subgraph.addEdge(newEdge.getBegin(), newEdge.getEnd(), newEdge.getLength());
 			}
 		}
 

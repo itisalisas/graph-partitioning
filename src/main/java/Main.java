@@ -1,12 +1,14 @@
-import graph.Graph;
+import graph.*;
 import graph.Vertex;
 import partitioning.BalancedPartitioning;
 import partitioning.InertialFlowPartitioning;
+import graphPreparation.GraphPreparation;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.HashMap;
 
 public class Main {
 
@@ -55,7 +57,21 @@ public class Main {
 			throw new RuntimeException("Can't parse max sum vertices weight");
 		}
 
-		ArrayList<HashSet<Vertex>> partitionResult = partitioning.partition(graph, maxSumVerticesWeight);
+		GraphPreparation preparation = new GraphPreparation();
+		Graph preparedGraph = preparation.prepareGraph(graph, 0.00000000000001);
+		
+		ArrayList<HashSet<Vertex>> partitionResultForFaces;
+
+		partitionResultForFaces = partitioning.partition(preparedGraph, maxSumVerticesWeight);
+		
+		ArrayList<HashSet<Vertex>> partitionResult = new ArrayList<HashSet<Vertex>>();
+		HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph = preparation.getComparisonForDualGraph();
+		for (int i = 0; i < partitionResultForFaces.size(); i++) {
+			partitionResult.add(new HashSet<Vertex>());
+			for (Vertex face : partitionResultForFaces.get(i)) {
+				partitionResult.get(i).addAll(comparisonForDualGraph.get(face).getVerticesOfFace());
+			}
+		}
 
 		String pathToResultDirectory = args[3];
 

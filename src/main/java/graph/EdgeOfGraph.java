@@ -62,7 +62,8 @@ public class EdgeOfGraph extends Edge {
 			if (this.getBegin().getPoint().getX() != edge.getBegin().getPoint().getX() ||
 					(Math.max(this.getBegin().getPoint().getY(), this.getEnd().getPoint().getY()) < Math.min(edge.getBegin().getPoint().getY(), edge.getEnd().getPoint().getY())
 							|| Math.min(this.getBegin().getPoint().getY(), this.getEnd().getPoint().getY()) > Math.max(edge.getBegin().getPoint().getY(), edge.getEnd().getPoint().getY()))) {
-				return new Vertex(0, new Point(-1, -1));
+				//System.out.println("one edge higher then other");
+				return null;
 			}
 			return new Vertex(0, new Point(this.getBegin().getPoint().getX(), 
 					Math.max(this.getBegin().getPoint().getY(), this.getEnd().getPoint().getY()) 
@@ -82,7 +83,8 @@ public class EdgeOfGraph extends Edge {
 		double b2 = edge.getBegin().getPoint().getY() - k2 * edge.getBegin().getPoint().getX();		
 		
 		if (k1 == k2) {
-			return new Vertex(0, new Point(-1, -1));
+			//System.out.println("parallel");
+			return null;
 		}
 		return new Vertex(0, new Point((b2 - b1) / (k1 - k2), this.getYForEdge((b2 - b1) / (k1 - k2))));
 	}
@@ -102,5 +104,24 @@ public class EdgeOfGraph extends Edge {
 	}
 	public boolean includeForX(Vertex vert) {
 		return (vert.getPoint().getX() - this.begin.getPoint().getX()) * (vert.getPoint().getX() - this.end.getPoint().getX()) < 0;
+	}
+	
+	public double getCorner() {
+		if (this.end.getPoint().getX() - this.begin.getPoint().getX() > 0) {
+			return Math.atan((this.end.getPoint().getY() - this.begin.getPoint().getY())/
+					(this.end.getPoint().getX() - this.begin.getPoint().getX())) + Math.PI;
+		} else if (this.end.getPoint().getX() - this.begin.getPoint().getX() < 0) {
+			if (this.end.getPoint().getY() - this.begin.getPoint().getY() > 0) {
+				return Math.atan((this.end.getPoint().getY() - this.begin.getPoint().getY())/
+						(this.end.getPoint().getX() - this.begin.getPoint().getX())) + 2 * Math.PI;
+			} else {
+				return Math.atan((this.end.getPoint().getY() - this.begin.getPoint().getY())/
+						(this.end.getPoint().getX() - this.begin.getPoint().getX()));
+			}
+		} else if (this.end.getPoint().getY() - this.begin.getPoint().getY() > 0) {
+			return Math.PI / 2 + Math.PI;
+		} else {
+			return Math.PI / 2;
+		}
 	}
 }

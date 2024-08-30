@@ -1,4 +1,6 @@
-package sweepLine;
+package graphPreparation;
+
+import graphPreparation.ActionType;
 
 enum ActionType {
 	ADD, DELETE
