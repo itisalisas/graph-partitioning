@@ -356,7 +356,7 @@ public class Graph {
 
 		for (Vertex vertex : vertices) {
 			if (verticesOfSubgraph.contains(vertex)) {
-				subgraph.addVertex(new Vertex(vertex.getName(), vertex.getPoint()));
+				subgraph.addVertex(new Vertex(vertex.getName(), vertex.getPoint(), vertex.getWeight()));
 			}
 		}
 
