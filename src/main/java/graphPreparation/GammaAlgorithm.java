@@ -1,5 +1,6 @@
-package partitioningGraph;
+package graphPreparation;
 
+import graph.*;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -9,9 +10,9 @@ public class GammaAlgorithm {
 	public GammaAlgorithm() {
 		
 	}
-	public boolean isPlanar(Graph gph) throws IOException {
+	public boolean isPlanar(Graph gph){
 		// split for connectivity components
-		ArrayList<HashSet<Vertex>> component = gph.splitForConnectivityComponents();
+		ArrayList<HashSet<Vertex>> component = gph.splitForConnectedComponents();
 		// check each component
 		int n = component.size();
 		// make undirected
@@ -23,7 +24,7 @@ public class GammaAlgorithm {
 		return true;
 	}
 	
-	private boolean componentIsPlanar(Graph undirGraph, HashSet<Vertex> vertexInComponent) throws IOException {
+	private boolean componentIsPlanar(Graph undirGraph, HashSet<Vertex> vertexInComponent) {
 		// make new components if there is bridge an check them
 		// check component
 		// undir - edgesNumber x2
@@ -48,13 +49,13 @@ public class GammaAlgorithm {
 	}
 	private void cutBridges(Graph undirGraph, HashSet<Vertex> vertexInComponent) {
 		int timer = 0;
-		HashMap<Vertex, Integer> tin = new HashMap<Vertex, Integer>();
-		HashMap<Vertex, Integer> fup = new HashMap<Vertex, Integer>();
+		HashMap<Vertex, Integer> inTime = new HashMap<Vertex, Integer>();
+		HashMap<Vertex, Integer> returnTime = new HashMap<Vertex, Integer>();
 		HashSet<Vertex> used = new HashSet<Vertex>();
 		ArrayList<EdgeOfGraph> bridges = new ArrayList<EdgeOfGraph>();
 		for (Vertex begin : vertexInComponent) {
 			if (!used.contains(begin)) {
-				dfsBridges(undirGraph, vertexInComponent, begin, null, used, timer, tin, fup, bridges);
+				undirGraph.dfsBridges(vertexInComponent, begin, null, used, timer, inTime, returnTime, bridges);
 			}
 		}
 		for (int i = 0; i < bridges.size(); i++) {
@@ -63,40 +64,7 @@ public class GammaAlgorithm {
 		}
 
 	}
-	private void dfsBridges(Graph undirGraph, HashSet<Vertex> vertexInComponent, Vertex begin, Vertex prev,
-			HashSet<Vertex> used, int timer, HashMap<Vertex, Integer> tin, HashMap<Vertex, Integer> fup,
-			ArrayList<EdgeOfGraph> bridges) {
-		used.add(begin);
-		timer++;
-		tin.put(begin, timer);
-		fup.put(begin, timer);
-		if (undirGraph.getEdges().get(begin) == null) {
-			return;
-		}
-		for (Vertex out : undirGraph.getEdges().get(begin).keySet()) {
-			if (!vertexInComponent.contains(out))
-				continue;
-			if (out.equals(prev))
-				continue;
-			if (used.contains(out)) {
-				if (tin.containsKey(out) && tin.get(out) < fup.get(begin)) {
-					fup.replace(begin, fup.get(begin), tin.get(out));
-				}
-			} else {
-				dfsBridges(undirGraph, vertexInComponent, out, begin, used, timer, tin, fup, bridges);
-				if (fup.containsKey(out) && fup.get(out) < fup.get(begin)) {
-					fup.replace(begin, fup.get(begin), fup.get(out));
-				}
-				if (!fup.containsKey(out) || (fup.containsKey(out) && tin.get(begin) < fup.get(out))) {
-					// delete bridge
-					bridges.add(new EdgeOfGraph(begin, out, undirGraph.getEdges().get(begin).get(out).getLength()));
-//					undirGraph.deleteEdge(begin, out);
-//					undirGraph.deleteEdge(out, begin);
-				}
 
-			}
-		}
-	}
 	private ArrayList<HashSet<Vertex>> makeNewComponentsWithoutBridges(Graph undirGraph,
 			HashSet<Vertex> vertexInComponent) {
 		ArrayList<HashSet<Vertex>> componentsWithoutBridges = new ArrayList<HashSet<Vertex>>();
@@ -130,7 +98,7 @@ public class GammaAlgorithm {
 		}
 
 	}
-	private boolean gammaAlgorithm(HashSet<Vertex> component, Graph undirGraph) throws IOException {
+	private boolean gammaAlgorithm(HashSet<Vertex> component, Graph undirGraph) {
 		// small component, number of vertices less 4 => trivial go on Plane
 		if (component.size() <= 3) {
 			return true;

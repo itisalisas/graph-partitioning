@@ -1,4 +1,7 @@
-package partitioningGraph;
+package graphPreparation;
+
+import graphPreparation.ActionType;
+
 enum ActionType {
 	ADD, DELETE
 }

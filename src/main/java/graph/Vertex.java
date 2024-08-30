@@ -1,4 +1,4 @@
-package partitioningGraph;
+package graph;
 
 import java.util.Objects;
 import java.util.Random;

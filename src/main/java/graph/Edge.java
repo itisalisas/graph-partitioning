@@ -1,8 +1,8 @@
-package partitioningGraph;
+package graph;
 
 public class Edge {
 	private double length;
-	private int bandwidth;
+	private double bandwidth;
 	public double flow;
 	
 	public Edge() {
@@ -12,16 +12,16 @@ public class Edge {
 	}	
 	public Edge(double length) {
 		this.length = length;
-		this.bandwidth = 1;
+		this.bandwidth = length;
 		this.flow = 0;
 	}
 
-	public Edge(double length, int bandwidth) {
+	public Edge(double length, double bandwidth) {
 		this.length = length;
 		this.bandwidth = bandwidth;
 		this.flow = 0;
 	}
-	public Edge(double length, double flow, int bandwidth) {
+	public Edge(double length, double flow, double bandwidth) {
 		this.length = length;
 		this.bandwidth = bandwidth;
 		this.flow = flow;
@@ -29,7 +29,7 @@ public class Edge {
 	public double getLength() {
 		return length;
 	}
-	public int getBandwidth() {
+	public double getBandwidth() {
 		return bandwidth;
 	}
 }
