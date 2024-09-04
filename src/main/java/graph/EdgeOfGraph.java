@@ -69,13 +69,13 @@ public class EdgeOfGraph extends Edge {
 					Math.max(this.getBegin().getPoint().getY(), this.getEnd().getPoint().getY()) 
 					< Math.max(edge.getBegin().getPoint().getY(), edge.getEnd().getPoint().getY()) 
 					? (Math.max(this.getBegin().getPoint().getY(), this.getEnd().getPoint().getY()) +  Math.min(edge.getBegin().getPoint().getY(), edge.getEnd().getPoint().getY())) / 2
-					: (Math.min(this.getBegin().getPoint().getY(), this.getEnd().getPoint().getY()) +  Math.max(edge.getBegin().getPoint().getY(), edge.getEnd().getPoint().getY())) / 2));
+					: (Math.min(this.getBegin().getPoint().getY(), this.getEnd().getPoint().getY()) +  Math.max(edge.getBegin().getPoint().getY(), edge.getEnd().getPoint().getY())) / 2), 0);
 		}
 		if (this.getBegin().getPoint().getX() == this.getEnd().getPoint().getX()) {
-			return new Vertex(0, new Point(this.getBegin().getPoint().getX(), edge.getYForEdge(this.getBegin().getPoint().getX())));
+			return new Vertex(0, new Point(this.getBegin().getPoint().getX(), edge.getYForEdge(this.getBegin().getPoint().getX())), 0);
 		}
 		if (edge.getBegin().getPoint().getX() == edge.getEnd().getPoint().getX()) {
-			return new Vertex(0, new Point(edge.getBegin().getPoint().getX(), this.getYForEdge(edge.getBegin().getPoint().getX())));
+			return new Vertex(0, new Point(edge.getBegin().getPoint().getX(), this.getYForEdge(edge.getBegin().getPoint().getX())), 0);
 		}
 		double k1 = (this.getBegin().getPoint().getY() - this.getEnd().getPoint().getY()) / (this.getBegin().getPoint().getX() - this.getEnd().getPoint().getX());
 		double k2 = (edge.getBegin().getPoint().getY() - edge.getEnd().getPoint().getY()) / (edge.getBegin().getPoint().getX() - edge.getEnd().getPoint().getX());
@@ -86,7 +86,7 @@ public class EdgeOfGraph extends Edge {
 			//System.out.println("parallel");
 			return null;
 		}
-		return new Vertex(0, new Point((b2 - b1) / (k1 - k2), this.getYForEdge((b2 - b1) / (k1 - k2))));
+		return new Vertex(0, new Point((b2 - b1) / (k1 - k2), this.getYForEdge((b2 - b1) / (k1 - k2))), 0);
 	}
 	public double getYForEdge(double x) {
 		if (this.getBegin().getPoint().getX() == this.getEnd().getPoint().getX()) return this.getBegin().getPoint().getY();

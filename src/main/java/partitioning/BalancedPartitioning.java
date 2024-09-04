@@ -135,5 +135,14 @@ public class BalancedPartitioning {
 		} catch (Exception e) {
 			throw new RuntimeException("Can't write info to file");
 		}
+		System.out.println("Empty parts number: " + countEmptyParts(partitionResult));
+	}
+	
+	private int countEmptyParts(List<HashSet<Vertex>> partitionResult) {
+		int ans = 0;
+		for (int i = 0; i < partitionResult.size(); i++) {
+			if (partitionResult.get(i).isEmpty()) ans++; 
+		}
+		return ans;
 	}
 }
