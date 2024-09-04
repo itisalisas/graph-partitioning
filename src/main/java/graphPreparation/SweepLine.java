@@ -2,8 +2,11 @@ package graphPreparation;
 
 import graph.*;
 
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedList;
 
 public class SweepLine {
 	double inaccuracy;
@@ -30,6 +33,7 @@ public class SweepLine {
 				continue;
 			}
 			gph.deleteEdge(edgesList[i].getBegin(), edgesList[i].getEnd());
+			intersectionPoints.get(i).addFirst(edgesList[i].getBegin());
 			if (edgesList[i].getBegin().getPoint().getX() > edgesList[i].getEnd().getPoint().getX()) {
 //				if (edgesList[i].getBegin().getLength(intersectionPoints.get(i).get(intersectionPoints.get(i).size() - 1)) <= inaccuracy) {
 //					intersectionPoints.get(i).removeLast();
@@ -101,7 +105,6 @@ public class SweepLine {
 					});
 				}
 			}
-			intersectionPoints.get(i).addFirst(edgesList[i].getBegin());
 			intersectionPoints.get(i).addLast(edgesList[i].getEnd());
 			int uselessPointsNum = 0;
 			for (int j = 1; j < intersectionPoints.get(i).size(); j++) {
