@@ -26,17 +26,22 @@ public class GraphPreparation {
 	}
 	
 	public Graph prepareGraph(Graph gph, double inaccuracy) {
+		gph.correctVerticesWeight();
+		System.out.println("Start graph weight: " + gph.verticesSumWeight());
 		if (!isPlanar) {
 			SweepLine sl = new SweepLine(inaccuracy);
 			sl.makePlanar(gph);
 		}
+		System.out.println("After sweepline graph weight: " + gph.verticesSumWeight());
 		if (!isDual) {
 			MakingDualGraph dg = new MakingDualGraph();
 			Graph dualGraph = dg.buildDualGraph(gph);
 			comparisonForDualGraph.clear();
 			comparisonForDualGraph.putAll(dg.getComparison());
+			System.out.println("Dual graph weight: " + dualGraph.verticesSumWeight());
 			return dualGraph;
 		}
+
 		return gph;	
 	}
 	

@@ -383,5 +383,26 @@ public class Graph {
 	boolean isConnected() {
 		return splitForConnectedComponents().size() == 1;
 	}
+	
+	public long verticesSumWeight() {
+		long ans = 0;
+		for (Vertex ver : edges.keySet()) {
+			ans = ans + ver.getWeight();
+		}
+		return ans;
+	}
+
+	public void correctVerticesWeight() {
+		for (Vertex begin : edges.keySet()) {
+			for (Vertex end : edges.get(begin).keySet()) {
+				for (Vertex check : edges.keySet()) {
+					if (end.equals(check)) {
+						end.setWeight(check.getWeight());
+					}
+				}
+			}
+		}
+		
+	}
 
 }

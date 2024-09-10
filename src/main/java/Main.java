@@ -57,6 +57,9 @@ public class Main {
 			throw new RuntimeException("Can't parse max sum vertices weight");
 		}
 
+
+		System.out.println("Graph weight before: " + graph.verticesSumWeight());
+		
 		GraphPreparation preparation = new GraphPreparation();
 		Graph preparedGraph = preparation.prepareGraph(graph, 0.00000000000001);
 		
