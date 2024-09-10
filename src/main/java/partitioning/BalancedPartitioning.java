@@ -7,10 +7,13 @@ import graph.Vertex;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.*;
 
 public class BalancedPartitioning {
 	private BalancedPartitioningOfPlanarGraphs bp;
+
+	private int maxSumVerticesWeight;
 
 	private Map<Set<Vertex>, Double> cutEdgesMap;
 
@@ -22,6 +25,7 @@ public class BalancedPartitioning {
 	public ArrayList<HashSet<Vertex>> partition(Graph graph,
 												int maxSumVerticesWeight) {
 		bp.partition = new ArrayList<>();
+		this.maxSumVerticesWeight = maxSumVerticesWeight;
 		long startTime = System.currentTimeMillis();
 		bp.balancedPartitionAlgorithm(graph, maxSumVerticesWeight);
 		partitioningTime = ((double) (System.currentTimeMillis() - startTime)) / 1000;
@@ -84,12 +88,12 @@ public class BalancedPartitioning {
 		} catch (IOException e) {
 			throw new RuntimeException("Can't create info file");
 		}
+		List<Integer> weights = new ArrayList<>(partitionResult.stream()
+				.map(set -> set.stream()
+						.mapToInt(Vertex::getWeight)
+						.sum())
+				.toList());
 		try (FileWriter writer = new FileWriter(infoFile, false)) {
-			List<Integer> weights = partitionResult.stream()
-					.map(set -> set.stream()
-							.mapToInt(Vertex::getWeight)
-							.sum())
-					.toList();
 
 			int minSumWeight = weights.stream().mapToInt(Integer::intValue).min().orElse(0);
 			int maxSumWeight = weights.stream().mapToInt(Integer::intValue).max().orElse(0);
@@ -135,7 +139,22 @@ public class BalancedPartitioning {
 		} catch (Exception e) {
 			throw new RuntimeException("Can't write info to file");
 		}
-		System.out.println("Empty parts number: " + countEmptyParts(partitionResult));
+		File ratioFile = new File(outputDirectory + File.separator + "ratio.txt");
+		try {
+			ratioFile.createNewFile();
+		} catch (IOException e) {
+			throw new RuntimeException("Can't create ratio file");
+		}
+		try (FileWriter writer = new FileWriter(ratioFile, false)) {
+			weights.sort(Integer::compareTo);
+			DecimalFormat df = new DecimalFormat("#.###");
+			for (int weight : weights) {
+				writer.write(df.format((double) weight / (double) maxSumVerticesWeight) + "\n");
+			}
+		} catch (Exception e) {
+			throw new RuntimeException("Can't write ratio to file");
+		}
+		// System.out.println("Empty parts number: " + countEmptyParts(partitionResult));
 	}
 	
 	private int countEmptyParts(List<HashSet<Vertex>> partitionResult) {

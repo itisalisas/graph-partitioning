@@ -59,11 +59,10 @@ public class Main {
 
 		GraphPreparation preparation = new GraphPreparation();
 		Graph preparedGraph = preparation.prepareGraph(graph, 0.00000000000001);
-		
-		ArrayList<HashSet<Vertex>> partitionResultForFaces;
 
-		partitionResultForFaces = partitioning.partition(preparedGraph, maxSumVerticesWeight);
-		
+		ArrayList<HashSet<Vertex>> partitionResultForFaces = partitioning.partition(preparedGraph, maxSumVerticesWeight);
+
+		/*
 		ArrayList<HashSet<Vertex>> partitionResult = new ArrayList<HashSet<Vertex>>();
 		HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph = preparation.getComparisonForDualGraph();
 		for (int i = 0; i < partitionResultForFaces.size(); i++) {
@@ -72,10 +71,12 @@ public class Main {
 				partitionResult.get(i).addAll(comparisonForDualGraph.get(face).getVerticesOfFace());
 			}
 		}
+		*/
 
 		String pathToResultDirectory = args[3];
 
-		partitioning.savePartitionToDirectory(outputDirectory + pathToResultDirectory, partitionResult);
+		// partitioning.savePartitionToDirectory(outputDirectory + pathToResultDirectory, partitionResult);
+		partitioning.savePartitionToDirectory(outputDirectory + pathToResultDirectory, partitionResultForFaces);
 
 	}
 

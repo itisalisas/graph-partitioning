@@ -34,11 +34,10 @@ public class Graph {
 	public Graph clone() {
 		Graph result = new Graph();
 		for (Vertex begin : this.edges.keySet()) {
-			result.edges.put(begin, new HashMap<Vertex, Edge>());
+			result.edges.put(begin.clone(), new HashMap<Vertex, Edge>());
 			for (Vertex end : this.edges.get(begin).keySet()) {
 				Edge originalEdge = this.edges.get(begin).get(end);
-				Edge copyOfEdge = new Edge(originalEdge.getLength(), originalEdge.getBandwidth());
-				result.edges.get(begin).put(end, copyOfEdge);
+				result.edges.get(begin).put(end.clone(), originalEdge.clone());
 			}
 		}
 		return result;
@@ -174,7 +173,7 @@ public class Graph {
 	}
 
 
-	public int edgesNumberInCompanentUndirGraph(HashSet<Vertex> vertexInComponent) {
+	public int edgesNumberInComponentUndirGraph(HashSet<Vertex> vertexInComponent) {
 		int edgesNumber = 0;
 		for (Vertex begin : vertexInComponent) {
 			if (edges.get(begin) == null)
@@ -306,6 +305,9 @@ public class Graph {
 
 	public Graph makeUndirectedGraph() {
 		Graph graph = new Graph();
+		for (Vertex vertex : edges.keySet()) {
+			graph.addVertex(vertex.clone());
+		}
 		for (Vertex begin : edges.keySet()) {
 			for (Vertex end : edges.get(begin).keySet()) {
 				graph.addEdge(begin, end, edges.get(begin).get(end).getLength());
@@ -348,32 +350,23 @@ public class Graph {
 			}
 		}
 	}
-	
+
 	public Graph createSubgraph(Set<Vertex> verticesOfSubgraph) {
 		Graph subgraph = new Graph();
 		List<EdgeOfGraph> edges = Arrays.stream(edgesArray()).toList();
 		List<Vertex> vertices = new ArrayList<>(verticesArray());
 
 		for (Vertex vertex : vertices) {
-		   if (verticesOfSubgraph.contains(vertex)) {
-			   boolean flag = false;
-		       for (Vertex v : getEdges().get(vertex).keySet()) {
-		           if (verticesOfSubgraph.contains(v)) {
-					   flag = true;
-		               break;
-				   }
-			   }
-			   if (!flag) {
-				   subgraph.addVertex(new Vertex(vertex.getName(), vertex.getPoint(), vertex.getWeight()));
-			   }
-		   }
+			if (verticesOfSubgraph.contains(vertex)) {
+				subgraph.addVertex(new Vertex(vertex.getName(), vertex.getPoint(), vertex.getWeight()));
+			}
 		}
 
 		for (EdgeOfGraph edge : edges) {
 			EdgeOfGraph newEdge;
 			if (verticesOfSubgraph.contains(edge.getBegin()) && verticesOfSubgraph.contains(edge.getEnd())) {
 				newEdge = new EdgeOfGraph(edge.getBegin(), edge.getEnd(), edge.getLength());
-		        subgraph.addEdge(newEdge.getBegin(), newEdge.getEnd(), newEdge.getLength());
+				subgraph.addEdge(newEdge.getBegin(), newEdge.getEnd(), newEdge.getLength());
 			}
 		}
 

@@ -28,7 +28,7 @@ public class GammaAlgorithm {
 		// make new components if there is bridge an check them
 		// check component
 		// undir - edgesNumber x2
-		int edgesNumber = undirGraph.edgesNumberInCompanentUndirGraph(vertexInComponent);
+		int edgesNumber = undirGraph.edgesNumberInComponentUndirGraph(vertexInComponent);
 		// component = tree
 		if (undirTree(edgesNumber, vertexInComponent.size()))
 			return true;
