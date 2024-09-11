@@ -6,9 +6,8 @@ import graphPreparation.GraphPreparation;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.HashMap;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class Main {
 
@@ -62,11 +61,10 @@ public class Main {
 		
 		GraphPreparation preparation = new GraphPreparation();
 		Graph preparedGraph = preparation.prepareGraph(graph, 0.00000000000001);
-		
-		ArrayList<HashSet<Vertex>> partitionResultForFaces;
 
-		partitionResultForFaces = partitioning.partition(preparedGraph, maxSumVerticesWeight);
-		
+		ArrayList<HashSet<Vertex>> partitionResultForFaces = partitioning.partition(preparedGraph, maxSumVerticesWeight);
+
+
 		ArrayList<HashSet<Vertex>> partitionResult = new ArrayList<HashSet<Vertex>>();
 		HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph = preparation.getComparisonForDualGraph();
 		for (int i = 0; i < partitionResultForFaces.size(); i++) {
@@ -76,9 +74,13 @@ public class Main {
 			}
 		}
 
+		List<Vertex> bound = Graph.findBound(partitionResult);
+
 		String pathToResultDirectory = args[3];
 
-		partitioning.savePartitionToDirectory(outputDirectory + pathToResultDirectory, partitionResult);
+		// partitioning.savePartitionToDirectory(outputDirectory + pathToResultDirectory, partitionResult);
+		partitioning.savePartitionToDirectory(outputDirectory + pathToResultDirectory, partitionResultForFaces);
+		partitioning.printBound(bound, outputDirectory + pathToResultDirectory);
 
 	}
 

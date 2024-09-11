@@ -32,4 +32,10 @@ public class Edge {
 	public double getBandwidth() {
 		return bandwidth;
 	}
+
+	@Override
+	public Edge clone() {
+		return new Edge(this.length, this.flow, this.bandwidth);
+	}
+
 }
