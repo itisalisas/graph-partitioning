@@ -9,15 +9,18 @@ import graph.VertexOfDualGraph;
 public class GraphPreparation {
 	private boolean isPlanar;
 	private boolean isDual;
+	private long faceMaxWreight;
 	private HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph;
 	public GraphPreparation() {
 		this.isPlanar = false;
 		this.isDual = false;
+		this.faceMaxWreight = 100;
 		comparisonForDualGraph = new HashMap<Vertex, VertexOfDualGraph>();
 	}
-	public GraphPreparation(boolean isPlanar, boolean isDual) {
+	public GraphPreparation(boolean isPlanar, boolean isDual, long faceMaxWreight) {
 		this.isPlanar = isPlanar;
 		this.isDual = isDual;
+		this.faceMaxWreight = faceMaxWreight;
 		comparisonForDualGraph = new HashMap<Vertex, VertexOfDualGraph>();
 	}
 	
@@ -35,7 +38,7 @@ public class GraphPreparation {
 		System.out.println("After sweepline graph weight: " + gph.verticesSumWeight());
 		if (!isDual) {
 			MakingDualGraph dg = new MakingDualGraph();
-			Graph dualGraph = dg.buildDualGraph(gph);
+			Graph dualGraph = dg.buildDualGraph(gph, faceMaxWreight);
 			comparisonForDualGraph.clear();
 			comparisonForDualGraph.putAll(dg.getComparison());
 			System.out.println("Dual graph weight: " + dualGraph.verticesSumWeight());
