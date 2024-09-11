@@ -69,6 +69,7 @@ public class BalancedPartitioning {
 		}
 
 		for (int i = 0; i < partitionResult.size(); i++) {
+			HashSet<Vertex> part = partitionResult.get(i);
 			File outputFile = new File(outputDirectory + File.separator + "partition_" + i + ".txt");
 			try {
 				outputFile.createNewFile();
@@ -76,7 +77,7 @@ public class BalancedPartitioning {
 				throw new RuntimeException("Can't create output file");
 			}
 			try {
-				bp.graph.writePartitionToFile(partitionResult.get(i), cutEdgesMap.get(partitionResult.get(i)), outputFile);
+				bp.graph.writePartitionToFile(part, cutEdgesMap.get(part), outputFile);
 			} catch (Exception e) {
 				throw new RuntimeException("Can't write partition to file: " + e.getMessage());
 			}
@@ -155,6 +156,22 @@ public class BalancedPartitioning {
 			throw new RuntimeException("Can't write ratio to file");
 		}
 		// System.out.println("Empty parts number: " + countEmptyParts(partitionResult));
+	}
+
+	public void printBound(List<Vertex> bound, String outputDirectory) {
+			File boundFile = new File(outputDirectory + File.separator + "bound.txt");
+			try {
+				boundFile.createNewFile();
+			} catch (IOException e) {
+				throw new RuntimeException("Can't create bound file");
+			}
+			for (Vertex vertex : bound) {
+				try {
+					vertex.printVertexToFile(boundFile);
+				} catch (Exception e) {
+					throw new RuntimeException("Can't print bound to file");
+				}
+			}
 	}
 	
 	private int countEmptyParts(List<HashSet<Vertex>> partitionResult) {

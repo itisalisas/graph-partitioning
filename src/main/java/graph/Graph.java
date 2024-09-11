@@ -373,6 +373,31 @@ public class Graph {
 		return subgraph;
 	}
 
+	public static List<Vertex> findBound(List<HashSet<Vertex>> partition) {
+		List<Vertex> bound = new ArrayList<>();
+		for (int i = 0; i < partition.size(); i++) {
+			addPartBound(partition, i, bound);
+		}
+		return bound;
+	}
+
+	private static void addPartBound(List<HashSet<Vertex>> partition, int currentPartIndex, List<Vertex> bound) {
+		for (Vertex v : partition.get(currentPartIndex)) {
+			if (isOtherPartContainsVertex(v, partition, currentPartIndex)) {
+				bound.add(v);
+			}
+		}
+	}
+
+	private static boolean isOtherPartContainsVertex(Vertex vertex, List<HashSet<Vertex>> partition, int currentPartIndex) {
+		for (int j = 0; j < partition.size(); j++) {
+			if (currentPartIndex != j && partition.get(j).contains(vertex)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	boolean isConnected() {
 		return splitForConnectedComponents().size() == 1;
 	}
