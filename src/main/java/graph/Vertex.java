@@ -36,6 +36,11 @@ public class Vertex {
 		this.point = point;
 		this.weight = weight;
 	}
+	public Vertex(Vertex src) {
+		this.name = src.name;
+		this.point = src.point;
+		this.weight = src.weight;
+	}
 
 	public long getName() {
 		return name;

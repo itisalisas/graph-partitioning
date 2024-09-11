@@ -129,17 +129,21 @@ public class BalancedPartitioning {
 			writer.write("MIN = " + minSumWeight + "\n");
 			writer.write("MAX = " + maxSumWeight + "\n");
 			writer.write("AVERAGE = " + wMean + "\n");
-			writer.write("VARIANCE = " + wStandardDeviation + "\n");
+			writer.write("VARIANCE = " + wVariance + "\n");
 			writer.write("CV = " + wStandardDeviation / wMean + "\n");
 			writer.write("TOTAL CUT LENGTH = " + calculateTotalCutEdgesLength() + "\n");
 			writer.write("AVERAGE CUT LENGTH = " + cutMean + "\n");
-			writer.write("VARIANCE CUT LENGTH = " + cutStandardDeviation + "\n");
+			writer.write("VARIANCE CUT LENGTH = " + cutVariance + "\n");
 			writer.write("CV CUT LENGTH = " + cutStandardDeviation / cutMean + "\n");
 			writer.write("TIME = " + partitioningTime + "\n");
 			writer.flush();
 		} catch (Exception e) {
 			throw new RuntimeException("Can't write info to file");
 		}
+<<<<<<< 2024.07.12-Draft
+		System.out.println("Empty parts number: " + countEmptyParts(partitionResult));
+		System.out.println("Graph weight after: " + countSumPartitioningWeight(partitionResult));
+=======
 		File ratioFile = new File(outputDirectory + File.separator + "ratio.txt");
 		try {
 			ratioFile.createNewFile();
@@ -172,6 +176,7 @@ public class BalancedPartitioning {
 					throw new RuntimeException("Can't print bound to file");
 				}
 			}
+>>>>>>> inertial-flow
 	}
 	
 	private int countEmptyParts(List<HashSet<Vertex>> partitionResult) {
@@ -181,5 +186,14 @@ public class BalancedPartitioning {
 		}
 		return ans;
 	}
-
+	
+	private long countSumPartitioningWeight(List<HashSet<Vertex>> partitionResult) {
+		long ans = 0;
+		for (int i = 0; i < partitionResult.size(); i++) {
+			for (Vertex ver : partitionResult.get(i)) {
+				ans = ans + ver.getWeight();
+			}
+		}
+		return ans;
+	}
 }
