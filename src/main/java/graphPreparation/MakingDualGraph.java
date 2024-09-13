@@ -1,5 +1,6 @@
 package graphPreparation;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -54,7 +55,7 @@ public class MakingDualGraph {
 
 	private void buildDualVerteices(Graph res, HashMap<EdgeOfGraph, Vertex> inFace,
 			HashMap<Vertex, TreeSet<EdgeOfGraph>> sortedGraph, EdgeOfGraph[] edgesList) {
-		HashSet<Vertex> verticesOfFace = new HashSet<Vertex>();
+		ArrayList<Vertex> verticesOfFace = new ArrayList<Vertex>();
 		HashSet<EdgeOfGraph> inActualFace = new HashSet<EdgeOfGraph>();
 		long vertName = 0;
 		for (int i = 0; i < edgesList.length; i++) {
@@ -76,7 +77,7 @@ public class MakingDualGraph {
 		}
 	}
 
-	private void findFace(HashSet<Vertex> verticesOfFace, HashSet<EdgeOfGraph> inActualFace,
+	private void findFace(ArrayList<Vertex> verticesOfFace, HashSet<EdgeOfGraph> inActualFace,
 			HashMap<Vertex, TreeSet<EdgeOfGraph>> sortedGraph, EdgeOfGraph firstEdge) {
 		long faceWeight = 0;
 		Vertex prev = new Vertex(firstEdge.getBegin());
