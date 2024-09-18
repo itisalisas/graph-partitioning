@@ -92,7 +92,7 @@ public class Graph {
 		out.write(String.format("%f\n", cutWeight));
 		out.write(String.format("%d\n", partition.size()));
 		for (Vertex v : partition) {
-			out.write(String.format("%d %f %f %d\n", v.getName(), v.getPoint().getX(), v.getPoint().getY(), v.getWeight()));
+			out.write(String.format("%d %f %f %f\n", v.getName(), v.getPoint().getX(), v.getPoint().getY(), v.getWeight()));
 		}
 		out.close();
 	}
@@ -116,8 +116,8 @@ public class Graph {
 
 	}
 
-	public long verticesWeight() {
-		return verticesArray().stream().mapToLong(Vertex::getWeight).sum();
+	public Double verticesWeight() {
+		return verticesArray().stream().mapToDouble(Vertex::getWeight).sum();
 	}
 
 
@@ -402,8 +402,8 @@ public class Graph {
 		return splitForConnectedComponents().size() == 1;
 	}
 	
-	public long verticesSumWeight() {
-		long ans = 0;
+	public double verticesSumWeight() {
+		double ans = 0;
 		for (Vertex ver : edges.keySet()) {
 			ans = ans + ver.getWeight();
 		}
@@ -421,6 +421,24 @@ public class Graph {
 			}
 		}
 		
+	}
+
+	public int countZeroWeightVertices() {
+		int ans = 0;
+		for (Vertex v : edges.keySet()) {
+			if (v.getWeight() == 0) {
+				ans++;
+			}
+		}
+		return ans;
+	}
+	
+	public HashMap<Vertex, Integer> initVertexInFaceCounter() {
+		HashMap<Vertex, Integer> res = new HashMap<Vertex, Integer>();
+		for (Vertex v : this.edges.keySet()) {
+			res.put(v, 0);
+		}
+		return res;
 	}
 
 }

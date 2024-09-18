@@ -26,12 +26,15 @@ public class GraphPreparation {
 	}
 	
 	public Graph prepareGraph(Graph gph, double inaccuracy) {
+		System.out.println("Number of 0 weight vertex, before correction: " + gph.countZeroWeightVertices());
 		gph.correctVerticesWeight();
+		System.out.println("Number of 0 weight vertex, before sweepLine: " + gph.countZeroWeightVertices());
 		System.out.println("Start graph weight: " + gph.verticesSumWeight());
 		if (!isPlanar) {
 			SweepLine sl = new SweepLine(inaccuracy);
 			sl.makePlanar(gph);
 		}
+		System.out.println("Number of 0 weight vertex, after sweepLine: " + gph.countZeroWeightVertices());
 		System.out.println("After sweepline graph weight: " + gph.verticesSumWeight());
 		if (!isDual) {
 			MakingDualGraph dg = new MakingDualGraph();

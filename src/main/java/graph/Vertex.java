@@ -13,7 +13,7 @@ public class Vertex {
 
 	private long name;
 	private Point point;
-	private int weight;
+	private double weight;
 	
 	public Vertex() {
 		this.name = -1;
@@ -31,7 +31,7 @@ public class Vertex {
 		this.weight = random.nextInt(10, 40);
 	}
 
-	public Vertex(long name, Point point, int weight) {
+	public Vertex(long name, Point point, double weight) {
 		this.name = name;
 		this.point = point;
 		this.weight = weight;
@@ -48,11 +48,11 @@ public class Vertex {
 	public Point getPoint() {
 		return point;
 	}
-	public int getWeight() {
+	public double getWeight() {
 		return weight;
 	}
-	public void setWeight(int weight) {
-		this.weight = weight;
+	public void setWeight(double d) {
+		this.weight = d;
 	}
 	@Override
 	public boolean equals(Object obj) {
@@ -77,7 +77,7 @@ public class Vertex {
 
 	public void printVertexToFile(File outFile) throws IOException {
 		FileWriter out = new FileWriter(outFile, true);
-		out.write(String.format("%d %f %f %d\n", this.getName(), this.getPoint().getX(), this.getPoint().getY(), this.getWeight()));
+		out.write(String.format("%d %f %f %f\n", this.getName(), this.getPoint().getX(), this.getPoint().getY(), this.getWeight()));
 		out.close();
 	}
 }

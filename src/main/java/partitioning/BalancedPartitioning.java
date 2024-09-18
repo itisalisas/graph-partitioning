@@ -89,18 +89,18 @@ public class BalancedPartitioning {
 		} catch (IOException e) {
 			throw new RuntimeException("Can't create info file");
 		}
-		List<Integer> weights = new ArrayList<>(partitionResult.stream()
+		List<Double> weights = new ArrayList<>(partitionResult.stream()
 				.map(set -> set.stream()
-						.mapToInt(Vertex::getWeight)
+						.mapToDouble(Vertex::getWeight)
 						.sum())
 				.toList());
 		try (FileWriter writer = new FileWriter(infoFile, false)) {
 
-			int minSumWeight = weights.stream().mapToInt(Integer::intValue).min().orElse(0);
-			int maxSumWeight = weights.stream().mapToInt(Integer::intValue).max().orElse(0);
+			double minSumWeight = weights.stream().mapToDouble(Double::doubleValue).min().orElse(0);
+			double maxSumWeight = weights.stream().mapToDouble(Double::doubleValue).max().orElse(0);
 
 			double wMean = weights.stream()
-					.mapToInt(Integer::intValue)
+					.mapToDouble(Double::doubleValue)
 					.average()
 					.orElse(0.0);
 
@@ -151,9 +151,9 @@ public class BalancedPartitioning {
 			throw new RuntimeException("Can't create ratio file");
 		}
 		try (FileWriter writer = new FileWriter(ratioFile, false)) {
-			weights.sort(Integer::compareTo);
+			weights.sort(Double::compareTo);
 			DecimalFormat df = new DecimalFormat("#.###");
-			for (int weight : weights) {
+			for (double weight : weights) {
 				writer.write(df.format((double) weight / (double) maxSumVerticesWeight) + "\n");
 			}
 		} catch (Exception e) {
@@ -186,8 +186,8 @@ public class BalancedPartitioning {
 		return ans;
 	}
 	
-	private long countSumPartitioningWeight(List<HashSet<Vertex>> partitionResult) {
-		long ans = 0;
+	private double countSumPartitioningWeight(List<HashSet<Vertex>> partitionResult) {
+		double ans = 0;
 		for (int i = 0; i < partitionResult.size(); i++) {
 			for (Vertex ver : partitionResult.get(i)) {
 				ans = ans + ver.getWeight();

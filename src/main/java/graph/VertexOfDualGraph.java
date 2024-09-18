@@ -4,13 +4,13 @@ import java.util.ArrayList;
 
 public class VertexOfDualGraph extends Vertex{
 	private ArrayList<Vertex> verticesOfFace;
-	public VertexOfDualGraph(Vertex center, int weightSum, ArrayList<Vertex> verticesOfFace) {
+	public VertexOfDualGraph(Vertex center, double weightSum, ArrayList<Vertex> verticesOfFace) {
 		super(center.getName(), center.getPoint(), weightSum);
 		this.verticesOfFace = new ArrayList<Vertex>();
 		this.verticesOfFace.addAll(verticesOfFace);
 	}
 	
-	public VertexOfDualGraph(long name, Vertex center, int weightSum, ArrayList<Vertex> verticesOfFace) {
+	public VertexOfDualGraph(long name, Vertex center, double weightSum, ArrayList<Vertex> verticesOfFace) {
 		super(name, center.getPoint(), weightSum);
 		this.verticesOfFace = new ArrayList<Vertex>();
 		this.verticesOfFace.addAll(verticesOfFace);
@@ -37,8 +37,8 @@ public class VertexOfDualGraph extends Vertex{
 		return center;
 	}
 
-	public static int sumVertexWeight(ArrayList<Vertex> vertexIn) {
-		int sum = 0;
+	public static double sumVertexWeight(ArrayList<Vertex> vertexIn) {
+		double sum = 0;
 		for (Vertex v : vertexIn) {
 			sum = sum + v.getWeight();
 		}

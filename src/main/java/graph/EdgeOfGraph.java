@@ -15,6 +15,11 @@ public class EdgeOfGraph extends Edge {
 		this.begin = begin;
 		this.end = end;
 	}
+	public EdgeOfGraph(Vertex begin, Vertex end, double length, double flow, double bandwidth, boolean road) {
+		super(length, flow, bandwidth, road);
+		this.begin = begin;
+		this.end = end;
+	}
 	public Vertex getBegin() {
 		return begin;
 	}

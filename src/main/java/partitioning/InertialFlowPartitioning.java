@@ -113,8 +113,8 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             }));
 
 
-            int totalWeight = vertices.stream().mapToInt(Vertex::getWeight).sum();
-            int targetWeight = (int) (PARAMETER * totalWeight);
+            double totalWeight = vertices.stream().mapToDouble(Vertex::getWeight).sum();
+            double targetWeight = (int) (PARAMETER * totalWeight);
 
             long maxIndex = vertices.stream().max(Comparator.comparingLong(Vertex::getName)).get().getName();
 
@@ -149,7 +149,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
     }
 
-    private Set<Vertex> selectVerticesForSet(List<Vertex> vertices, int startIndex, int targetWeight, Set<Vertex> dontUse, Graph graph) {
+    private Set<Vertex> selectVerticesForSet(List<Vertex> vertices, int startIndex, double targetWeight, Set<Vertex> dontUse, Graph graph) {
         Set<Vertex> vertexSet = new HashSet<>();
         int currentWeight = 0;
         Queue<Vertex> queue = new LinkedList<>();
