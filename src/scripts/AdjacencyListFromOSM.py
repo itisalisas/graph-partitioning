@@ -3,7 +3,7 @@ import networkx
 
 x = 59.93893094417527
 y = 30.32268115454809
-d = 50
+d = 50 + 200
 
 print("write x coordinate or -:")
 inputX = input()
@@ -18,7 +18,7 @@ if (inputY != '-'):
 print("write dist or -:")
 inputDist = input()
 if (inputDist != '-'):
-    d = inputDist
+    d = inputDist + 200
     
 
 
