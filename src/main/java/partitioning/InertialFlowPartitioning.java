@@ -66,7 +66,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
     public void balancedPartitionAlgorithm(Graph graph, int maxSumVerticesWeight) {
 
         Stack<Graph> stack = new Stack<>();
-        graph = getLargestConnectedComponent(graph);
+        graph = graph.getLargestConnectedComponent();
         this.graph = graph;
 
         stack.push(graph);

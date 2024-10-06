@@ -12,7 +12,7 @@ def load_vertex_data(file_path):
         data = [[int(parts[0]), float(parts[1].replace(',', '.')), float(parts[2].replace(',', '.'))]
                 for line in lines[2:num_vertices + 2]
                 for parts in [line.strip().split()]]
-    return pd.DataFrame(data, columns=['id', 'longitude', 'latitude'])
+    return pd.DataFrame(data, columns=['id', 'latitude', 'longitude'])
 
 def generate_colors(n):
     cmap = plt.get_cmap('RdYlGn')

@@ -6,6 +6,7 @@ import graphPreparation.GraphPreparation;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -58,30 +59,37 @@ public class Main {
 
 
 		System.out.println("Graph weight before: " + graph.verticesSumWeight());
-		
+
 		GraphPreparation preparation = new GraphPreparation();
+		List<Vertex> bound = new ArrayList<>();
 		Graph preparedGraph = preparation.prepareGraph(graph, 0.00000000000001);
 
 		ArrayList<HashSet<Vertex>> partitionResultForFaces = partitioning.partition(preparedGraph, maxSumVerticesWeight);
 
-
 		ArrayList<HashSet<Vertex>> partitionResult = new ArrayList<HashSet<Vertex>>();
 		HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph = preparation.getComparisonForDualGraph();
+		List<List<Vertex>> bounds = new ArrayList<>();
+
 		for (int i = 0; i < partitionResultForFaces.size(); i++) {
 			partitionResult.add(new HashSet<Vertex>());
 			for (Vertex face : partitionResultForFaces.get(i)) {
 				partitionResult.get(i).addAll(comparisonForDualGraph.get(face).getVerticesOfFace());
 			}
+			bounds.add(BoundSearcher.findBound(graph, partitionResultForFaces.get(i), comparisonForDualGraph));
 		}
 
-		List<Vertex> bound = Graph.findBound(partitionResult);
+		List<Vertex> graphBoundEnd = BoundSearcher.findConvexHull(
+				partitionResult.stream()
+						.flatMap(Set::stream)
+						.collect(Collectors.toList())
+		);
 
 		String pathToResultDirectory = args[3];
 
 		// partitioning.savePartitionToDirectory(outputDirectory + pathToResultDirectory, partitionResult);
 		partitioning.savePartitionToDirectory(outputDirectory + pathToResultDirectory, partitionResultForFaces);
-		partitioning.printBound(bound, outputDirectory + pathToResultDirectory);
-
+		partitioning.printBound(bounds, outputDirectory + pathToResultDirectory);
+		partitioning.printHull(graphBoundEnd, outputDirectory + pathToResultDirectory, "end_bound.txt");
 	}
 
 }

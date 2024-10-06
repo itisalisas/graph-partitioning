@@ -23,8 +23,8 @@ public class Graph {
 
 	public Vertex readVertex(Scanner sc) {
 		long name = sc.nextLong();
-		String xStr = sc.next().replace(',', '.');
 		String yStr = sc.next().replace(',', '.');
+		String xStr = sc.next().replace(',', '.');
 		double x = Double.parseDouble(xStr);
 		double y = Double.parseDouble(yStr);
 		return addVertex(new Vertex(name, new Point(x, y)));
@@ -373,29 +373,10 @@ public class Graph {
 		return subgraph;
 	}
 
-	public static List<Vertex> findBound(List<HashSet<Vertex>> partition) {
-		List<Vertex> bound = new ArrayList<>();
-		for (int i = 0; i < partition.size(); i++) {
-			addPartBound(partition, i, bound);
-		}
-		return bound;
-	}
-
-	private static void addPartBound(List<HashSet<Vertex>> partition, int currentPartIndex, List<Vertex> bound) {
-		for (Vertex v : partition.get(currentPartIndex)) {
-			if (isOtherPartContainsVertex(v, partition, currentPartIndex)) {
-				bound.add(v);
-			}
-		}
-	}
-
-	private static boolean isOtherPartContainsVertex(Vertex vertex, List<HashSet<Vertex>> partition, int currentPartIndex) {
-		for (int j = 0; j < partition.size(); j++) {
-			if (currentPartIndex != j && partition.get(j).contains(vertex)) {
-				return true;
-			}
-		}
-		return false;
+	public Graph getLargestConnectedComponent() {
+		List<HashSet<Vertex>> connectivityComponents = this.makeUndirectedGraph().splitForConnectedComponents();
+		HashSet<Vertex> largestComponent = connectivityComponents.stream().max(Comparator.comparingInt(HashSet::size)).orElseThrow();
+		return this.createSubgraph(largestComponent);
 	}
 
 	boolean isConnected() {
@@ -437,6 +418,22 @@ public class Graph {
 		HashMap<Vertex, Integer> res = new HashMap<Vertex, Integer>();
 		for (Vertex v : this.edges.keySet()) {
 			res.put(v, 0);
+		}
+		return res;
+	}
+
+	public HashMap<Vertex, TreeSet<EdgeOfGraph>> arrangeByAngle() {
+		Comparator<EdgeOfGraph> edgeComp = (o1, o2) -> {
+            double a1 = o1.getCorner();
+            double a2 = o2.getCorner();
+            return Double.compare(a1, a2);
+        };
+		HashMap<Vertex, TreeSet<EdgeOfGraph>> res = new HashMap<Vertex, TreeSet<EdgeOfGraph>>();
+		for (Vertex begin : this.getEdges().keySet()) {
+			res.put(begin, new TreeSet<EdgeOfGraph>(edgeComp));
+			for (Vertex end : this.getEdges().get(begin).keySet()) {
+				res.get(begin).add(new EdgeOfGraph(begin, end, this.getEdges().get(begin).get(end).getLength()));
+			}
 		}
 		return res;
 	}
