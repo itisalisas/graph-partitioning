@@ -41,7 +41,7 @@ public class Main {
 			throw new RuntimeException("No such partition algorithm");
 		}
 
-		Graph graph = new Graph();
+		Graph<Vertex> graph = new Graph<Vertex>();
 
 		try {
 			graph.readGraphFromFile(resourcesDirectory + pathToFile);
@@ -60,9 +60,9 @@ public class Main {
 		System.out.println("Graph weight before: " + graph.verticesSumWeight());
 		
 		GraphPreparation preparation = new GraphPreparation();
-		Graph preparedGraph = preparation.prepareGraph(graph, 0.00000000000001);
+		Graph<VertexOfDualGraph> preparedGraph = preparation.prepareGraph(graph, 0.00000000000001);
 
-		ArrayList<HashSet<Vertex>> partitionResultForFaces = partitioning.partition(preparedGraph, maxSumVerticesWeight);
+		ArrayList<HashSet<VertexOfDualGraph>> partitionResultForFaces = partitioning.partition(preparedGraph, maxSumVerticesWeight);
 
 
 		ArrayList<HashSet<Vertex>> partitionResult = new ArrayList<HashSet<Vertex>>();

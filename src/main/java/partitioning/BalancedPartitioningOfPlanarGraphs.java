@@ -2,20 +2,21 @@ package partitioning;
 
 import graph.Graph;
 import graph.Vertex;
+import graph.VertexOfDualGraph;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 
 public abstract class BalancedPartitioningOfPlanarGraphs {
 
-	ArrayList<HashSet<Vertex>> partition;
+	ArrayList<HashSet<VertexOfDualGraph>> partition;
 
-	public Graph graph;
+	public Graph<VertexOfDualGraph> graph;
 
 	//public abstract Graph[] balancedPartitionAlgorithm(Graph graph);
-	public abstract void balancedPartitionAlgorithm(Graph graph, int maxSumVerticesWeight);
+	public abstract void balancedPartitionAlgorithm(Graph<VertexOfDualGraph> graph, int maxSumVerticesWeight);
 
-	public ArrayList<HashSet<Vertex>> getPartition() {
+	public ArrayList<HashSet<VertexOfDualGraph>> getPartition() {
 		return partition;
 	}
 	//return name of failed condition or ""

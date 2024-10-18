@@ -3,19 +3,44 @@ package graph;
 import java.util.ArrayList;
 
 public class VertexOfDualGraph extends Vertex{
+	
 	private ArrayList<Vertex> verticesOfFace;
+	
 	public VertexOfDualGraph(Vertex center, double weightSum, ArrayList<Vertex> verticesOfFace) {
-		super(center.getName(), center.getPoint(), weightSum);
+		super(center.getName(), center, weightSum);
 		this.verticesOfFace = new ArrayList<Vertex>();
 		this.verticesOfFace.addAll(verticesOfFace);
 	}
 	
+	
 	public VertexOfDualGraph(long name, Vertex center, double weightSum, ArrayList<Vertex> verticesOfFace) {
-		super(name, center.getPoint(), weightSum);
+		super(name, center, weightSum);
 		this.verticesOfFace = new ArrayList<Vertex>();
 		this.verticesOfFace.addAll(verticesOfFace);
 	}
+	
+	
+	public VertexOfDualGraph(long name, double x, double y) {
+		super(name, x , y);
+		this.verticesOfFace = null;
+	}
+	
+	public VertexOfDualGraph(long name) {
+		super(name);
+		this.verticesOfFace = null;
+	}
+	
+	public VertexOfDualGraph(long name, double x, double y, double weight) {
+		super(name, x , y, weight);
+		this.verticesOfFace = null;
+	}
+	
+	public <T extends Vertex> VertexOfDualGraph(T v) {
+		super(v.getName(), v.getX(), v.getY(), v.getWeight());
+		this.verticesOfFace = null;
+	}
 
+	
 	public static Vertex findCenter(ArrayList<Vertex> vertexIn) {
 		Vertex center = new Vertex();
 		double minLengthSum = 0;
@@ -37,6 +62,7 @@ public class VertexOfDualGraph extends Vertex{
 		return center;
 	}
 
+	
 	public static double sumVertexWeight(ArrayList<Vertex> vertexIn) {
 		double sum = 0;
 		for (Vertex v : vertexIn) {
@@ -45,6 +71,7 @@ public class VertexOfDualGraph extends Vertex{
 		return sum;
 	}
 
+	
 	public ArrayList<Vertex> getVerticesOfFace() {
 		return verticesOfFace;
 	}

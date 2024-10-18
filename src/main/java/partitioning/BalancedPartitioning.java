@@ -3,6 +3,7 @@ package partitioning;
 import graph.EdgeOfGraph;
 import graph.Graph;
 import graph.Vertex;
+import graph.VertexOfDualGraph;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -15,29 +16,29 @@ public class BalancedPartitioning {
 
 	private int maxSumVerticesWeight;
 
-	private Map<Set<Vertex>, Double> cutEdgesMap;
+	private Map<Set<VertexOfDualGraph>, Double> cutEdgesMap;
 
 	private double partitioningTime;
 
 	public BalancedPartitioning(BalancedPartitioningOfPlanarGraphs bp) {
 		this.bp = bp;
 	}
-	public ArrayList<HashSet<Vertex>> partition(Graph graph,
+	public ArrayList<HashSet<VertexOfDualGraph>> partition(Graph<VertexOfDualGraph> graph,
 												int maxSumVerticesWeight) {
 		bp.partition = new ArrayList<>();
 		this.maxSumVerticesWeight = maxSumVerticesWeight;
 		long startTime = System.currentTimeMillis();
 		bp.balancedPartitionAlgorithm(graph, maxSumVerticesWeight);
 		partitioningTime = ((double) (System.currentTimeMillis() - startTime)) / 1000;
-		ArrayList<HashSet<Vertex>> partitionResult = bp.getPartition();
+		ArrayList<HashSet<VertexOfDualGraph>> partitionResult = bp.getPartition();
 		calculateCutWeights(bp.graph, partitionResult);
 		return partitionResult;
 	}
 
-	private void calculateCutWeights(Graph graph, List<HashSet<Vertex>> partitions) {
+	private void calculateCutWeights(Graph graph, List<HashSet<VertexOfDualGraph>> partitions) {
 		cutEdgesMap = new HashMap<>();
 
-		for (Set<Vertex> partition : partitions) {
+		for (Set<VertexOfDualGraph> partition : partitions) {
 			double cutEdgesWeightSum = 0;
 
 			for (EdgeOfGraph edge : graph.edgesArray()) {
@@ -60,7 +61,7 @@ public class BalancedPartitioning {
 	}
 
 
-	public void savePartitionToDirectory(String outputDirectory, List<HashSet<Vertex>> partitionResult) {
+	public void savePartitionToDirectory(String outputDirectory, List<HashSet<VertexOfDualGraph>> partitionResult) {
 		File outputDirectoryFile = new File(outputDirectory);
 		if (!outputDirectoryFile.exists()) {
 			if (!outputDirectoryFile.mkdirs()) {
@@ -69,7 +70,7 @@ public class BalancedPartitioning {
 		}
 
 		for (int i = 0; i < partitionResult.size(); i++) {
-			HashSet<Vertex> part = partitionResult.get(i);
+			HashSet<VertexOfDualGraph> part = partitionResult.get(i);
 			File outputFile = new File(outputDirectory + File.separator + "partition_" + i + ".txt");
 			try {
 				outputFile.createNewFile();
@@ -178,7 +179,7 @@ public class BalancedPartitioning {
 			}
 	}
 	
-	private int countEmptyParts(List<HashSet<Vertex>> partitionResult) {
+	private int countEmptyParts(List<HashSet<VertexOfDualGraph>> partitionResult) {
 		int ans = 0;
 		for (int i = 0; i < partitionResult.size(); i++) {
 			if (partitionResult.get(i).isEmpty()) ans++; 
@@ -186,7 +187,7 @@ public class BalancedPartitioning {
 		return ans;
 	}
 	
-	private double countSumPartitioningWeight(List<HashSet<Vertex>> partitionResult) {
+	private double countSumPartitioningWeight(List<HashSet<VertexOfDualGraph>> partitionResult) {
 		double ans = 0;
 		for (int i = 0; i < partitionResult.size(); i++) {
 			for (Vertex ver : partitionResult.get(i)) {

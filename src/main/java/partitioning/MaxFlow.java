@@ -1,18 +1,19 @@
 package partitioning;
 
+import java.util.*;
+
 import graph.Edge;
 import graph.Graph;
 import graph.Vertex;
-
-import java.util.*;
+import graph.VertexOfDualGraph;
 
 class FlowResult {
     double flowSize;
-    Graph graphWithFlow;
-    Vertex source;
-    Vertex sink;
+    Graph<VertexOfDualGraph> graphWithFlow;
+    VertexOfDualGraph source;
+    VertexOfDualGraph sink;
 
-    public FlowResult(double flow, Graph graph, Vertex source, Vertex sink) {
+    public FlowResult(double flow, Graph<VertexOfDualGraph> graph, VertexOfDualGraph source, VertexOfDualGraph sink) {
         this.flowSize = flow;
         this.graphWithFlow = graph;
         this.source = source;
@@ -25,21 +26,21 @@ class FlowResult {
 }
 
 public class MaxFlow {
-    Graph graph;
-    HashMap<Vertex, Integer> lastNeighbourIndex;
-    Vertex source;
-    Vertex sink;
+    Graph<VertexOfDualGraph> graph;
+    HashMap<VertexOfDualGraph, Integer> lastNeighbourIndex;
+    VertexOfDualGraph source;
+    VertexOfDualGraph sink;
     double flow;
-    HashMap<Vertex, Integer> level;
-    Queue<Vertex> queue;
+    HashMap<VertexOfDualGraph, Integer> level;
+    Queue<VertexOfDualGraph> queue;
 
 
-    public MaxFlow(Graph graph, Vertex source, Vertex sink) {
+    public MaxFlow(Graph<VertexOfDualGraph> graph, VertexOfDualGraph source, VertexOfDualGraph sink) {
         this.graph = graph;
         this.source = source;
         this.sink = sink;
         this.lastNeighbourIndex = new HashMap<>();
-        for (Vertex vertex : graph.verticesArray()) {
+        for (VertexOfDualGraph vertex : graph.verticesArray()) {
             lastNeighbourIndex.put(vertex, 0);
         }
         this.flow = 0;
@@ -61,7 +62,7 @@ public class MaxFlow {
     }
 
     private boolean bfs() {
-        for (Vertex v : graph.verticesArray()) {
+        for (VertexOfDualGraph v : graph.verticesArray()) {
             level.put(v, Integer.MAX_VALUE);
         }
         level.put(source, 0);
@@ -69,7 +70,7 @@ public class MaxFlow {
         while (!queue.isEmpty()) {
             Vertex u = queue.peek();
             queue.remove();
-            for (Map.Entry<Vertex, Edge> edge : graph.getEdges().get(u).entrySet()) {
+            for (Map.Entry<VertexOfDualGraph, Edge> edge : graph.getEdges().get(u).entrySet()) {
                 if (edge.getValue().flow < edge.getValue().getBandwidth() && level.get(edge.getKey()) == Integer.MAX_VALUE) {
                     level.put(edge.getKey(), level.get(u) + 1);
                     queue.add(edge.getKey());
@@ -79,15 +80,15 @@ public class MaxFlow {
         return level.get(sink) != Integer.MAX_VALUE;
     }
 
-    private double dfs(Vertex vertex, double flow) {
+    private double dfs(VertexOfDualGraph vertex, double flow) {
         if (vertex.equals(sink) || flow == 0) {
             return flow;
         }
-        List<Map.Entry<Vertex, Edge>> neighbours = graph.getEdges().get(vertex).entrySet().stream().sorted(Comparator.comparing(v -> v.getKey().getName())).toList();
+        List<Map.Entry<VertexOfDualGraph, Edge>> neighbours = graph.getEdges().get(vertex).entrySet().stream().sorted(Comparator.comparing(v -> v.getKey().getName())).toList();
         for (; lastNeighbourIndex.get(vertex) < neighbours.size();
              lastNeighbourIndex.replace(vertex, lastNeighbourIndex.get(vertex), lastNeighbourIndex.get(vertex) + 1)) {
-            Map.Entry<Vertex, Edge> entry = neighbours.get(lastNeighbourIndex.get(vertex));
-            Vertex to = entry.getKey();
+            Map.Entry<VertexOfDualGraph, Edge> entry = neighbours.get(lastNeighbourIndex.get(vertex));
+            VertexOfDualGraph to = entry.getKey();
             Edge edge = entry.getValue();
             if (level.get(to) == level.get(vertex) + 1 && edge.flow < edge.getBandwidth()) {
                 double pushed = dfs(to, Math.min(flow, edge.getBandwidth() - edge.flow));

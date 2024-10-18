@@ -22,9 +22,9 @@ public class MakingDualGraph {
 		return this.comparison;
 	}
 	
-	public Graph buildDualGraph(Graph gph) {
-		Graph res = new Graph();
-		Graph undir = gph.makeUndirectedGraph();
+	public Graph<VertexOfDualGraph> buildDualGraph(Graph<Vertex> gph) {
+		Graph<VertexOfDualGraph> res = new Graph<VertexOfDualGraph>();
+		Graph<Vertex> undir = gph.makeUndirectedGraph();
 		EdgeOfGraph[] edgesList = undir.edgesArray();
 		HashMap<Vertex, Integer> vertexInFaceNumber = gph.initVertexInFaceCounter();
 		HashMap<EdgeOfGraph, Vertex> inFace = new HashMap<EdgeOfGraph, Vertex>();
@@ -34,7 +34,7 @@ public class MakingDualGraph {
 		return res;
 	}
 
-	private void addDualEdges(Graph res, HashMap<EdgeOfGraph, Vertex> inFace) {
+	private void addDualEdges(Graph<VertexOfDualGraph> res, HashMap<EdgeOfGraph, Vertex> inFace) {
 		EdgeOfGraph back = null;
 		double oldLength = 0;
 		for (EdgeOfGraph edge : inFace.keySet()) {
@@ -48,13 +48,13 @@ public class MakingDualGraph {
 				res.getEdges().get(inFace.get(edge)).remove(inFace.get(back));
 				res.getEdges().get(inFace.get(back)).remove(inFace.get(edge));
 			}
-			res.getEdges().get(inFace.get(edge)).put(inFace.get(back), new Edge(oldLength + edge.getLength() / 2));
-			res.getEdges().get(inFace.get(back)).put(inFace.get(edge), new Edge(oldLength + edge.getLength() / 2));
+			res.getEdges().get(inFace.get(edge)).put((VertexOfDualGraph) inFace.get(back), new Edge(oldLength + edge.getLength() / 2));
+			res.getEdges().get(inFace.get(back)).put((VertexOfDualGraph) inFace.get(edge), new Edge(oldLength + edge.getLength() / 2));
 		}
 
 	}
 
-	private void buildDualVerteices(Graph res, HashMap<EdgeOfGraph, Vertex> inFace,
+	private void buildDualVerteices(Graph<VertexOfDualGraph> res, HashMap<EdgeOfGraph, Vertex> inFace,
 			HashMap<Vertex, TreeSet<EdgeOfGraph>> sortedGraph, EdgeOfGraph[] edgesList, HashMap<Vertex, Integer> vertexInFaceNumber) {
 		ArrayList<Vertex> verticesOfFace = new ArrayList<Vertex>();
 		HashSet<EdgeOfGraph> inActualFace = new HashSet<EdgeOfGraph>();
@@ -79,7 +79,7 @@ public class MakingDualGraph {
 		correctFacesWeight(res, sortedGraph, vertexInFaceNumber);
 	}
 
-	private void correctFacesWeight(Graph res, HashMap<Vertex, TreeSet<EdgeOfGraph>> sortedGraph,
+	private void correctFacesWeight(Graph<VertexOfDualGraph> res, HashMap<Vertex, TreeSet<EdgeOfGraph>> sortedGraph,
 			HashMap<Vertex, Integer> vertexInFaceNumber) {
 		for (Vertex v : res.getEdges().keySet()) {
 			v.setWeight(countFaceWeight(v, vertexInFaceNumber));
@@ -131,12 +131,12 @@ public class MakingDualGraph {
 
 	}
 
-	private HashMap<Vertex, TreeSet<EdgeOfGraph>> arrangeByAngle(Graph gph) {
+	private HashMap<Vertex, TreeSet<EdgeOfGraph>> arrangeByAngle(Graph<Vertex> gph) {
 		Comparator<EdgeOfGraph> edgeComp = new Comparator<EdgeOfGraph>() {
 			@Override
 			public int compare(EdgeOfGraph o1, EdgeOfGraph o2) {
-				double a1 = o1.getCorner();
-				double a2 = o2.getCorner();
+				double a1 = o1.angle();
+				double a2 = o2.angle();
 				return a1 < a2 ? -1 : a1 > a2 ? 1 : 0;
 			}
 		};

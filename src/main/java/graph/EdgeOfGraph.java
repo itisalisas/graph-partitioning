@@ -3,29 +3,41 @@ package graph;
 import java.util.Objects;
 
 public class EdgeOfGraph extends Edge {
+	
 	private Vertex begin;
 	private Vertex end;
+	
 	public EdgeOfGraph(Vertex begin,Vertex end, double length) {
 		super(length);
 		this.begin = begin;
 		this.end = end;
 	}
+	
+	
 	public EdgeOfGraph(Vertex begin, Vertex end, double length, double flow, double bandwidth) {
 		super(length, flow, bandwidth);
 		this.begin = begin;
 		this.end = end;
 	}
+	
+	
 	public EdgeOfGraph(Vertex begin, Vertex end, double length, double flow, double bandwidth, boolean road) {
 		super(length, flow, bandwidth, road);
 		this.begin = begin;
 		this.end = end;
 	}
+	
+	
 	public Vertex getBegin() {
 		return begin;
 	}
+	
+	
 	public Vertex getEnd() {
 		return end;
 	}
+	
+	
 	@Override
 	public boolean equals(Object obj) {
 		if (obj == this) return true;
@@ -33,100 +45,131 @@ public class EdgeOfGraph extends Edge {
 		EdgeOfGraph v = (EdgeOfGraph) obj;
 		return v.begin.equals(this.begin) && v.end.equals(this.end);
 	}
+	
+	
 	@Override
 	public int hashCode() {
 		return Objects.hash(begin, end);
 	}
+	
+	
 	public boolean intersect(EdgeOfGraph edge) {
-		return intersectForOneCoordinate(this.begin.getPoint().getX(), this.end.getPoint().getX(), edge.begin.getPoint().getX(), edge.end.getPoint().getX()) 
-				&& intersectForOneCoordinate(this.begin.getPoint().getY(), this.end.getPoint().getY(), edge.begin.getPoint().getY(), edge.end.getPoint().getY())
-				&& this.area(edge.begin.getPoint()) * this.area(edge.end.getPoint()) <= 0
-				&& edge.area(this.begin.getPoint()) * edge.area(this.end.getPoint()) <= 0;
+		return intersectForOneCoordinate(this.begin.getX(), this.end.getX(), edge.begin.getX(), edge.end.getX()) 
+				&& intersectForOneCoordinate(this.begin.getY(), this.end.getY(), edge.begin.getY(), edge.end.getY())
+				&& this.area(edge.begin) * this.area(edge.end) <= 0
+				&& edge.area(this.begin) * edge.area(this.end) <= 0;
 	}
+	
+	
 	private double area(Point point) {
-		return (this.end.getPoint().getX() - this.begin.getPoint().getX()) * (point.getY() - this.begin.getPoint().getY())
-				- (this.end.getPoint().getY() - this.begin.getPoint().getY()) * (point.getX() - this.begin.getPoint().getX());
+		return (this.end.getX() - this.begin.getX()) * (point.getY() - this.begin.getY())
+				- (this.end.getY() - this.begin.getY()) * (point.getX() - this.begin.getX());
 	}
-	private boolean intersectForOneCoordinate(double bx1, double ex1,double bx2, double ex2) {
+	
+	
+	private boolean intersectForOneCoordinate(double begin1x, double end1x, double begin2x, double end2x) {
 		double tmp = 0;
-		if (bx1 > ex1) {
-			tmp = bx1;
-			bx1 = ex1;
-			ex1 = tmp;
+		if (begin1x > end1x) {
+			tmp = begin1x;
+			begin1x = end1x;
+			end1x = tmp;
 		}
-		if (bx2 > ex2) {
-			tmp = bx2;
-			bx2 = ex2;
-			ex2 = tmp;
+		if (begin2x > end2x) {
+			tmp = begin2x;
+			begin2x = end2x;
+			end2x = tmp;
 		}
-		return Math.max(bx1, bx2) <= Math.min(ex1, ex2);
+		return Math.max(begin1x, begin2x) <= Math.min(end1x, end2x);
 	}
+	
+	
 	public Vertex intersectionPoint(EdgeOfGraph edge) {
 		if (!intersect(edge)) return null;
-		if (this.getBegin().getPoint().getX() == this.getEnd().getPoint().getX() && edge.getBegin().getPoint().getX() == edge.getEnd().getPoint().getX()) {
-			if (this.getBegin().getPoint().getX() != edge.getBegin().getPoint().getX() ||
-					(Math.max(this.getBegin().getPoint().getY(), this.getEnd().getPoint().getY()) < Math.min(edge.getBegin().getPoint().getY(), edge.getEnd().getPoint().getY())
-							|| Math.min(this.getBegin().getPoint().getY(), this.getEnd().getPoint().getY()) > Math.max(edge.getBegin().getPoint().getY(), edge.getEnd().getPoint().getY()))) {
+		
+		if (this.begin.getX() == this.end.getX() && edge.begin.getX() == edge.end.getX()) {
+			if (this.begin.getX() != edge.begin.getX() ||
+					(Math.max(this.begin.getY(), this.end.getY()) < Math.min(edge.begin.getY(), edge.end.getY())
+							|| Math.min(this.begin.getY(), this.end.getY()) > Math.max(edge.begin.getY(), edge.end.getY()))) {
 				//System.out.println("one edge higher then other");
 				return null;
 			}
-			return new Vertex(0, new Point(this.getBegin().getPoint().getX(), 
-					Math.max(this.getBegin().getPoint().getY(), this.getEnd().getPoint().getY()) 
-					< Math.max(edge.getBegin().getPoint().getY(), edge.getEnd().getPoint().getY()) 
-					? (Math.max(this.getBegin().getPoint().getY(), this.getEnd().getPoint().getY()) +  Math.min(edge.getBegin().getPoint().getY(), edge.getEnd().getPoint().getY())) / 2
-					: (Math.min(this.getBegin().getPoint().getY(), this.getEnd().getPoint().getY()) +  Math.max(edge.getBegin().getPoint().getY(), edge.getEnd().getPoint().getY())) / 2), 0);
+			return new Vertex(0, new Point(this.begin.getX(), 
+					Math.max(this.begin.getY(), this.end.getY()) 
+					< Math.max(edge.begin.getY(), edge.end.getY()) 
+					? (Math.max(this.begin.getY(), this.end.getY()) +  Math.min(edge.begin.getY(), edge.end.getY())) / 2
+					: (Math.min(this.begin.getY(), this.end.getY()) +  Math.max(edge.begin.getY(), edge.end.getY())) / 2), 0);
 		}
-		if (this.getBegin().getPoint().getX() == this.getEnd().getPoint().getX()) {
-			return new Vertex(0, new Point(this.getBegin().getPoint().getX(), edge.getYForEdge(this.getBegin().getPoint().getX())), 0);
+		
+		if (this.begin.getX() == this.end.getX()) {
+			return new Vertex(0, new Point(this.begin.getX(), edge.getYForEdge(this.begin.getX())), 0);
 		}
-		if (edge.getBegin().getPoint().getX() == edge.getEnd().getPoint().getX()) {
-			return new Vertex(0, new Point(edge.getBegin().getPoint().getX(), this.getYForEdge(edge.getBegin().getPoint().getX())), 0);
+		
+		if (edge.begin.getX() == edge.end.getX()) {
+			return new Vertex(0, new Point(edge.begin.getX(), this.getYForEdge(edge.begin.getX())), 0);
 		}
-		double k1 = (this.getBegin().getPoint().getY() - this.getEnd().getPoint().getY()) / (this.getBegin().getPoint().getX() - this.getEnd().getPoint().getX());
-		double k2 = (edge.getBegin().getPoint().getY() - edge.getEnd().getPoint().getY()) / (edge.getBegin().getPoint().getX() - edge.getEnd().getPoint().getX());
-		double b1 = this.getBegin().getPoint().getY() - k1 * this.getBegin().getPoint().getX();
-		double b2 = edge.getBegin().getPoint().getY() - k2 * edge.getBegin().getPoint().getX();		
+		
+		double k1 = (this.begin.getY() - this.end.getY()) / (this.begin.getX() - this.end.getX());
+		double k2 = (edge.begin.getY() - edge.end.getY()) / (edge.begin.getX() - edge.end.getX());
+		double b1 = this.begin.getY() - k1 * this.begin.getX();
+		double b2 = edge.begin.getY() - k2 * edge.begin.getX();		
 		
 		if (k1 == k2) {
 			//System.out.println("parallel");
 			return null;
 		}
+		
 		return new Vertex(0, new Point((b2 - b1) / (k1 - k2), this.getYForEdge((b2 - b1) / (k1 - k2))), 0);
 	}
+	
+	
 	public double getYForEdge(double x) {
-		if (this.getBegin().getPoint().getX() == this.getEnd().getPoint().getX()) return this.getBegin().getPoint().getY();
-		return this.getBegin().getPoint().getY() + (this.getEnd().getPoint().getY() - this.getBegin().getPoint().getY()) 
-				* (x - this.getBegin().getPoint().getX()) / (this.getEnd().getPoint().getX() - this.getBegin().getPoint().getX()) ;
-	}
-	public boolean vertical() {
-		return this.getBegin().getPoint().getX() == this.getEnd().getPoint().getX();
-	}
-	public boolean includeForY(Vertex vert) {
-		return (vert.getPoint().getY() - this.begin.getPoint().getY()) * (vert.getPoint().getY() - this.end.getPoint().getY()) < 0;
-	}
-	public boolean horizontal() {
-		return this.getBegin().getPoint().getY() == this.getEnd().getPoint().getY();
-	}
-	public boolean includeForX(Vertex vert) {
-		return (vert.getPoint().getX() - this.begin.getPoint().getX()) * (vert.getPoint().getX() - this.end.getPoint().getX()) < 0;
+		if (this.begin.getX() == this.end.getX()) return this.begin.getY();
+		return this.begin.getY() + (this.end.getY() - this.begin.getY()) 
+				* (x - this.begin.getX()) / (this.end.getX() - this.begin.getX()) ;
 	}
 	
-	public double getCorner() {
-		if (this.end.getPoint().getX() - this.begin.getPoint().getX() > 0) {
-			return Math.atan((this.end.getPoint().getY() - this.begin.getPoint().getY())/
-					(this.end.getPoint().getX() - this.begin.getPoint().getX())) + Math.PI;
-		} else if (this.end.getPoint().getX() - this.begin.getPoint().getX() < 0) {
-			if (this.end.getPoint().getY() - this.begin.getPoint().getY() > 0) {
-				return Math.atan((this.end.getPoint().getY() - this.begin.getPoint().getY())/
-						(this.end.getPoint().getX() - this.begin.getPoint().getX())) + 2 * Math.PI;
-			} else {
-				return Math.atan((this.end.getPoint().getY() - this.begin.getPoint().getY())/
-						(this.end.getPoint().getX() - this.begin.getPoint().getX()));
-			}
-		} else if (this.end.getPoint().getY() - this.begin.getPoint().getY() > 0) {
-			return Math.PI / 2 + Math.PI;
-		} else {
-			return Math.PI / 2;
-		}
+	
+	public boolean vertical() {
+		return this.begin.getX() == this.end.getX();
+	}
+	
+	
+	public boolean includeForY(Vertex vert) {
+		return (vert.getY() - this.begin.getY()) * (vert.getY() - this.end.getY()) < 0;
+	}
+	
+	
+	public boolean horizontal() {
+		return this.begin.getY() == this.end.getY();
+	}
+	
+	
+	public boolean includeForX(Vertex vert) {
+		return (vert.getX() - this.begin.getX()) * (vert.getX() - this.end.getX()) < 0;
+	}
+	
+	/**
+	 * angle for edge of graph
+	 * @return arctan(from -PI to PI) + PI
+	 */
+	public double angle() {
+		Point vector = this.begin.coordinateDistance(this.end);
+		return Math.atan2(vector.getY(), vector.getX()) + Math.PI;
+//		if (this.end.getX() - this.begin.getX() > 0) {
+//			return Math.atan((this.end.getY() - this.begin.getY())/
+//					(this.end.getX() - this.begin.getX())) + Math.PI;
+//		} else if (this.end.getX() - this.begin.getX() < 0) {
+//			if (this.end.getY() - this.begin.getY() > 0) {
+//				return Math.atan((this.end.getY() - this.begin.getY())/
+//						(this.end.getX() - this.begin.getX())) + 2 * Math.PI;
+//			} else {
+//				return Math.atan((this.end.getY() - this.begin.getY())/
+//						(this.end.getX() - this.begin.getX()));
+//			}
+//		} else if (this.end.getY() - this.begin.getY() > 0) {
+//			return Math.PI / 2 + Math.PI;
+//		} else {
+//			return Math.PI / 2;
+//		}
 	}
 }
