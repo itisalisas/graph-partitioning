@@ -19,14 +19,12 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
         this.PARAMETER = parameter;
     }
 
-    // lines kx - y = 0
-    // TODO : change to Direction
-    private static class Line {
+    private static class Vector2D {
         Point secondPoint;
         boolean isVertical;
         double k;
 
-        public Line(Point secondPoint) {
+        public Vector2D(Point secondPoint) {
             this.secondPoint = secondPoint;
             isVertical = secondPoint.getX() == 0;
             if (!isVertical) {
@@ -49,11 +47,11 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
     }
 
-    List<Line> lines = Arrays.asList(
-            new Line(new Point(0, 1)),
-            new Line(new Point(1, 0)),
-            new Line(new Point(1, 1)),
-            new Line(new Point(1, -1))
+    List<Vector2D> lines = Arrays.asList(
+            new Vector2D(new Point(0, 1)),
+            new Vector2D(new Point(1, 0)),
+            new Vector2D(new Point(1, 1)),
+            new Vector2D(new Point(1, -1))
     );
 
     private Graph getLargestConnectedComponent(Graph graph) {
@@ -63,7 +61,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
     }
 
     @Override
-    public void balancedPartitionAlgorithm(Graph graph, int maxSumVerticesWeight) {
+    public void balancedPartitionAlgorithm(Graph graph, double maxSumVerticesWeight) {
 
         Stack<Graph> stack = new Stack<>();
         graph = graph.getLargestConnectedComponent();
@@ -80,10 +78,10 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                 continue;
             }
 
-            Line bestLine = null;
+            Vector2D bestLine = null;
             double maxStretch = -1;
 
-            for (Line line : lines) {
+            for (Vector2D line : lines) {
                 vertices.sort(Comparator.comparing(v -> {
                     Point p = v.getPoint();
                     Point projected = line.projectPoint(p);
@@ -105,7 +103,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                 }
             }
 
-            Line finalBestLine = bestLine;
+            Vector2D finalBestLine = bestLine;
             vertices.sort(Comparator.comparing(v -> {
                 Point p = v.getPoint();
                 Point projected = finalBestLine.projectPoint(p);

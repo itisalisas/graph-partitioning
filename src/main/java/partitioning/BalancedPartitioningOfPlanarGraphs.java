@@ -13,7 +13,7 @@ public abstract class BalancedPartitioningOfPlanarGraphs {
 	public Graph graph;
 
 	//public abstract Graph[] balancedPartitionAlgorithm(Graph graph);
-	public abstract void balancedPartitionAlgorithm(Graph graph, int maxSumVerticesWeight);
+	public abstract void balancedPartitionAlgorithm(Graph graph, double maxSumVerticesWeight);
 
 	public ArrayList<HashSet<Vertex>> getPartition() {
 		return partition;

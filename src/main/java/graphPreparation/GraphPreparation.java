@@ -5,6 +5,7 @@ import java.util.HashMap;
 import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
+import org.junit.jupiter.api.Assertions;
 
 public class GraphPreparation {
 	private boolean isPlanar;
@@ -39,6 +40,9 @@ public class GraphPreparation {
 		if (!isDual) {
 			MakingDualGraph dg = new MakingDualGraph();
 			Graph dualGraph = dg.buildDualGraph(gph);
+			Assertions.assertTrue(dualGraph.isConnected());
+			dg.removeExternalFace(dualGraph);
+			Assertions.assertTrue(dualGraph.isConnected());
 			comparisonForDualGraph.clear();
 			comparisonForDualGraph.putAll(dg.getComparison());
 			System.out.println("Dual graph weight: " + dualGraph.verticesSumWeight());

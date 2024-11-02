@@ -13,7 +13,7 @@ import java.util.*;
 public class BalancedPartitioning {
 	private BalancedPartitioningOfPlanarGraphs bp;
 
-	private int maxSumVerticesWeight;
+	private double maxSumVerticesWeight;
 
 	private Map<Set<Vertex>, Double> cutEdgesMap;
 
@@ -23,7 +23,7 @@ public class BalancedPartitioning {
 		this.bp = bp;
 	}
 	public ArrayList<HashSet<Vertex>> partition(Graph graph,
-												int maxSumVerticesWeight) {
+												double maxSumVerticesWeight) {
 		bp.partition = new ArrayList<>();
 		this.maxSumVerticesWeight = maxSumVerticesWeight;
 		long startTime = System.currentTimeMillis();
@@ -202,19 +202,19 @@ public class BalancedPartitioning {
 	
 	private int countEmptyParts(List<HashSet<Vertex>> partitionResult) {
 		int ans = 0;
-		for (int i = 0; i < partitionResult.size(); i++) {
-			if (partitionResult.get(i).isEmpty()) ans++; 
-		}
+        for (HashSet<Vertex> vertices : partitionResult) {
+            if (vertices.isEmpty()) ans++;
+        }
 		return ans;
 	}
 	
 	private double countSumPartitioningWeight(List<HashSet<Vertex>> partitionResult) {
 		double ans = 0;
-		for (int i = 0; i < partitionResult.size(); i++) {
-			for (Vertex ver : partitionResult.get(i)) {
-				ans = ans + ver.getWeight();
-			}
-		}
+        for (HashSet<Vertex> vertices : partitionResult) {
+            for (Vertex ver : vertices) {
+                ans = ans + ver.getWeight();
+            }
+        }
 		return ans;
 	}
 }

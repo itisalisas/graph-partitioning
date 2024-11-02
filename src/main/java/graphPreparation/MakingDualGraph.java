@@ -2,11 +2,8 @@ package graphPreparation;
 
 import java.util.*;
 
-import graph.Edge;
-import graph.EdgeOfGraph;
-import graph.Graph;
-import graph.Vertex;
-import graph.VertexOfDualGraph;
+import graph.*;
+import org.junit.jupiter.api.Assertions;
 
 public class MakingDualGraph {
 	private HashMap<Vertex, VertexOfDualGraph> comparison;
@@ -57,12 +54,14 @@ public class MakingDualGraph {
 		long vertName = 0;
 		for (int i = 0; i < edgesList.length; i++) {
 			if (inFace.containsKey(edgesList[i])) {
+				//System.out.println("already in partition: " + edgesList[i].getBegin().getName() + "->" + edgesList[i].getEnd().getName());
 				continue;
 			}
 			findFace(verticesOfFace, inActualFace, sortedGraph, edgesList[i], vertexInFaceNumber);
+			Assertions.assertTrue(verticesOfFace.size() >= 3);
 			vertName++;
 			//System.out.print(vertName + " ");
-			VertexOfDualGraph vert = new VertexOfDualGraph(vertName, VertexOfDualGraph.findCenter(verticesOfFace),
+			VertexOfDualGraph vert = new VertexOfDualGraph(vertName, VertexOfDualGraph.findCenter(verticesOfFace, vertName),
 					VertexOfDualGraph.sumVertexWeight(verticesOfFace), verticesOfFace);
 			res.addVertex(vert);
 			comparison.put(vert, vert);
@@ -72,6 +71,7 @@ public class MakingDualGraph {
 			verticesOfFace.clear();
 			inActualFace.clear();
 		}
+		//System.out.println("cnt_vert = " + cnt_vert);
 		correctFacesWeight(res, sortedGraph, vertexInFaceNumber);
 	}
 
@@ -96,22 +96,30 @@ public class MakingDualGraph {
 		double faceWeight = 0;
 		Vertex prev = new Vertex(firstEdge.getBegin());
 		Vertex begin = new Vertex(firstEdge.getEnd());
-		verticesOfFace.add(prev);
+
+		//verticesOfFace.add(prev);
 		vertexInFaceNumber.put(prev, vertexInFaceNumber.get(prev) + 1);
-		verticesOfFace.add(begin);
+		//verticesOfFace.add(begin);
 		vertexInFaceNumber.put(begin, vertexInFaceNumber.get(begin) + 1);
-		faceWeight = faceWeight + prev.getWeight();
-		faceWeight = faceWeight + begin.getWeight();
+		faceWeight += prev.getWeight();
+		faceWeight += begin.getWeight();
 		inActualFace.add(firstEdge);
 		EdgeOfGraph actualEdge = null;
-		sortedGraph.get(prev).remove(firstEdge);
-		while (!(begin.equals(firstEdge.getBegin()) && !prev.equals(firstEdge.getEnd()))) {
+		//sortedGraph.get(prev).remove(firstEdge);
+		do {
+			//System.out.println("begin = " + begin.getName() + ", prev = " + prev.getName());
 			if (sortedGraph.get(begin).isEmpty()) {
+				//System.out.println("end");
 				//System.out.println("empty vertex");
 				return;
 			}
 			EdgeOfGraph back = new EdgeOfGraph(begin, prev, begin.getLength(prev));
 			actualEdge = sortedGraph.get(begin).higher(back);
+			/*
+			for (EdgeOfGraph u : sortedGraph.get(begin)) {
+				System.out.println("e: " + u.getBegin().getName() + " -> " + u.getEnd().getName());
+			}
+			 */
 			if (actualEdge == null) {
 				actualEdge = sortedGraph.get(begin).first();
 			}
@@ -121,9 +129,52 @@ public class MakingDualGraph {
 			vertexInFaceNumber.put(begin, vertexInFaceNumber.get(begin) + 1);
 			faceWeight = faceWeight + begin.getWeight();
 			inActualFace.add(actualEdge);
-			sortedGraph.get(prev).remove(actualEdge);
+			// sortedGraph.get(prev).remove(actualEdge);
 			actualEdge = null;
+		} while (!(begin.equals(firstEdge.getEnd()) && prev.equals(firstEdge.getBegin())));
+		// System.out.println("begin = " + begin.getName() + ", prev = " + prev.getName());
+	}
+
+
+	public void removeExternalFace(Graph dualGraph) {
+		Vertex leftTop = null;
+		Vertex rightBottom = null;
+
+		for (Vertex dualVertex : dualGraph.verticesArray()) {
+			for (Vertex v : getComparison().get(dualVertex).getVerticesOfFace()) {
+				Point point = v.getPoint();
+				if (leftTop == null || (point.getX() < leftTop.getPoint().getX() ||
+						(point.getX() == leftTop.getPoint().getX() && point.getY() > leftTop.getPoint().getY()))) {
+					leftTop = v;
+				}
+				if (rightBottom == null || (point.getX() > rightBottom.getPoint().getX() ||
+						(point.getX() == rightBottom.getPoint().getX() && point.getY() < rightBottom.getPoint().getY()))) {
+					rightBottom = v;
+				}
+			}
 		}
 
+		if (leftTop == null || rightBottom == null) {
+			throw new RuntimeException("Couldn't find external vertices");
+		}
+
+		// System.out.println("left top = " + leftTop.getName() + ", right bottom = " + rightBottom.getName());
+
+		Vertex externalFaceVertex = null;
+
+		for (Vertex dualVertex : dualGraph.verticesArray()) {
+			if (comparison.get(dualVertex).getVerticesOfFace().contains(leftTop) &&
+					comparison.get(dualVertex).getVerticesOfFace().contains(rightBottom)) {
+				externalFaceVertex = dualVertex;
+				break;
+			}
+		}
+
+		if (externalFaceVertex == null) {
+			throw new RuntimeException("Couldn't find external face");
+		}
+
+		dualGraph.deleteVertex(externalFaceVertex);
+		comparison.remove(externalFaceVertex);
 	}
 }

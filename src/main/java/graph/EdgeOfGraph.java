@@ -110,23 +110,11 @@ public class EdgeOfGraph extends Edge {
 	public boolean includeForX(Vertex vert) {
 		return (vert.getPoint().getX() - this.begin.getPoint().getX()) * (vert.getPoint().getX() - this.end.getPoint().getX()) < 0;
 	}
-	
+
 	public double getCorner() {
-		if (this.end.getPoint().getX() - this.begin.getPoint().getX() > 0) {
-			return Math.atan((this.end.getPoint().getY() - this.begin.getPoint().getY())/
-					(this.end.getPoint().getX() - this.begin.getPoint().getX())) + Math.PI;
-		} else if (this.end.getPoint().getX() - this.begin.getPoint().getX() < 0) {
-			if (this.end.getPoint().getY() - this.begin.getPoint().getY() > 0) {
-				return Math.atan((this.end.getPoint().getY() - this.begin.getPoint().getY())/
-						(this.end.getPoint().getX() - this.begin.getPoint().getX())) + 2 * Math.PI;
-			} else {
-				return Math.atan((this.end.getPoint().getY() - this.begin.getPoint().getY())/
-						(this.end.getPoint().getX() - this.begin.getPoint().getX()));
-			}
-		} else if (this.end.getPoint().getY() - this.begin.getPoint().getY() > 0) {
-			return Math.PI / 2 + Math.PI;
-		} else {
-			return Math.PI / 2;
-		}
+		double deltaX = this.end.getPoint().getX() - this.begin.getPoint().getX();
+		double deltaY = this.end.getPoint().getY() - this.begin.getPoint().getY();
+		double angle = Math.atan2(deltaY, deltaX); // Угол в диапазоне [-pi, pi]
+		return angle < 0 ? angle + 2 * Math.PI : angle; // Преобразуем к диапазону [0, 2pi]
 	}
 }

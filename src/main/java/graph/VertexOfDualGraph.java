@@ -16,26 +16,22 @@ public class VertexOfDualGraph extends Vertex{
 		this.verticesOfFace.addAll(verticesOfFace);
 	}
 
-	public static Vertex findCenter(ArrayList<Vertex> vertexIn) {
-		Vertex center = new Vertex();
-		double minLengthSum = 0;
-		double lengthSum = 0;
-		for (Vertex begin : vertexIn) {
-			lengthSum = 0;
-			for (Vertex end : vertexIn) {
-				lengthSum = lengthSum + begin.getLength(end);
-			}
-			if (minLengthSum == 0) {
-				center = begin;
-				minLengthSum = lengthSum;
-			}
-			if (minLengthSum > lengthSum) {
-				center = begin;
-				minLengthSum = lengthSum;
-			}
+	public static Vertex findCenter(ArrayList<Vertex> vertexIn, long id) {
+		double sumX = 0;
+		double sumY = 0;
+		int n = vertexIn.size();
+
+		for (Vertex v : vertexIn) {
+			sumX += v.getPoint().getX();
+			sumY += v.getPoint().getY();
 		}
-		return center;
+
+		double centerX = sumX / n;
+		double centerY = sumY / n;
+
+		return new Vertex(id, new Point(centerX, centerY));
 	}
+
 
 	public static double sumVertexWeight(ArrayList<Vertex> vertexIn) {
 		double sum = 0;

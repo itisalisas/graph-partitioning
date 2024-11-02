@@ -23,8 +23,8 @@ public class Graph {
 
 	public Vertex readVertex(Scanner sc) {
 		long name = sc.nextLong();
-		String yStr = sc.next().replace(',', '.');
 		String xStr = sc.next().replace(',', '.');
+		String yStr = sc.next().replace(',', '.');
 		double x = Double.parseDouble(xStr);
 		double y = Double.parseDouble(yStr);
 		return addVertex(new Vertex(name, new Point(x, y)));
@@ -201,7 +201,7 @@ public class Graph {
 	}
 
 
-	boolean findСycle(Graph undirGraph, HashSet<Vertex> component, ArrayList<Graph> faces) {
+	boolean findCycle(Graph undirGraph, HashSet<Vertex> component, ArrayList<Graph> faces) {
 		HashMap<Vertex, Integer> used = new HashMap<Vertex, Integer>();
 		boolean cycle = false;
 		ArrayList<Vertex> path = new ArrayList<Vertex>();
@@ -373,13 +373,49 @@ public class Graph {
 		return subgraph;
 	}
 
+	public Graph createSubgraphFromFaces(List<List<Vertex>> faces) {
+		Graph subgraph = new Graph();
+
+		for (List<Vertex> face : faces) {
+			for (Vertex vertex : face) {
+					subgraph.addVertex(new Vertex(vertex.getName(), vertex.getPoint(), vertex.getWeight()));
+			}
+		}
+
+		// Добавляем рёбра только между вершинами, которые находятся в одной и той же грани
+		for (List<Vertex> face : faces) {
+			for (int i = 0; i < face.size(); i++) {
+				Vertex v1 = face.get(i);
+				Vertex v2 = face.get((i + 1) % face.size());
+
+				EdgeOfGraph edge = findEdge(v1, v2);
+				if (edge != null) {
+					subgraph.addEdge(v1, v2, edge.getLength());
+				}
+			}
+		}
+
+		return subgraph;
+	}
+
+	private EdgeOfGraph findEdge(Vertex v1, Vertex v2) {
+		for (EdgeOfGraph edge : edgesArray()) {
+			if ((edge.getBegin().equals(v1) && edge.getEnd().equals(v2)) ||
+					(edge.getBegin().equals(v2) && edge.getEnd().equals(v1))) {
+				return edge;
+			}
+		}
+		return null;
+	}
+
+
 	public Graph getLargestConnectedComponent() {
 		List<HashSet<Vertex>> connectivityComponents = this.makeUndirectedGraph().splitForConnectedComponents();
 		HashSet<Vertex> largestComponent = connectivityComponents.stream().max(Comparator.comparingInt(HashSet::size)).orElseThrow();
 		return this.createSubgraph(largestComponent);
 	}
 
-	boolean isConnected() {
+	public boolean isConnected() {
 		return splitForConnectedComponents().size() == 1;
 	}
 	

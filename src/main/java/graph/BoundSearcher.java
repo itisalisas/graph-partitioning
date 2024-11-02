@@ -98,23 +98,31 @@ public class BoundSearcher {
                 .flatMap(Collection::stream)
                 .collect(Collectors.toSet());
 
-        Graph partSubgraph = graph.createSubgraph(allVertices).makeUndirectedGraph();
+        Graph partSubgraph = graph.createSubgraphFromFaces(verticesByFaces).makeUndirectedGraph();
         Assertions.assertTrue(partSubgraph.isConnected());
 
         HashMap<Vertex, TreeSet<EdgeOfGraph>> arrangedEdges = partSubgraph.arrangeByAngle();
 
         Vertex start = findLeftmostVertex(allVertices);
+        //  System.out.println("start vertex = " + start.getName());
         bound.add(start);
 
         // start is the highest among the leftmost ones, all incident edges must lie in [0;pi/2) U [3pi/2; 2pi)
         EdgeOfGraph startEdge = findMaxEdgeLessThanPiOver2(arrangedEdges.get(start));
+
+        Assertions.assertTrue((0 <= startEdge.getCorner() && startEdge.getCorner() < Math.PI / 2.0) ||
+                (3.0 * Math.PI) / 2.0 <= startEdge.getCorner() && startEdge.getCorner() < 2 * Math.PI);
+
+        // System.out.println(startEdge.getBegin().getName() + " -> " + startEdge.getEnd().getName());
         EdgeOfGraph prevEdge = new EdgeOfGraph(startEdge.getEnd(), startEdge.getBegin(), 0);
         Vertex current = startEdge.getEnd();
+        Assertions.assertTrue(Arrays.stream(partSubgraph.edgesArray()).toList().contains(startEdge));
         int faceIndex = findCommonFace(startEdge.getBegin(), startEdge.getEnd(), verticesByFaces);
         while (!current.equals(start)) {
             bound.add(current);
             Vertex next;
             if (numberOfFaces.get(current) > 1) {
+                // System.out.println("change face");
                 EdgeOfGraph edge = findNextEdge(prevEdge, arrangedEdges.get(current));
                 assert edge != null;
                 faceIndex = findCommonFace(edge.getBegin(), edge.getEnd(), verticesByFaces);
@@ -122,14 +130,18 @@ public class BoundSearcher {
             } else {
                 next = verticesByFaces.get(faceIndex).get((verticesByFaces.get(faceIndex).indexOf(current) + 1) % verticesByFaces.get(faceIndex).size());
             }
+            // System.out.println(current.getName() + " -> " + next.getName());
             prevEdge = new EdgeOfGraph(next, current, 0);
             current = next;
         }
 
-        System.out.println("Bound size: " + bound.size());
+        Assertions.assertTrue(bound.size() >= 3);
+
+        // System.out.println("Bound size: " + bound.size());
 
         return bound;
     }
+
 
     private static EdgeOfGraph findNextEdge(EdgeOfGraph prevEdge, TreeSet<EdgeOfGraph> orderedEdges) {
         if (orderedEdges.isEmpty()) {
@@ -139,19 +151,24 @@ public class BoundSearcher {
         return result == null ? orderedEdges.last() : result;
     }
 
+
     private static int findCommonFace(Vertex v1, Vertex v2, List<List<Vertex>> verticesByFaces) {
         int faceNumber = -1;
+        //System.out.println("Search common face for " + v1.getName() + " and " + v2.getName());
         for (List<Vertex> face : verticesByFaces) {
-            Set<Vertex> verticesSet = new HashSet<>(face);
-            if (verticesSet.contains(v1) && verticesSet.contains(v2)) {
-                if (faceNumber != -1) {
-                    throw new RuntimeException("Multiple common faces for edge");
+            for (int ptr = 0; ptr < face.size(); ptr++) {
+                if ((face.get(ptr).equals(v1) && face.get((ptr + 1) % face.size()).equals(v2)) ||
+                face.get(ptr).equals(v2) && face.get((ptr + 1) % face.size()).equals(v1)) {
+                    if (faceNumber != -1 && faceNumber != verticesByFaces.indexOf(face)) {
+                        throw new RuntimeException("Multiple common faces for edge");
+                    }
+                    faceNumber = verticesByFaces.indexOf(face);
                 }
-                faceNumber = verticesByFaces.indexOf(face);
             }
         }
+
         if (faceNumber == -1) {
-            throw new RuntimeException("Can't find common face for edge");
+            throw new RuntimeException("Can't find common face for edge " + v1.getName() + " -> " + v2.getName());
         }
         return faceNumber;
     }
