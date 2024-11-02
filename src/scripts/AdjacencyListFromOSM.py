@@ -33,7 +33,7 @@ if inputDist != '-':
     d = int(inputDist)
 
 # Получаем граф с ребрами, проходящими через границу
-G = osmnx.graph_from_point((center_lat, center_lon), dist=d, truncate_by_edge=True)
+G = osmnx.graph_from_point((center_lat, center_lon), dist=d, truncate_by_edge=True, simplify=False)
 
 # Получаем границу bounding box
 boundary_box = get_bounding_box((center_lat, center_lon), d)
