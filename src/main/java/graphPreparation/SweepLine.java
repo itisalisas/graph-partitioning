@@ -18,14 +18,14 @@ public class SweepLine {
 		this.inaccuracy = inaccuracy;
 	}
 
-	public void makePlanar(Graph gph) {
+	public void makePlanar(Graph<Vertex> gph) {
 		EdgeOfGraph[] edgesList = gph.edgesArray();
 		ArrayList<LinkedList<Vertex>> intersectionPoints = findPointsOfIntersection(edgesList);
 		addIntersectionPoints(gph, edgesList, intersectionPoints);
 
 	}
 
-	private void addIntersectionPoints(Graph gph, EdgeOfGraph[] edgesList,
+	private void addIntersectionPoints(Graph<Vertex> gph, EdgeOfGraph[] edgesList,
 			ArrayList<LinkedList<Vertex>> intersectionPoints) {
 		for (int i = 0; i < edgesList.length; i++) {
 			if (intersectionPoints.get(i) == null
@@ -34,7 +34,7 @@ public class SweepLine {
 			}
 			gph.deleteEdge(edgesList[i].getBegin(), edgesList[i].getEnd());
 			intersectionPoints.get(i).addFirst(edgesList[i].getBegin());
-			if (edgesList[i].getBegin().getPoint().getX() > edgesList[i].getEnd().getPoint().getX()) {
+			if (edgesList[i].getBegin().getX() > edgesList[i].getEnd().getX()) {
 //				if (edgesList[i].getBegin().getLength(intersectionPoints.get(i).get(intersectionPoints.get(i).size() - 1)) <= inaccuracy) {
 //					intersectionPoints.get(i).removeLast();
 //					intersectionPoints.get(i).addLast(edgesList[i].getBegin());
@@ -53,13 +53,13 @@ public class SweepLine {
 
 					@Override
 					public int compare(Vertex o1, Vertex o2) {
-						return o1.getPoint().getX() > o2.getPoint().getX() ? -1
-								: o1.getPoint().getX() < o2.getPoint().getX() ? 1 : 0;
+						return o1.getX() > o2.getX() ? -1
+								: o1.getX() < o2.getX() ? 1 : 0;
 					}
 
 				});
 
-			} else if (edgesList[i].getBegin().getPoint().getX() < edgesList[i].getEnd().getPoint().getX()) {
+			} else if (edgesList[i].getBegin().getX() < edgesList[i].getEnd().getX()) {
 //				if (edgesList[i].getBegin().getLength(intersectionPoints.get(i).get(0)) <= inaccuracy) {
 //					intersectionPoints.get(i).removeFirst();
 //					intersectionPoints.get(i).addFirst(edgesList[i].getBegin());
@@ -79,18 +79,18 @@ public class SweepLine {
 				Collections.sort(intersectionPoints.get(i), new Comparator<Vertex>() {
 					@Override
 					public int compare(Vertex o1, Vertex o2) {
-						return o1.getPoint().getX() < o2.getPoint().getX() ? -1
-								: o1.getPoint().getX() > o2.getPoint().getX() ? 1 : 0;
+						return o1.getX() < o2.getX() ? -1
+								: o1.getX() > o2.getX() ? 1 : 0;
 					}
 
 				});
 			} else {
-				if (edgesList[i].getBegin().getPoint().getY() < edgesList[i].getEnd().getPoint().getY()) {
+				if (edgesList[i].getBegin().getY() < edgesList[i].getEnd().getY()) {
 					Collections.sort(intersectionPoints.get(i), new Comparator<Vertex>() {
 						@Override
 						public int compare(Vertex o1, Vertex o2) {
-							return o1.getPoint().getY() < o2.getPoint().getY() ? -1
-									: o1.getPoint().getY() > o2.getPoint().getY() ? 1 : 0;
+							return o1.getY() < o2.getY() ? -1
+									: o1.getY() > o2.getY() ? 1 : 0;
 						}
 
 					});
@@ -98,8 +98,8 @@ public class SweepLine {
 					Collections.sort(intersectionPoints.get(i), new Comparator<Vertex>() {
 						@Override
 						public int compare(Vertex o1, Vertex o2) {
-							return o1.getPoint().getY() > o2.getPoint().getY() ? -1
-									: o1.getPoint().getY() < o2.getPoint().getY() ? 1 : 0;
+							return o1.getY() > o2.getY() ? -1
+									: o1.getY() < o2.getY() ? 1 : 0;
 						}
 
 					});
@@ -154,8 +154,8 @@ public class SweepLine {
 //		TreeSet<EdgeOfGraph> actualEdge = new TreeSet<EdgeOfGraph>(new Comparator<EdgeOfGraph>() {
 //			@Override
 //			public int compare(EdgeOfGraph o1, EdgeOfGraph o2) {
-//				double x = Math.max(Math.min(o1.getBegin().getPoint().getX(), o1.getEnd().getPoint().getX()), 
-//						Math.min(o2.getBegin().getPoint().getX(), o2.getEnd().getPoint().getX()));
+//				double x = Math.max(Math.min(o1.getBegin().getX(), o1.getEnd().getX()), 
+//						Math.min(o2.getBegin().getX(), o2.getEnd().getX()));
 //				return getYForEdge(x, o1) < getYForEdge(x, o2) ? -1 : getYForEdge(x, o1) > getYForEdge(x, o2) ? 1 : 0;
 //			}
 //		});
@@ -217,10 +217,10 @@ public class SweepLine {
 		ArrayList<Action> result = new ArrayList<Action>();
 		for (int i = 0; i < edgesList.length; i++) {
 			result.add(new Action(
-					Math.min(edgesList[i].getBegin().getPoint().getX(), edgesList[i].getEnd().getPoint().getX()), i,
+					Math.min(edgesList[i].getBegin().getX(), edgesList[i].getEnd().getX()), i,
 					ActionType.ADD));
 			result.add(new Action(
-					Math.max(edgesList[i].getBegin().getPoint().getX(), edgesList[i].getEnd().getPoint().getX()), i,
+					Math.max(edgesList[i].getBegin().getX(), edgesList[i].getEnd().getX()), i,
 					ActionType.DELETE));
 		}
 		return result;

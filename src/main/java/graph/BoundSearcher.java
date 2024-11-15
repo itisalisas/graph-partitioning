@@ -11,10 +11,10 @@ public class BoundSearcher {
         Vertex finalInitVertex = getInitVertex(vertices);
 
         vertices.sort((a, b) -> {
-            double ax = a.getPoint().getX() - finalInitVertex.getPoint().getX();
-            double ay = a.getPoint().getY() - finalInitVertex.getPoint().getY();
-            double bx = b.getPoint().getX() - finalInitVertex.getPoint().getX();
-            double by = b.getPoint().getY() - finalInitVertex.getPoint().getY();
+            double ax = a.getX() - finalInitVertex.getX();
+            double ay = a.getY() - finalInitVertex.getY();
+            double bx = b.getX() - finalInitVertex.getX();
+            double by = b.getY() - finalInitVertex.getY();
 
             double crossProduct = ax * by - ay * bx;
 
@@ -53,9 +53,9 @@ public class BoundSearcher {
 
         Vertex initVertex = vertices.get(0);
         for (Vertex vertex : vertices) {
-            if (vertex.getPoint().getX() < initVertex.getPoint().getX() ||
-                    (vertex.getPoint().getX() == initVertex.getPoint().getX() &&
-                            vertex.getPoint().getY() < initVertex.getPoint().getY())) {
+            if (vertex.getX() < initVertex.getX() ||
+                    (vertex.getX() == initVertex.getX() &&
+                            vertex.getY() < initVertex.getY())) {
                 initVertex = vertex;
             }
         }
@@ -67,23 +67,23 @@ public class BoundSearcher {
         Vertex last = hull.get(hull.size() - 1);
         Vertex secondLast = hull.get(hull.size() - 2);
 
-        double lastVecX = last.getPoint().getX() - secondLast.getPoint().getX();
-        double lastVecY = last.getPoint().getY() - secondLast.getPoint().getY();
+        double lastVecX = last.getX() - secondLast.getX();
+        double lastVecY = last.getY() - secondLast.getY();
 
-        double newVecX = vertex.getPoint().getX() - last.getPoint().getX();
-        double newVecY = vertex.getPoint().getY() - last.getPoint().getY();
+        double newVecX = vertex.getX() - last.getX();
+        double newVecY = vertex.getY() - last.getY();
 
         return lastVecX * newVecY - lastVecY * newVecX;
     }
 
-    public static List<Vertex> findBound(Graph graph, HashSet<Vertex> part, HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph) {
-        List<Vertex> orderedFaces = part.stream().toList();
+    public static List<Vertex> findBound(Graph<Vertex> graph, HashSet<VertexOfDualGraph> part, HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph) {
+        List<VertexOfDualGraph> orderedFaces = part.stream().toList();
         List<Vertex> bound = new ArrayList<>();
         List<List<Vertex>> verticesByFaces = new ArrayList<>();
         HashMap<Vertex, Integer> numberOfFaces = new HashMap<>();
 
         for (int i = 0; i < part.size(); i++) {
-            Vertex v = orderedFaces.get(i);
+            VertexOfDualGraph v = orderedFaces.get(i);
             verticesByFaces.add(comparisonForDualGraph.get(v).getVerticesOfFace());
             for (Vertex u : verticesByFaces.get(i)) {
                 if (!numberOfFaces.containsKey(u)) {
@@ -98,7 +98,7 @@ public class BoundSearcher {
                 .flatMap(Collection::stream)
                 .collect(Collectors.toSet());
 
-        Graph partSubgraph = graph.createSubgraphFromFaces(verticesByFaces).makeUndirectedGraph();
+        Graph<Vertex> partSubgraph = graph.createSubgraphFromFaces(verticesByFaces).makeUndirectedGraph();
         Assertions.assertTrue(partSubgraph.isConnected());
 
         HashMap<Vertex, TreeSet<EdgeOfGraph>> arrangedEdges = partSubgraph.arrangeByAngle();
@@ -176,9 +176,9 @@ public class BoundSearcher {
     private static Vertex findLeftmostVertex(Set<Vertex> partition) {
         Vertex leftmost = null;
         for (Vertex v : partition) {
-            if (leftmost == null || v.getPoint().getX() < leftmost.getPoint().getX() ||
-                    (v.getPoint().getX() == leftmost.getPoint().getX() &&
-                            v.getPoint().getY() > leftmost.getPoint().getY())) {
+            if (leftmost == null || v.getX() < leftmost.getX() ||
+                    (v.getX() == leftmost.getX() &&
+                            v.getY() > leftmost.getY())) {
                 leftmost = v;
             }
         }

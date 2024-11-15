@@ -83,7 +83,7 @@ public class GammaAlgorithm {
 		}
 		return componentsWithoutBridges;
 	}
-	private void dfsCompanentsWithoutBridges(Graph undirGraph, HashSet<Vertex> vertexInComponent, Vertex begin,
+	private void dfsCompanentsWithoutBridges(Graph<VertexOfDualGraph> undirGraph, HashSet<Vertex> vertexInComponent, Vertex begin,
 			HashSet<Vertex> actualComp, HashSet<Vertex> visited) {
 		if (undirGraph.getEdges().get(begin) == null)
 			return;
@@ -98,7 +98,7 @@ public class GammaAlgorithm {
 		}
 
 	}
-	private boolean gammaAlgorithm(HashSet<Vertex> component, Graph undirGraph) {
+	private boolean gammaAlgorithm(HashSet<Vertex> component, Graph<Vertex> undirGraph) {
 		// small component, number of vertices less 4 => trivial go on Plane
 		if (component.size() <= 3) {
 			return true;
@@ -106,7 +106,7 @@ public class GammaAlgorithm {
 
 		// init gammaAlgorithm
 		HashSet<Vertex> verticesOnPlane = new HashSet<Vertex>();
-		ArrayList<Graph> faces = new ArrayList<Graph>();
+		ArrayList<Graph<Vertex>> faces = new ArrayList<Graph<Vertex>>();
 
 		// no cycle = > tree => trivial go on Plane
 		// add cycle to first 2 faces
@@ -120,7 +120,7 @@ public class GammaAlgorithm {
 		}
 
 		// edges not on plane
-		Graph remains = new Graph();
+		Graph<Vertex> remains = new Graph<Vertex>();
 		addEdgesNotOnPlane(remains, component, faces, undirGraph);
 
 //		for (Vertex begin : component) {
@@ -130,7 +130,7 @@ public class GammaAlgorithm {
 //		}
 
 		// init segments and find segment (f)
-		ArrayList<Graph> segment = new ArrayList<Graph>();
+		ArrayList<Graph<Vertex>> segment = new ArrayList<Graph<Vertex>>();
 		findSegments(segment, remains, verticesOnPlane);
 
 		//
@@ -164,11 +164,11 @@ public class GammaAlgorithm {
 			}
 			System.out.println("init actual face segment");
 			// init actual segment
-			Graph actualSegment = segment.get(iterMinFacesNumber);
+			Graph<Vertex> actualSegment = segment.get(iterMinFacesNumber);
 			segment.remove(iterMinFacesNumber);
 
 			// init actual face
-			Graph actualFace = null;
+			Graph<Vertex> actualFace = null;
 			int actualFaceNum = findActualFace(actualSegment, verticesOnPlane, faces);
 			if (actualFaceNum != -1) {
 				actualFace = faces.get(actualFaceNum);
@@ -246,7 +246,7 @@ public class GammaAlgorithm {
 		return true;
 	}
 
-	private void deleteNewEdgesOnPlane(Graph remains, ArrayList<Vertex> chain) {
+	private void deleteNewEdgesOnPlane(Graph<Vertex> remains, ArrayList<Vertex> chain) {
 		for (int i = 0; i < chain.size() - 1; i++) {
 			remains.deleteEdge(chain.get(i), chain.get(i + 1));
 			remains.deleteEdge(chain.get(i + 1), chain.get(i));
@@ -254,7 +254,7 @@ public class GammaAlgorithm {
 
 	}
 
-	private void addChain(Graph face, HashSet<Vertex> verticesOnPlane, ArrayList<Vertex> chain, Graph actualSegment) {
+	private void addChain(Graph<Vertex> face, HashSet<Vertex> verticesOnPlane, ArrayList<Vertex> chain, Graph<Vertex> actualSegment) {
 		for (int i = 0; i < chain.size() - 1; i++) {
 			verticesOnPlane.add(chain.get(i));
 			face.addEdge(chain.get(i), chain.get(i + 1),
@@ -266,7 +266,7 @@ public class GammaAlgorithm {
 	}
 
 
-	private void splitActualFace(Graph oldFace, Vertex chainStart, Vertex chainEnd, Graph newFace1, Graph newFace2) {
+	private void splitActualFace(Graph<Vertex> oldFace, Vertex chainStart, Vertex chainEnd, Graph<Vertex> newFace1, Graph<Vertex> newFace2) {
 		Vertex tmp = chainStart;
 		HashSet<Vertex> prev = new HashSet<Vertex>();
 		while (tmp != chainEnd) {
@@ -287,7 +287,7 @@ public class GammaAlgorithm {
 
 	}
 
-	private int findActualFace(Graph actualSegment, HashSet<Vertex> verticesOnPlane, ArrayList<Graph> faces) {
+	private int findActualFace(Graph<Vertex> actualSegment, HashSet<Vertex> verticesOnPlane, ArrayList<Graph<Vertex>> faces) {
 		HashSet<Vertex> connectedVertexInSegment = new HashSet<Vertex>();
 		boolean vertexInFace = true;
 		for (Vertex v : actualSegment.getEdges().keySet()) {
@@ -308,7 +308,7 @@ public class GammaAlgorithm {
 		return -1;
 	}
 
-	private int facesNumberOfSegment(Graph segment, HashSet<Vertex> verticesOnPlane, ArrayList<Graph> faces) {
+	private int facesNumberOfSegment(Graph<Vertex> segment, HashSet<Vertex> verticesOnPlane, ArrayList<Graph<Vertex>> faces) {
 		int ans = 0;
 		boolean vertexInFace = true;
 		HashSet<Vertex> connectedVertexInSegment = new HashSet<Vertex>();
@@ -329,7 +329,7 @@ public class GammaAlgorithm {
 		return ans;
 	}
 
-	private void findSegments(ArrayList<Graph> segment, Graph remains, HashSet<Vertex> verticesOnPlane) {
+	private void findSegments(ArrayList<Graph<Vertex>> segment, Graph<Vertex> remains, HashSet<Vertex> verticesOnPlane) {
 		HashSet<Vertex> visited = new HashSet<Vertex>();
 		int segmentNumber = segment.size() - 1;
 		int allSegmentsNumber = segment.size();
@@ -338,14 +338,14 @@ public class GammaAlgorithm {
 				continue;
 			allSegmentsNumber++;
 			segmentNumber++;
-			segment.add(new Graph());
+			segment.add(new Graph<Vertex>());
 			segment.get(segmentNumber).addVertex(begin);
 			visited.add(begin);
 			dfsFindSegments(remains, begin, segmentNumber, allSegmentsNumber, visited, verticesOnPlane, segment, null);
 		}
 	}
 
-	private void addEdgesNotOnPlane(Graph remains, HashSet<Vertex> component, ArrayList<Graph> faces, Graph undirGraph) {
+	private void addEdgesNotOnPlane(Graph<Vertex> remains, HashSet<Vertex> component, ArrayList<Graph<Vertex>> faces, Graph<Vertex> undirGraph) {
 		for (Vertex begin : component) {
 			for (Vertex end : component) {
 				for (int i = 0; i < faces.size(); i++) {
@@ -361,7 +361,7 @@ public class GammaAlgorithm {
 		}
 	}
 
-	private boolean dfsFindChain(Vertex begin, Vertex chainEnd, Graph actualSegment, ArrayList<Vertex> chain,
+	private boolean dfsFindChain(Vertex begin, Vertex chainEnd, Graph<Vertex> actualSegment, ArrayList<Vertex> chain,
 			boolean done, Vertex prev, HashSet<Vertex> visited) {
 		chain.add(begin);
 		visited.add(begin);
@@ -387,7 +387,7 @@ public class GammaAlgorithm {
 
 	}
 
-	private Vertex findVertexForChain(HashSet<Vertex> verticesOnPlane, Graph actualSegment, Vertex chainStart,
+	private Vertex findVertexForChain(HashSet<Vertex> verticesOnPlane, Graph<Vertex> actualSegment, Vertex chainStart,
 			Vertex chainEnd) {
 		for (Vertex v : actualSegment.getEdges().keySet()) {
 			if (verticesOnPlane.contains(v)) {
@@ -405,8 +405,8 @@ public class GammaAlgorithm {
 
 	}
 
-	private void dfsFindSegments(Graph undirGraph, Vertex begin, int segmentNumber, int allSegmentsNumber, HashSet<Vertex> visited,
-			HashSet<Vertex> verticesOnPlane, ArrayList<Graph> segment, Vertex prev) {
+	private void dfsFindSegments(Graph<Vertex> undirGraph, Vertex begin, int segmentNumber, int allSegmentsNumber, HashSet<Vertex> visited,
+			HashSet<Vertex> verticesOnPlane, ArrayList<Graph<Vertex>> segment, Vertex prev) {
 		visited.add(begin);
 		if (undirGraph.getEdges().get(begin) == null)
 			return;
@@ -430,7 +430,7 @@ public class GammaAlgorithm {
 
 	}
 
-	boolean findСycle(Graph undirGraph, HashSet<Vertex> component, ArrayList<Graph> faces) {
+	boolean findСycle(Graph<Vertex> undirGraph, HashSet<Vertex> component, ArrayList<Graph<Vertex>> faces) {
 		HashMap<Vertex, Integer> used = new HashMap<Vertex, Integer>();
 		boolean cycle = false;
 		ArrayList<Vertex> path = new ArrayList<Vertex>();
@@ -450,7 +450,7 @@ public class GammaAlgorithm {
 		Vertex to = path.get(path.size() - 1);
 		while (path.get(cycleIter) != to)
 			cycleIter--;
-		Graph gph = new Graph();
+		Graph<Vertex> gph = new Graph<Vertex>();
 		gph.addVertex(to);
 		for (; cycleIter <= path.size() - 2; cycleIter++) {
 			gph.addEdge(path.get(cycleIter), path.get(cycleIter + 1),
@@ -464,7 +464,7 @@ public class GammaAlgorithm {
 
 	}
 
-	private boolean dfsFindCycle(Graph undirGraph, HashSet<Vertex> component, HashMap<Vertex, Integer> used,
+	private boolean dfsFindCycle(Graph<Vertex> undirGraph, HashSet<Vertex> component, HashMap<Vertex, Integer> used,
 			ArrayList<Vertex> path, boolean cycle, Vertex begin, Vertex prev) {
 		if (cycle)
 			return true;

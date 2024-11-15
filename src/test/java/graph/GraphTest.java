@@ -17,14 +17,14 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class GraphTest {
 
-    private Graph graph;
+    private Graph<Vertex> graph;
     private List<Vertex> vs;
     private List<EdgeOfGraph> edges;
 
 
     @BeforeEach
     void setUp() {
-        graph = new Graph();
+        graph = new Graph<Vertex>();
         vs = List.of(new Vertex(0, new Point(0, 0)),
                 new Vertex(1, new Point(5, -1)),
                 new Vertex(2, new Point(4, -10)),
@@ -90,7 +90,7 @@ class GraphTest {
 
     @Test
     void testMakeUndirectedGraph() {
-        Graph undirGraph = graph.makeUndirectedGraph();
+        Graph<Vertex> undirGraph = graph.makeUndirectedGraph();
         // вершины не теряются
         assertEquals(vs.size(), undirGraph.verticesNumber());
         assertEquals(22, undirGraph.edgesNumber());
@@ -102,7 +102,7 @@ class GraphTest {
     @Test
     void testCreateSubgraph() {
         List<Vertex> subgraphVertices = List.of(vs.get(2), vs.get(3), vs.get(4), vs.get(5), vs.get(6), vs.get(7), vs.get(8));
-        Graph subgraph = graph.createSubgraph(new HashSet<>(subgraphVertices));
+        Graph<Vertex> subgraph = graph.createSubgraph(new HashSet<>(subgraphVertices));
         assertEquals(subgraphVertices.size(), subgraph.verticesNumber());
         assertEquals(7, subgraph.edgesNumber());
         graph.addEdge(vs.get(0), vs.get(3), 1);
@@ -110,7 +110,7 @@ class GraphTest {
         // проверка, что если между вершинами есть ребро в не входящей в список грани, то ребро не появится
         List<List<Vertex>> faces = List.of(List.of(vs.get(0), vs.get(3), vs.get(1)),
                 List.of(vs.get(2), vs.get(1), vs.get(4), vs.get(7)));
-        Graph facesSubgraph = graph.createSubgraphFromFaces(faces);
+        Graph<Vertex> facesSubgraph = graph.createSubgraphFromFaces(faces);
         assertEquals(6, facesSubgraph.verticesNumber());
         facesSubgraph.makeUndirectedGraph();
         assertNull(facesSubgraph.getEdges().get(vs.get(0)).get(vs.get(2)));
@@ -144,20 +144,20 @@ class GraphTest {
 
     @Test
     void testDualGraphSimple() throws IOException {
-        Graph g = new Graph();
+        Graph<Vertex> g = new Graph<>();
         g.readGraphFromFile("src/main/resources/testGraphs/test_graph_0.txt".replace('/', File.separatorChar));
         GraphPreparation preparation = new GraphPreparation();
-        Graph dualGraph = preparation.prepareGraph(g, 1e-9);
+        Graph<VertexOfDualGraph> dualGraph = preparation.prepareGraph(g, 1e-9);
         Assertions.assertEquals(1, dualGraph.verticesNumber());
     }
 
 
     @Test
     void testDualGraph() throws IOException {
-        Graph g = new Graph();
+        Graph<Vertex> g = new Graph<>();
         g.readGraphFromFile("src/main/resources/testGraphs/test_graph_1.txt".replace('/', File.separatorChar));
         GraphPreparation preparation = new GraphPreparation();
-        Graph dualGraph = preparation.prepareGraph(g, 1e-9);
+        Graph<VertexOfDualGraph> dualGraph = preparation.prepareGraph(g, 1e-9);
         dualGraph.printGraphToFile("src/main/resources/testGraphs/test_graph_1_dual.txt");
         Assertions.assertEquals(6, dualGraph.verticesNumber());
     }
@@ -165,10 +165,10 @@ class GraphTest {
 
     @Test
     void testDualGraphWithInnerEdge() throws IOException {
-        Graph g = new Graph();
+        Graph<Vertex> g = new Graph<>();
         g.readGraphFromFile("src/main/resources/testGraphs/test_graph_2.txt".replace('/', File.separatorChar));
         GraphPreparation preparation = new GraphPreparation();
-        Graph dualGraph = preparation.prepareGraph(g, 1e-9);
+        Graph<VertexOfDualGraph> dualGraph = preparation.prepareGraph(g, 1e-9);
         dualGraph.printGraphToFile("src/main/resources/testGraphs/test_graph_2_dual.txt");
         Assertions.assertEquals(3, dualGraph.verticesNumber());
     }

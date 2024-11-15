@@ -1,5 +1,6 @@
 import graph.*;
 import graph.Vertex;
+import org.junit.jupiter.api.Assertions;
 import partitioning.BalancedPartitioning;
 import partitioning.InertialFlowPartitioning;
 import graphPreparation.GraphPreparation;
@@ -40,7 +41,7 @@ public class Main {
 			throw new RuntimeException("No such partition algorithm");
 		}
 
-		Graph graph = new Graph();
+		Graph<Vertex> graph = new Graph<Vertex>();
 
 		try {
 			graph.readGraphFromFile(resourcesDirectory + pathToFile);
@@ -59,10 +60,15 @@ public class Main {
 		System.out.println("Graph weight before: " + graph.verticesSumWeight());
 
 		GraphPreparation preparation = new GraphPreparation();
-		List<Vertex> bound = new ArrayList<>();
-		Graph preparedGraph = preparation.prepareGraph(graph, 1e-9);
 
-		ArrayList<HashSet<Vertex>> partitionResultForFaces = partitioning.partition(preparedGraph, maxSumVerticesWeight);
+		Graph<VertexOfDualGraph> preparedGraph = preparation.prepareGraph(graph, 0.0000001);
+
+		for (VertexOfDualGraph v : preparedGraph.verticesArray()) {
+			Assertions.assertNotNull(v.getVerticesOfFace());
+		}
+
+		ArrayList<HashSet<VertexOfDualGraph>> partitionResultForFaces = partitioning.partition(preparedGraph, maxSumVerticesWeight);
+
 		System.out.println("Partition size: " + partitionResultForFaces.size());
 
 		ArrayList<HashSet<Vertex>> partitionResult = new ArrayList<HashSet<Vertex>>();
@@ -71,7 +77,7 @@ public class Main {
 
 		for (int i = 0; i < partitionResultForFaces.size(); i++) {
 			partitionResult.add(new HashSet<Vertex>());
-			for (Vertex face : partitionResultForFaces.get(i)) {
+			for (VertexOfDualGraph face : partitionResultForFaces.get(i)) {
 				partitionResult.get(i).addAll(comparisonForDualGraph.get(face).getVerticesOfFace());
 			}
 			bounds.add(BoundSearcher.findBound(graph, partitionResultForFaces.get(i), comparisonForDualGraph));

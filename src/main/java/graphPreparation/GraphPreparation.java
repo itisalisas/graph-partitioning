@@ -26,7 +26,7 @@ public class GraphPreparation {
 		return this.comparisonForDualGraph;
 	}
 	
-	public Graph prepareGraph(Graph gph, double inaccuracy) {
+	public Graph<VertexOfDualGraph> prepareGraph(Graph<Vertex> gph, double inaccuracy) {
 		System.out.println("Number of 0 weight vertex, before correction: " + gph.countZeroWeightVertices());
 		gph.correctVerticesWeight();
 		System.out.println("Number of 0 weight vertex, before sweepLine: " + gph.countZeroWeightVertices());
@@ -37,19 +37,19 @@ public class GraphPreparation {
 		}
 		System.out.println("Number of 0 weight vertex, after sweepLine: " + gph.countZeroWeightVertices());
 		System.out.println("After sweepline graph weight: " + gph.verticesSumWeight());
-		if (!isDual) {
-			MakingDualGraph dg = new MakingDualGraph();
-			Graph dualGraph = dg.buildDualGraph(gph);
-			Assertions.assertTrue(dualGraph.isConnected());
-			dg.removeExternalFace(dualGraph);
-			Assertions.assertTrue(dualGraph.isConnected());
-			comparisonForDualGraph.clear();
-			comparisonForDualGraph.putAll(dg.getComparison());
-			System.out.println("Dual graph weight: " + dualGraph.verticesSumWeight());
-			return dualGraph;
-		}
 
-		return gph;	
+		MakingDualGraph dg = new MakingDualGraph();
+		Graph<VertexOfDualGraph> dualGraph = dg.buildDualGraph(gph);
+		for (VertexOfDualGraph v : dualGraph.verticesArray()) {
+			Assertions.assertNotNull(v.getVerticesOfFace());
+		}
+		Assertions.assertTrue(dualGraph.isConnected());
+		dg.removeExternalFace(dualGraph);
+		Assertions.assertTrue(dualGraph.isConnected());
+		comparisonForDualGraph.clear();
+		comparisonForDualGraph.putAll(dg.getComparison());
+		System.out.println("Dual graph weight: " + dualGraph.verticesSumWeight());
+		return dualGraph;
 	}
 	
 }
