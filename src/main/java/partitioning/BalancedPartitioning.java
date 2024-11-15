@@ -14,7 +14,7 @@ import java.util.*;
 public class BalancedPartitioning {
 	private BalancedPartitioningOfPlanarGraphs bp;
 
-	private int maxSumVerticesWeight;
+	private double maxSumVerticesWeight;
 
 	private Map<Set<VertexOfDualGraph>, Double> cutEdgesMap;
 
@@ -23,6 +23,7 @@ public class BalancedPartitioning {
 	public BalancedPartitioning(BalancedPartitioningOfPlanarGraphs bp) {
 		this.bp = bp;
 	}
+
 	public ArrayList<HashSet<VertexOfDualGraph>> partition(Graph<VertexOfDualGraph> graph,
 												int maxSumVerticesWeight) {
 		bp.partition = new ArrayList<>();
@@ -62,6 +63,7 @@ public class BalancedPartitioning {
 
 
 	public void savePartitionToDirectory(String outputDirectory, List<HashSet<VertexOfDualGraph>> partitionResult) {
+		createOutputDirectory(outputDirectory);
 		File outputDirectoryFile = new File(outputDirectory);
 		if (!outputDirectoryFile.exists()) {
 			if (!outputDirectoryFile.mkdirs()) {
@@ -163,37 +165,64 @@ public class BalancedPartitioning {
 		// System.out.println("Empty parts number: " + countEmptyParts(partitionResult));
 	}
 
-	public void printBound(List<Vertex> bound, String outputDirectory) {
-			File boundFile = new File(outputDirectory + File.separator + "bound.txt");
+	public void printBound(List<List<Vertex>> bounds, String outputDirectory) {
+		createOutputDirectory(outputDirectory);
+		for (int i = 0; i < bounds.size(); i++) {
+			File boundFile = new File(outputDirectory + File.separator + "bound_" + i + ".txt");
 			try {
 				boundFile.createNewFile();
 			} catch (IOException e) {
 				throw new RuntimeException("Can't create bound file");
 			}
-			for (Vertex vertex : bound) {
-				try {
-					vertex.printVertexToFile(boundFile);
-				} catch (Exception e) {
-					throw new RuntimeException("Can't print bound to file");
-				}
+			printVerticesToFile(bounds.get(i), boundFile);
+		}
+	}
+
+	public void printHull(List<Vertex> hull, String outputDirectory, String fileName) {
+		createOutputDirectory(outputDirectory);
+		File boundFile = new File(outputDirectory + File.separator + fileName);
+		try {
+			boundFile.createNewFile();
+		} catch (IOException e) {
+			throw new RuntimeException("Can't create bound file");
+		}
+		printVerticesToFile(hull, boundFile);
+	}
+
+	private void printVerticesToFile(List<Vertex> vertices, File file) {
+		for (Vertex vertex : vertices) {
+			try {
+				vertex.printVertexToFile(file);
+			} catch (Exception e) {
+				throw new RuntimeException("Can't print vertex to file " + file.getName());
 			}
+		}
+	}
+
+	private void createOutputDirectory(String outputDirectory) {
+		File outputDirectoryFile = new File(outputDirectory);
+		if (!outputDirectoryFile.exists()) {
+			if (!outputDirectoryFile.mkdirs()) {
+				throw new RuntimeException("Can't create output directory");
+			}
+		}
 	}
 	
 	private int countEmptyParts(List<HashSet<VertexOfDualGraph>> partitionResult) {
 		int ans = 0;
-		for (int i = 0; i < partitionResult.size(); i++) {
-			if (partitionResult.get(i).isEmpty()) ans++; 
-		}
+        for (HashSet<VertexOfDualGraph> vertices : partitionResult) {
+            if (vertices.isEmpty()) ans++;
+        }
 		return ans;
 	}
 	
 	private double countSumPartitioningWeight(List<HashSet<VertexOfDualGraph>> partitionResult) {
 		double ans = 0;
-		for (int i = 0; i < partitionResult.size(); i++) {
-			for (Vertex ver : partitionResult.get(i)) {
-				ans = ans + ver.getWeight();
-			}
-		}
+        for (HashSet<VertexOfDualGraph> vertices : partitionResult) {
+            for (Vertex ver : vertices) {
+                ans = ans + ver.getWeight();
+            }
+        }
 		return ans;
 	}
 }

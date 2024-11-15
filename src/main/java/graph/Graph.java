@@ -221,6 +221,7 @@ public class Graph<T extends Vertex> {
 	}
 
 
+
 	boolean findСycle(Graph<T> undirGraph, HashSet<T> component, ArrayList<Graph<T>> faces) {
 		HashMap<T, Integer> used = new HashMap<T, Integer>();
 		boolean cycle = false;
@@ -399,36 +400,49 @@ public class Graph<T extends Vertex> {
 		return subgraph;
 	}
 
-	
-	public static List<Vertex> findBound(List<HashSet<Vertex>> partition) {
-		List<Vertex> bound = new ArrayList<>();
-		for (int i = 0; i < partition.size(); i++) {
-			addPartBound(partition, i, bound);
-		}
-		return bound;
-	}
 
-	
-	private static void addPartBound(List<HashSet<Vertex>> partition, int currentPartIndex, List<Vertex> bound) {
-		for (Vertex v : partition.get(currentPartIndex)) {
-			if (isOtherPartContainsVertex(v, partition, currentPartIndex)) {
-				bound.add(v);
+	public Graph<T> createSubgraphFromFaces(List<List<T>> faces) {
+		Graph<T> subgraph = new Graph<T>();
+
+		for (List<T> face : faces) {
+			for (T vertex : face) {
+				subgraph.addVertex((T) new VertexOfDualGraph(vertex.getName(), vertex, vertex.getWeight()));
 			}
 		}
-	}
 
-	
-	private static boolean isOtherPartContainsVertex(Vertex vertex, List<HashSet<Vertex>> partition, int currentPartIndex) {
-		for (int j = 0; j < partition.size(); j++) {
-			if (currentPartIndex != j && partition.get(j).contains(vertex)) {
-				return true;
+		for (List<T> face : faces) {
+			for (int i = 0; i < face.size(); i++) {
+				T v1 = face.get(i);
+				T v2 = face.get((i + 1) % face.size());
+
+				EdgeOfGraph edge = findEdge(v1, v2);
+				if (edge != null) {
+					subgraph.addEdge(v1, v2, edge.getLength());
+				}
 			}
 		}
-		return false;
+
+		return subgraph;
 	}
 
-	
-	boolean isConnected() {
+	private EdgeOfGraph findEdge(Vertex v1, Vertex v2) {
+		for (EdgeOfGraph edge : edgesArray()) {
+			if ((edge.getBegin().equals(v1) && edge.getEnd().equals(v2)) ||
+					(edge.getBegin().equals(v2) && edge.getEnd().equals(v1))) {
+				return edge;
+			}
+		}
+		return null;
+	}
+
+
+	public Graph<T> getLargestConnectedComponent() {
+		List<HashSet<T>> connectivityComponents = this.makeUndirectedGraph().splitForConnectedComponents();
+		HashSet<T> largestComponent = connectivityComponents.stream().max(Comparator.comparingInt(HashSet::size)).orElseThrow();
+		return this.createSubgraph(largestComponent);
+	}
+
+	public boolean isConnected() {
 		return splitForConnectedComponents().size() == 1;
 	}
 	
@@ -471,6 +485,22 @@ public class Graph<T extends Vertex> {
 		HashMap<Vertex, Integer> res = new HashMap<Vertex, Integer>();
 		for (Vertex v : this.edges.keySet()) {
 			res.put(v, 0);
+		}
+		return res;
+	}
+
+	public HashMap<Vertex, TreeSet<EdgeOfGraph>> arrangeByAngle() {
+		Comparator<EdgeOfGraph> edgeComp = (o1, o2) -> {
+            double a1 = o1.getCorner();
+            double a2 = o2.getCorner();
+            return Double.compare(a1, a2);
+        };
+		HashMap<Vertex, TreeSet<EdgeOfGraph>> res = new HashMap<Vertex, TreeSet<EdgeOfGraph>>();
+		for (Vertex begin : this.getEdges().keySet()) {
+			res.put(begin, new TreeSet<EdgeOfGraph>(edgeComp));
+			for (Vertex end : this.getEdges().get(begin).keySet()) {
+				res.get(begin).add(new EdgeOfGraph(begin, end, this.getEdges().get(begin).get(end).getLength()));
+			}
 		}
 		return res;
 	}

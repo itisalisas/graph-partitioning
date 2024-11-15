@@ -45,7 +45,7 @@ public class VertexOfDualGraph extends Vertex{
 		this.verticesOfFace = null;
 	}
 
-	
+
 	public static Vertex findCenter(ArrayList<Vertex> vertexIn) {
 		Vertex center = new Vertex();
 //		double minLengthSum = 0;
@@ -110,7 +110,7 @@ public class VertexOfDualGraph extends Vertex{
 		return center;
 	}
 
-	
+
 	public static double sumVertexWeight(ArrayList<Vertex> vertexIn) {
 		double sum = 0;
 		for (Vertex v : vertexIn) {

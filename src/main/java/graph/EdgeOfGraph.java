@@ -127,7 +127,13 @@ public class EdgeOfGraph extends Edge {
 		return this.begin.getY() + (this.end.getY() - this.begin.getY()) 
 				* (x - this.begin.getX()) / (this.end.getX() - this.begin.getX()) ;
 	}
-	
+
+	public double getCorner() {
+		double deltaX = this.end.getX() - this.begin.getX();
+		double deltaY = this.end.getY() - this.begin.getY();
+		double angle = Math.atan2(deltaY, deltaX); // Угол в диапазоне [-pi, pi]
+		return angle < 0 ? angle + 2 * Math.PI : angle; // Преобразуем к диапазону [0, 2pi]
+	}
 	
 	public boolean vertical() {
 		return this.begin.getX() == this.end.getX();
@@ -155,21 +161,5 @@ public class EdgeOfGraph extends Edge {
 	public double angle() {
 		Point vector = this.begin.coordinateDistance(this.end);
 		return Math.atan2(vector.getY(), vector.getX()) + Math.PI;
-//		if (this.end.getX() - this.begin.getX() > 0) {
-//			return Math.atan((this.end.getY() - this.begin.getY())/
-//					(this.end.getX() - this.begin.getX())) + Math.PI;
-//		} else if (this.end.getX() - this.begin.getX() < 0) {
-//			if (this.end.getY() - this.begin.getY() > 0) {
-//				return Math.atan((this.end.getY() - this.begin.getY())/
-//						(this.end.getX() - this.begin.getX())) + 2 * Math.PI;
-//			} else {
-//				return Math.atan((this.end.getY() - this.begin.getY())/
-//						(this.end.getX() - this.begin.getX()));
-//			}
-//		} else if (this.end.getY() - this.begin.getY() > 0) {
-//			return Math.PI / 2 + Math.PI;
-//		} else {
-//			return Math.PI / 2;
-//		}
 	}
 }

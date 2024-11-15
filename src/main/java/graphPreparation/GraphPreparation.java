@@ -5,16 +5,20 @@ import java.util.HashMap;
 import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
+import org.junit.jupiter.api.Assertions;
 
 public class GraphPreparation {
 	private boolean isPlanar;
+	private boolean isDual;
 	private HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph;
 	public GraphPreparation() {
 		this.isPlanar = false;
+		this.isDual = false;
 		comparisonForDualGraph = new HashMap<Vertex, VertexOfDualGraph>();
 	}
 	public GraphPreparation(boolean isPlanar, boolean isDual) {
 		this.isPlanar = isPlanar;
+		this.isDual = isDual;
 		comparisonForDualGraph = new HashMap<Vertex, VertexOfDualGraph>();
 	}
 	
@@ -33,14 +37,19 @@ public class GraphPreparation {
 		}
 		System.out.println("Number of 0 weight vertex, after sweepLine: " + gph.countZeroWeightVertices());
 		System.out.println("After sweepline graph weight: " + gph.verticesSumWeight());
-		
+
 		MakingDualGraph dg = new MakingDualGraph();
 		Graph<VertexOfDualGraph> dualGraph = dg.buildDualGraph(gph);
+		for (VertexOfDualGraph v : dualGraph.verticesArray()) {
+			Assertions.assertNotNull(v.getVerticesOfFace());
+		}
+		Assertions.assertTrue(dualGraph.isConnected());
+		dg.removeExternalFace(dualGraph);
+		Assertions.assertTrue(dualGraph.isConnected());
 		comparisonForDualGraph.clear();
 		comparisonForDualGraph.putAll(dg.getComparison());
 		System.out.println("Dual graph weight: " + dualGraph.verticesSumWeight());
 		return dualGraph;
-		
 	}
 	
 }
