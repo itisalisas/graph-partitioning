@@ -125,12 +125,24 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                 sourceSet = selectVerticesForSet(vertices, index, targetWeight, new HashSet<>(), currentGraph);
                 index++;
             }
+
+            /* может возникнуть проблема, что набрав sourceSet
+            связное множество нужного веса не наберется,
+            тогда берем максимальное по весу
+             */
             Set<Vertex> sinkSet = new HashSet<>();
+            Set<Vertex> maxSinkSet = new HashSet<>();
             index = 1;
             while (index <= vertices.size() && sinkSet.stream().mapToDouble(Vertex::getWeight).sum() < targetWeight) {
                 sinkSet = selectVerticesForSet(vertices, vertices.size() - index, targetWeight, sourceSet, currentGraph);
+                if (sinkSet.stream().mapToDouble(Vertex::getWeight).sum() >
+                        maxSinkSet.stream().mapToDouble(Vertex::getWeight).sum()) {
+                    maxSinkSet = sinkSet;
+                }
                 index++;
             }
+
+            sinkSet = maxSinkSet;
 
             Graph copyGraph = createGraphWithSourceSink(currentGraph, sourceSet, source, sinkSet, sink);
             Assertions.assertEquals(currentGraph.verticesNumber() + 2, copyGraph.verticesNumber());
