@@ -39,10 +39,10 @@ public class Graph<T extends Vertex> {
 	public Graph<T> clone() {
 		Graph<T> result = new Graph<T>();
 		for (T begin : this.edges.keySet()) {
-			result.edges.put((T) begin.clone(), new HashMap<T, Edge>());
+			result.edges.put((T) new VertexOfDualGraph(begin.clone()), new HashMap<T, Edge>());
 			for (T end : this.edges.get(begin).keySet()) {
 				Edge originalEdge = this.edges.get(begin).get(end);
-				result.edges.get(begin).put((T) end.clone(), originalEdge.clone());
+				result.edges.get(begin).put((T) new VertexOfDualGraph(end.clone()), originalEdge.clone());
 			}
 		}
 		return result;
@@ -384,7 +384,7 @@ public class Graph<T extends Vertex> {
 
 		for (Vertex vertex : vertices) {
 			if (verticesOfSubgraph.contains(vertex)) {
-				subgraph.addVertex((T) new Vertex(vertex.getName(), vertex, vertex.getWeight()));
+				subgraph.addVertex((T) new VertexOfDualGraph(vertex.getName(), vertex, vertex.getWeight()));
 			}
 		}
 
