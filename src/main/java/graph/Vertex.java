@@ -113,26 +113,33 @@ public class Vertex extends Point {
 	/**
 	 * @return vertex is in polygon
 	 */
-	public boolean inFace(ArrayList<Vertex> vertexIn) {
+	public boolean inFaceGeom(ArrayList<Vertex> vertexIn) {
 		Vertex begin = vertexIn.get(vertexIn.size() - 1);
 		int count = 0;
 		for (int i = 0; i < vertexIn.size(); i++) {
 			if (this.inSegment(begin, vertexIn.get(i))) {
+				begin = vertexIn.get(i);
 				return true;
 			}
 			if (begin.getY() == vertexIn.get(i).getY()) {
+				begin = vertexIn.get(i);
 				continue;
 			}
 			if (this.getY() == Math.max(begin.getY(), vertexIn.get(i).getY()) 
 					&& this.getX() < Math.min(begin.getX(), vertexIn.get(i).getX())) {
 				count++;
+				begin = vertexIn.get(i);
+				continue;
 			}
 			if (this.getY() == Math.min(begin.getY(), vertexIn.get(i).getY())) {
+				begin = vertexIn.get(i);
 				continue;
 			}
 			if ((this.getY() - begin.getY()) * (this.getY() - vertexIn.get(i).getY()) < 0 &&
 					this.getX() < begin.getX() + (this.getY() - begin.getY()) * (vertexIn.get(i).getX() - begin.getX()) / (vertexIn.get(i).getY() - begin.getY())) {
 				count++;
+				begin = vertexIn.get(i);
+				continue;
 			}
 		}
 		if (count % 2 == 0) {

@@ -6,13 +6,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 
 public class SweepLine {
 	double inaccuracy;
 
 	public SweepLine() {
-		this.inaccuracy = 0.00000000000001;
+		this.inaccuracy = 0.000000000001;
 	}
 	public SweepLine(double inaccuracy) {
 		this.inaccuracy = inaccuracy;
@@ -213,6 +214,8 @@ public class SweepLine {
 		return intersectionPoints;
 	}
 
+	
+	
 	private ArrayList<Action> initActions(EdgeOfGraph[] edgesList) {
 		ArrayList<Action> result = new ArrayList<Action>();
 		for (int i = 0; i < edgesList.length; i++) {
@@ -224,5 +227,47 @@ public class SweepLine {
 					ActionType.DELETE));
 		}
 		return result;
+	}
+	
+	/**
+	 * @param diagList - array diagonals of rectangles containing faces
+	 * @param returnFromSimplification - diagonal and face matching
+	 * @param newVertices - vertices for which we determine the position
+	 * @return matching: vertex - face
+	 */
+	public HashMap<Vertex, VertexOfDualGraph> findFacesOfVertices(EdgeOfGraph[] diagList,
+			HashMap<EdgeOfGraph, VertexOfDualGraph> returnFromSimplification, HashSet<Vertex> newVertices) {
+		HashMap<Vertex, VertexOfDualGraph> res = new HashMap<Vertex, VertexOfDualGraph>();
+		ArrayList<Action> actions = initActions(diagList);
+		//System.out.println("action size: " +  actions.size());
+		Collections.sort(actions, new Comparator<Action>() {
+			@Override
+			public int compare(Action a1, Action a2) {
+				return a1.getX() < a2.getX() ? -1
+						: a1.getX() > a2.getX() ? 1
+								: a1.getType() == ActionType.ADD ? 1 : a2.getType() == ActionType.ADD ? -1 : 0;
+			}
+		});
+		HashMap<Integer, EdgeOfGraph> actualEdge = new HashMap<Integer, EdgeOfGraph>();
+		for (int i = 0; i < actions.size(); i++) {
+			if (actions.get(i).getType() == ActionType.ADD) {
+				actualEdge.put(actions.get(i).getEdgeNum(), diagList[actions.get(i).getEdgeNum()]);
+				for (int edgeNum : actualEdge.keySet()) {
+					for (Vertex ver : newVertices) {
+						//System.out.println("face: " + returnFromSimplification.get(actualEdge.get(edgeNum)).getName() + " " + "vertex: " + ver.getName());
+						if (ver.inRectangle(actualEdge.get(edgeNum).getBegin(), actualEdge.get(edgeNum).getEnd())) {
+							//System.out.println("vertex: " + ver.getName() + "  in rect " + returnFromSimplification.get(actualEdge.get(edgeNum)).getName());
+							if (ver.inFaceGeom(returnFromSimplification.get(actualEdge.get(edgeNum)).getVerticesOfFace())) {
+								//System.out.println("vertex: " + ver.getName() + "  in face  " + returnFromSimplification.get(actualEdge.get(edgeNum)).getName());
+								res.put(ver, returnFromSimplification.get(actualEdge.get(edgeNum)));
+							}
+						}
+					}
+				}
+			} else {
+				actualEdge.remove(actions.get(i).getEdgeNum());
+			}
+		}
+		return res;
 	}
 }

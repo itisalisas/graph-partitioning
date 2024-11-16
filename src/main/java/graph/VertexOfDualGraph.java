@@ -99,7 +99,7 @@ public class VertexOfDualGraph extends Vertex{
 						edgeCenter.getY() + 0.000001 * normalDir / Math.sqrt(1 + normalDir * normalDir));
 			}
 			
-			if (center.inFace(vertexIn)) {
+			if (center.inFaceGeom(vertexIn)) {
 				return center;
 			} else {
 				Point diff = center.coordinateDistance(edgeCenter);

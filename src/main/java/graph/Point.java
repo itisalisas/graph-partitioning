@@ -85,4 +85,11 @@ public class Point {
 		}
 		return false;
 	}
+	
+	/**
+	 * @return is point in rectangle
+	 */
+	public boolean inRectangle(Point a, Point b) {
+		return (a.x - this.x) * (b.x - this.x) < 0 && (a.y - this.y) * (b.y - this.y) < 0;
+	}
 }
