@@ -127,32 +127,10 @@ public class SweepLine {
 				}
 				//check vertical
 				if (edgesList[actions.get(i).edgeNum()].vertical() && edgesList[edgeNum].vertical()) {
-					if (edgesList[actions.get(i).edgeNum()].includeForY(edgesList[edgeNum].begin)) {
-						intersectionPoints.get(actions.get(i).edgeNum()).add(edgesList[edgeNum].begin);
-					}
-					if (edgesList[actions.get(i).edgeNum()].includeForY(edgesList[edgeNum].end)) {
-						intersectionPoints.get(actions.get(i).edgeNum()).add(edgesList[edgeNum].end);
-					}
-					if (edgesList[edgeNum].includeForY(edgesList[actions.get(i).edgeNum()].begin)) {
-						intersectionPoints.get(edgeNum).add(edgesList[actions.get(i).edgeNum()].begin);
-					}
-					if (edgesList[edgeNum].includeForY(edgesList[actions.get(i).edgeNum()].end)) {
-						intersectionPoints.get(edgeNum).add(edgesList[actions.get(i).edgeNum()].end);
-					}
+					checkVerticalEdges(actions.get(i).edgeNum(), edgeNum, edgesList, intersectionPoints);
 				//check horizontal
 				} else if (edgesList[actions.get(i).edgeNum()].horizontal() && edgesList[edgeNum].horizontal()) {
-					if (edgesList[actions.get(i).edgeNum()].includeForX(edgesList[edgeNum].begin)) {
-						intersectionPoints.get(actions.get(i).edgeNum()).add(edgesList[edgeNum].begin);
-					}
-					if (edgesList[actions.get(i).edgeNum()].includeForX(edgesList[edgeNum].end)) {
-						intersectionPoints.get(actions.get(i).edgeNum()).add(edgesList[edgeNum].end);
-					}
-					if (edgesList[edgeNum].includeForX(edgesList[actions.get(i).edgeNum()].begin)) {
-						intersectionPoints.get(edgeNum).add(edgesList[actions.get(i).edgeNum()].begin);
-					}
-					if (edgesList[edgeNum].includeForX(edgesList[actions.get(i).edgeNum()].end)) {
-						intersectionPoints.get(edgeNum).add(edgesList[actions.get(i).edgeNum()].end);
-					}
+					chechHorizontalEdges(actions.get(i).edgeNum(), edgeNum, edgesList, intersectionPoints);
 				//check normal (not vertical, not horizontal)
 				} else {
 					Vertex intersecPoint = edgesList[actions.get(i).edgeNum()]
@@ -167,6 +145,40 @@ public class SweepLine {
 			actualEdge.put(actions.get(i).edgeNum(), edgesList[actions.get(i).edgeNum()]);
 		}
 		return intersectionPoints;
+	}
+
+	private void chechHorizontalEdges(int edgeNum1, int edgeNum2, EdgeOfGraph[] edgesList,
+			ArrayList<LinkedList<Vertex>> intersectionPoints) {
+		if (edgesList[edgeNum1].includeForX(edgesList[edgeNum2].begin)) {
+			intersectionPoints.get(edgeNum1).add(edgesList[edgeNum2].begin);
+		}
+		if (edgesList[edgeNum1].includeForX(edgesList[edgeNum2].end)) {
+			intersectionPoints.get(edgeNum1).add(edgesList[edgeNum2].end);
+		}
+		if (edgesList[edgeNum2].includeForX(edgesList[edgeNum1].begin)) {
+			intersectionPoints.get(edgeNum2).add(edgesList[edgeNum1].begin);
+		}
+		if (edgesList[edgeNum2].includeForX(edgesList[edgeNum1].end)) {
+			intersectionPoints.get(edgeNum2).add(edgesList[edgeNum1].end);
+		}
+		
+	}
+
+	private void checkVerticalEdges(int edgeNum1, int edgeNum2, EdgeOfGraph[] edgesList,
+			ArrayList<LinkedList<Vertex>> intersectionPoints) {
+		if (edgesList[edgeNum1].includeForY(edgesList[edgeNum2].begin)) {
+			intersectionPoints.get(edgeNum1).add(edgesList[edgeNum2].begin);
+		}
+		if (edgesList[edgeNum1].includeForY(edgesList[edgeNum2].end)) {
+			intersectionPoints.get(edgeNum1).add(edgesList[edgeNum2].end);
+		}
+		if (edgesList[edgeNum2].includeForY(edgesList[edgeNum1].begin)) {
+			intersectionPoints.get(edgeNum2).add(edgesList[edgeNum1].begin);
+		}
+		if (edgesList[edgeNum2].includeForY(edgesList[edgeNum1].end)) {
+			intersectionPoints.get(edgeNum2).add(edgesList[edgeNum1].end);
+		}
+		
 	}
 
 	private ArrayList<Action> initActions(EdgeOfGraph[] edgesList) {
