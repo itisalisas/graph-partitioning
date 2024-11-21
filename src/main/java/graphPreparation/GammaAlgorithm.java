@@ -59,8 +59,8 @@ public class GammaAlgorithm {
 			}
 		}
 		for (int i = 0; i < bridges.size(); i++) {
-			undirGraph.deleteEdge(bridges.get(i).getBegin(), bridges.get(i).getEnd());
-			undirGraph.deleteEdge(bridges.get(i).getEnd(), bridges.get(i).getBegin());
+			undirGraph.deleteEdge(bridges.get(i).begin, bridges.get(i).end);
+			undirGraph.deleteEdge(bridges.get(i).end, bridges.get(i).begin);
 		}
 
 	}

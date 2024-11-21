@@ -31,7 +31,7 @@ public class MakingDualGraph {
 		EdgeOfGraph back = null;
 		double oldLength = 0;
 		for (EdgeOfGraph edge : inFace.keySet()) {
-			back = new EdgeOfGraph(edge.getEnd(), edge.getBegin(), edge.getLength());
+			back = new EdgeOfGraph(edge.end, edge.begin, edge.getLength());
 			if (inFace.get(edge).equals((inFace).get(back))) {
 				continue;
 			}
@@ -94,8 +94,8 @@ public class MakingDualGraph {
 	private void findFace(ArrayList<Vertex> verticesOfFace, HashSet<EdgeOfGraph> inActualFace,
 						  HashMap<Vertex, TreeSet<EdgeOfGraph>> sortedGraph, EdgeOfGraph firstEdge, HashMap<Vertex, Integer> vertexInFaceNumber) {
 		double faceWeight = 0;
-		Vertex prev = new Vertex(firstEdge.getBegin());
-		Vertex begin = new Vertex(firstEdge.getEnd());
+		Vertex prev = new Vertex(firstEdge.begin);
+		Vertex begin = new Vertex(firstEdge.end);
 
 		//verticesOfFace.add(prev);
 		vertexInFaceNumber.put(prev, vertexInFaceNumber.get(prev) + 1);
@@ -123,15 +123,15 @@ public class MakingDualGraph {
 			if (actualEdge == null) {
 				actualEdge = sortedGraph.get(begin).first();
 			}
-			prev = new Vertex(actualEdge.getBegin());
-			begin = new Vertex(actualEdge.getEnd());
+			prev = new Vertex(actualEdge.begin);
+			begin = new Vertex(actualEdge.end);
 			verticesOfFace.add(begin);
 			vertexInFaceNumber.put(begin, vertexInFaceNumber.get(begin) + 1);
 			faceWeight = faceWeight + begin.getWeight();
 			inActualFace.add(actualEdge);
 			// sortedGraph.get(prev).remove(actualEdge);
 			actualEdge = null;
-		} while (!(begin.equals(firstEdge.getEnd()) && prev.equals(firstEdge.getBegin())));
+		} while (!(begin.equals(firstEdge.end) && prev.equals(firstEdge.begin)));
 		//System.out.println("begin = " + begin.getName() + ", prev = " + prev.getName());
 		//System.out.println("begin = " + begin.getX() + "y = " + begin.getY() + ", prev = " + prev.getName());
 		//System.out.println("firstEdge.begin = " + firstEdge.getBegin().getName() + ", end = " + firstEdge.getEnd().getName());

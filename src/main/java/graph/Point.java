@@ -3,8 +3,8 @@ package graph;
 
 public class Point {
 	
-	private double x;
-	private double y;
+	protected double x;
+	protected double y;
 	
 	public Point() {
 		this.x = -1;
@@ -91,5 +91,12 @@ public class Point {
 	 */
 	public boolean inRectangle(Point a, Point b) {
 		return (a.x - this.x) * (b.x - this.x) < 0 && (a.y - this.y) * (b.y - this.y) < 0;
+	}
+	
+	/**
+	 * @return vector length
+	 */
+	public double module() {
+		return Math.sqrt(x * x + y * y);
 	}
 }

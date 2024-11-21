@@ -61,7 +61,7 @@ public class Vertex extends Point {
 //	}
 	
 	public <T extends Vertex> Vertex(T v) {
-		super(v.getX(), v.getY());
+		super(v.x, v.y);
 		this.name = v.getName();
 		this.weight = v.getWeight();
 	}
@@ -87,14 +87,14 @@ public class Vertex extends Point {
 		if (obj == this) return true;
 		if (! (obj instanceof Vertex)) return false;
 		Vertex v = (Vertex) obj;
-		return v.getX() == this.getX()
-				&& v.getY() == this.getY() && v.getName() == this.getName();
+		return v.x == this.x
+				&& v.y == this.y && v.getName() == this.getName();
 	}
 	
 	
 	@Override
 	public int hashCode() { 
-		return Objects.hash(this.getX(), this.getY(), this.getName());
+		return Objects.hash(this.x, this.y, this.getName());
 	}
 
 	
@@ -106,7 +106,7 @@ public class Vertex extends Point {
 	
 	public void printVertexToFile(File outFile) throws IOException {
 		FileWriter out = new FileWriter(outFile, true);
-		out.write(String.format("%d %f %f %f\n", this.getName(), this.getX(), this.getY(), this.getWeight()));
+		out.write(String.format("%d %f %f %f\n", this.getName(), this.x, this.y, this.getWeight()));
 		out.close();
 	}
 
@@ -121,22 +121,22 @@ public class Vertex extends Point {
 				begin = vertexIn.get(i);
 				return true;
 			}
-			if (begin.getY() == vertexIn.get(i).getY()) {
+			if (begin.y == vertexIn.get(i).y) {
 				begin = vertexIn.get(i);
 				continue;
 			}
-			if (this.getY() == Math.max(begin.getY(), vertexIn.get(i).getY()) 
-					&& this.getX() < Math.min(begin.getX(), vertexIn.get(i).getX())) {
+			if (this.y == Math.max(begin.y, vertexIn.get(i).y) 
+					&& this.x < Math.min(begin.x, vertexIn.get(i).x)) {
 				count++;
 				begin = vertexIn.get(i);
 				continue;
 			}
-			if (this.getY() == Math.min(begin.getY(), vertexIn.get(i).getY())) {
+			if (this.y == Math.min(begin.y, vertexIn.get(i).y)) {
 				begin = vertexIn.get(i);
 				continue;
 			}
-			if ((this.getY() - begin.getY()) * (this.getY() - vertexIn.get(i).getY()) < 0 &&
-					this.getX() < begin.getX() + (this.getY() - begin.getY()) * (vertexIn.get(i).getX() - begin.getX()) / (vertexIn.get(i).getY() - begin.getY())) {
+			if ((this.y - begin.y) * (this.y - vertexIn.get(i).y) < 0 &&
+					this.x < begin.x + (this.y - begin.y) * (vertexIn.get(i).x - begin.x) / (vertexIn.get(i).y - begin.y)) {
 				count++;
 				begin = vertexIn.get(i);
 				continue;

@@ -43,8 +43,8 @@ public class BalancedPartitioning {
 			double cutEdgesWeightSum = 0;
 
 			for (EdgeOfGraph edge : graph.edgesArray()) {
-				Vertex u = edge.getBegin();
-				Vertex v = edge.getEnd();
+				Vertex u = edge.begin;
+				Vertex v = edge.end;
 				double weight = edge.getBandwidth();
 
 				if (partition.contains(u) && !partition.contains(v)) {

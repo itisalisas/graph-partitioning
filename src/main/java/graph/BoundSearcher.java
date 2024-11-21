@@ -11,16 +11,15 @@ public class BoundSearcher {
         Vertex finalInitVertex = getInitVertex(vertices);
 
         vertices.sort((a, b) -> {
-            double ax = a.getX() - finalInitVertex.getX();
-            double ay = a.getY() - finalInitVertex.getY();
-            double bx = b.getX() - finalInitVertex.getX();
-            double by = b.getY() - finalInitVertex.getY();
+            
+            Point coorDistA = finalInitVertex.coordinateDistance(a);
+            Point coorDistB = finalInitVertex.coordinateDistance(b);
 
-            double crossProduct = ax * by - ay * bx;
+            double crossProduct = coorDistA.x * coorDistB.y - coorDistA.y * coorDistB.x;
 
             if (crossProduct == 0) {
-                double distanceA = Math.sqrt(ax * ax + ay * ay);
-                double distanceB = Math.sqrt(bx * bx + by * by);
+                double distanceA = coorDistA.module();
+                double distanceB = coorDistB.module();
                 return Double.compare(distanceA, distanceB);
             }
 
@@ -53,9 +52,9 @@ public class BoundSearcher {
 
         Vertex initVertex = vertices.get(0);
         for (Vertex vertex : vertices) {
-            if (vertex.getX() < initVertex.getX() ||
-                    (vertex.getX() == initVertex.getX() &&
-                            vertex.getY() < initVertex.getY())) {
+            if (vertex.x < initVertex.x ||
+                    (vertex.x == initVertex.x &&
+                            vertex.y < initVertex.y)) {
                 initVertex = vertex;
             }
         }
@@ -67,13 +66,10 @@ public class BoundSearcher {
         Vertex last = hull.get(hull.size() - 1);
         Vertex secondLast = hull.get(hull.size() - 2);
 
-        double lastVecX = last.getX() - secondLast.getX();
-        double lastVecY = last.getY() - secondLast.getY();
+        Point lastVec = secondLast.coordinateDistance(last);
+        Point newVec = last.coordinateDistance(vertex);
 
-        double newVecX = vertex.getX() - last.getX();
-        double newVecY = vertex.getY() - last.getY();
-
-        return lastVecX * newVecY - lastVecY * newVecX;
+        return lastVec.x * newVec.y - lastVec.y * newVec.x;
     }
 
     public static List<Vertex> findBound(Graph<Vertex> graph, HashSet<VertexOfDualGraph> part, HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph) {
@@ -114,10 +110,10 @@ public class BoundSearcher {
                 (3.0 * Math.PI) / 2.0 <= startEdge.getCorner() && startEdge.getCorner() < 2 * Math.PI);
 
         // System.out.println(startEdge.getBegin().getName() + " -> " + startEdge.getEnd().getName());
-        EdgeOfGraph prevEdge = new EdgeOfGraph(startEdge.getEnd(), startEdge.getBegin(), 0);
-        Vertex current = startEdge.getEnd();
+        EdgeOfGraph prevEdge = new EdgeOfGraph(startEdge.end, startEdge.begin, 0);
+        Vertex current = startEdge.end;
         Assertions.assertTrue(Arrays.stream(partSubgraph.edgesArray()).toList().contains(startEdge));
-        int faceIndex = findCommonFace(startEdge.getBegin(), startEdge.getEnd(), verticesByFaces);
+        int faceIndex = findCommonFace(startEdge.begin, startEdge.end, verticesByFaces);
         while (!current.equals(start)) {
             bound.add(current);
             Vertex next;
@@ -125,8 +121,8 @@ public class BoundSearcher {
                 // System.out.println("change face");
                 EdgeOfGraph edge = findNextEdge(prevEdge, arrangedEdges.get(current));
                 assert edge != null;
-                faceIndex = findCommonFace(edge.getBegin(), edge.getEnd(), verticesByFaces);
-                next = edge.getEnd();
+                faceIndex = findCommonFace(edge.begin, edge.end, verticesByFaces);
+                next = edge.end;
             } else {
                 next = verticesByFaces.get(faceIndex).get((verticesByFaces.get(faceIndex).indexOf(current) + 1) % verticesByFaces.get(faceIndex).size());
             }
@@ -158,7 +154,7 @@ public class BoundSearcher {
         for (List<Vertex> face : verticesByFaces) {
             for (int ptr = 0; ptr < face.size(); ptr++) {
                 if ((face.get(ptr).equals(v1) && face.get((ptr + 1) % face.size()).equals(v2)) ||
-                face.get(ptr).equals(v2) && face.get((ptr + 1) % face.size()).equals(v1)) {
+                	face.get(ptr).equals(v2) && face.get((ptr + 1) % face.size()).equals(v1)) {
                     if (faceNumber != -1 && faceNumber != verticesByFaces.indexOf(face)) {
                         throw new RuntimeException("Multiple common faces for edge");
                     }
@@ -176,9 +172,9 @@ public class BoundSearcher {
     private static Vertex findLeftmostVertex(Set<Vertex> partition) {
         Vertex leftmost = null;
         for (Vertex v : partition) {
-            if (leftmost == null || v.getX() < leftmost.getX() ||
-                    (v.getX() == leftmost.getX() &&
-                            v.getY() > leftmost.getY())) {
+            if (leftmost == null || v.x < leftmost.x ||
+                    (v.x == leftmost.x &&
+                            v.y > leftmost.y)) {
                 leftmost = v;
             }
         }

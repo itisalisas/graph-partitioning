@@ -41,7 +41,7 @@ public class VertexOfDualGraph extends Vertex{
 	}
 	
 	public <T extends Vertex> VertexOfDualGraph(T v) {
-		super(v.getName(), v.getX(), v.getY(), v.getWeight());
+		super(v.getName(), v.x, v.y, v.getWeight());
 		this.verticesOfFace = null;
 	}
 
@@ -69,8 +69,9 @@ public class VertexOfDualGraph extends Vertex{
 		} else if (vertexIn.size() == 1) {
 			return vertexIn.get(0);
 		} else if (vertexIn.size() == 2) {
-			center = new Vertex(0, vertexIn.get(0).getX() + vertexIn.get(0).coordinateDistance(vertexIn.get(1)).getX() / 2, 
-					vertexIn.get(0).getY() + vertexIn.get(0).coordinateDistance(vertexIn.get(1)).getY() / 2);
+			center = new Vertex(0,
+								vertexIn.get(0).x + vertexIn.get(0).coordinateDistance(vertexIn.get(1)).x / 2, 
+								vertexIn.get(0).y + vertexIn.get(0).coordinateDistance(vertexIn.get(1)).y / 2);
 		} else {
 			//change to func find longest edge
 			Vertex begin = vertexIn.get(0);
@@ -83,20 +84,22 @@ public class VertexOfDualGraph extends Vertex{
 					end = vertexIn.get(i);
 				}
 			}
-			Vertex edgeCenter = new Vertex(0, begin.getX() + begin.coordinateDistance(end).getX() / 2, 
-					begin.getY() + begin.coordinateDistance(end).getY() / 2);
+			Vertex edgeCenter = new Vertex(0, 
+										begin.x + begin.coordinateDistance(end).x / 2, 
+										begin.y + begin.coordinateDistance(end).y / 2);
 			Point coordinateLength = begin.coordinateDistance(end);
 			double normalDir = 0;
-			if (coordinateLength.getY() == 0) {
+			if (coordinateLength.y == 0) {
 				normalDir = 1;
-				center = new Vertex(0, edgeCenter.getX(), edgeCenter.getY() + 0.000001);
-			} else if (coordinateLength.getX() == 0) {
+				center = new Vertex(0, edgeCenter.x, edgeCenter.y + 0.000001);
+			} else if (coordinateLength.x == 0) {
 				normalDir = 0;
-				center = new Vertex(0, edgeCenter.getX() + 0.000001, edgeCenter.getY());
+				center = new Vertex(0, edgeCenter.x + 0.000001, edgeCenter.y);
 			} else {
-				normalDir = -1 / Math.atan2(coordinateLength.getY(), coordinateLength.getX());
-				center = new Vertex(0, edgeCenter.getX() + 0.000001 / Math.sqrt(1 + normalDir * normalDir),
-						edgeCenter.getY() + 0.000001 * normalDir / Math.sqrt(1 + normalDir * normalDir));
+				normalDir = -1 / Math.atan2(coordinateLength.y, coordinateLength.x);
+				center = new Vertex(0, 
+									edgeCenter.x + 0.000001 / Math.sqrt(1 + normalDir * normalDir),
+									edgeCenter.y + 0.000001 * normalDir / Math.sqrt(1 + normalDir * normalDir));
 			}
 			
 			if (center.inFaceGeom(vertexIn)) {

@@ -4,8 +4,8 @@ import java.util.Objects;
 
 public class EdgeOfGraph extends Edge {
 	
-	private Vertex begin;
-	private Vertex end;
+	public Vertex begin;
+	public Vertex end;
 	
 	public EdgeOfGraph(Vertex begin,Vertex end, double length) {
 		super(length);
@@ -26,18 +26,8 @@ public class EdgeOfGraph extends Edge {
 		this.begin = begin;
 		this.end = end;
 	}
-	
-	
-	public Vertex getBegin() {
-		return begin;
-	}
-	
-	
-	public Vertex getEnd() {
-		return end;
-	}
-	
-	
+
+
 	@Override
 	public boolean equals(Object obj) {
 		if (obj == this) return true;
@@ -54,16 +44,16 @@ public class EdgeOfGraph extends Edge {
 	
 	
 	public boolean intersect(EdgeOfGraph edge) {
-		return intersectForOneCoordinate(this.begin.getX(), this.end.getX(), edge.begin.getX(), edge.end.getX()) 
-				&& intersectForOneCoordinate(this.begin.getY(), this.end.getY(), edge.begin.getY(), edge.end.getY())
+		return intersectForOneCoordinate(this.begin.x, this.end.x, edge.begin.x, edge.end.x) 
+				&& intersectForOneCoordinate(this.begin.y, this.end.y, edge.begin.y, edge.end.y)
 				&& this.area(edge.begin) * this.area(edge.end) <= 0
 				&& edge.area(this.begin) * edge.area(this.end) <= 0;
 	}
 	
 	
 	private double area(Point point) {
-		return (this.end.getX() - this.begin.getX()) * (point.getY() - this.begin.getY())
-				- (this.end.getY() - this.begin.getY()) * (point.getX() - this.begin.getX());
+		return (this.end.x - this.begin.x) * (point.y - this.begin.y)
+				- (this.end.y - this.begin.y) * (point.x - this.begin.x);
 	}
 	
 	
@@ -86,32 +76,34 @@ public class EdgeOfGraph extends Edge {
 	public Vertex intersectionPoint(EdgeOfGraph edge) {
 		if (!intersect(edge)) return null;
 		
-		if (this.begin.getX() == this.end.getX() && edge.begin.getX() == edge.end.getX()) {
-			if (this.begin.getX() != edge.begin.getX() ||
-					(Math.max(this.begin.getY(), this.end.getY()) < Math.min(edge.begin.getY(), edge.end.getY())
-							|| Math.min(this.begin.getY(), this.end.getY()) > Math.max(edge.begin.getY(), edge.end.getY()))) {
+		if (this.begin.x == this.end.x && edge.begin.x == edge.end.x) {
+			if (this.begin.x != edge.begin.x ||
+					(Math.max(this.begin.y, this.end.y) < Math.min(edge.begin.y, edge.end.y)
+					|| Math.min(this.begin.y, this.end.y) > Math.max(edge.begin.y, edge.end.y))) {
 				//System.out.println("one edge higher then other");
 				return null;
 			}
-			return new Vertex(0, new Point(this.begin.getX(), 
-					Math.max(this.begin.getY(), this.end.getY()) 
-					< Math.max(edge.begin.getY(), edge.end.getY()) 
-					? (Math.max(this.begin.getY(), this.end.getY()) +  Math.min(edge.begin.getY(), edge.end.getY())) / 2
-					: (Math.min(this.begin.getY(), this.end.getY()) +  Math.max(edge.begin.getY(), edge.end.getY())) / 2), 0);
+			return new Vertex(0, 
+							new Point(this.begin.x, 
+					        Math.max(this.begin.y, this.end.y) < Math.max(edge.begin.y, edge.end.y) 
+					        ? (Math.max(this.begin.y, this.end.y) +  Math.min(edge.begin.y, edge.end.y)) / 2
+					        : (Math.min(this.begin.y, this.end.y) +  Math.max(edge.begin.y, edge.end.y)) / 2), 
+							0);
 		}
 		
-		if (this.begin.getX() == this.end.getX()) {
-			return new Vertex(0, new Point(this.begin.getX(), edge.getYForEdge(this.begin.getX())), 0);
+		if (this.begin.x == this.end.x) {
+			return new Vertex(0, new Point(this.begin.x, edge.getYForEdge(this.begin.x)), 0);
 		}
 		
-		if (edge.begin.getX() == edge.end.getX()) {
-			return new Vertex(0, new Point(edge.begin.getX(), this.getYForEdge(edge.begin.getX())), 0);
+		if (edge.begin.x == edge.end.x) {
+			return new Vertex(0, new Point(edge.begin.x, this.getYForEdge(edge.begin.x)), 0);
 		}
 		
-		double k1 = (this.begin.getY() - this.end.getY()) / (this.begin.getX() - this.end.getX());
-		double k2 = (edge.begin.getY() - edge.end.getY()) / (edge.begin.getX() - edge.end.getX());
-		double b1 = this.begin.getY() - k1 * this.begin.getX();
-		double b2 = edge.begin.getY() - k2 * edge.begin.getX();		
+		//add fun for find k and b
+		double k1 = this.tang();
+		double k2 = edge.tang();
+		double b1 = this.lineRise();
+		double b2 = edge.lineRise();		
 		
 		if (k1 == k2) {
 			//System.out.println("parallel");
@@ -121,37 +113,52 @@ public class EdgeOfGraph extends Edge {
 		return new Vertex(0, new Point((b2 - b1) / (k1 - k2), this.getYForEdge((b2 - b1) / (k1 - k2))), 0);
 	}
 	
-	
+	/**
+	 * @return b (y = kx + b)
+	 */
+	private double lineRise() {
+		return this.begin.y - tang() * this.begin.x;
+	}
+
+
+	/**
+	 * @return slope tangent
+	 */
+	private double tang() {
+		return (this.begin.y - this.end.y) / (this.begin.x - this.end.x);
+	}
+
+
 	public double getYForEdge(double x) {
-		if (this.begin.getX() == this.end.getX()) return this.begin.getY();
-		return this.begin.getY() + (this.end.getY() - this.begin.getY()) 
-				* (x - this.begin.getX()) / (this.end.getX() - this.begin.getX()) ;
+		if (this.begin.x == this.end.x) return this.begin.y;
+		return this.begin.y + (this.end.y - this.begin.y) 
+				* (x - this.begin.x) / (this.end.x - this.begin.x) ;
 	}
 
 	public double getCorner() {
-		double deltaX = this.end.getX() - this.begin.getX();
-		double deltaY = this.end.getY() - this.begin.getY();
+		double deltaX = this.end.x - this.begin.x;
+		double deltaY = this.end.y - this.begin.y;
 		double angle = Math.atan2(deltaY, deltaX); // Угол в диапазоне [-pi, pi]
 		return angle < 0 ? angle + 2 * Math.PI : angle; // Преобразуем к диапазону [0, 2pi]
 	}
 	
 	public boolean vertical() {
-		return this.begin.getX() == this.end.getX();
+		return this.begin.x == this.end.x;
 	}
 	
 	
 	public boolean includeForY(Vertex vert) {
-		return (vert.getY() - this.begin.getY()) * (vert.getY() - this.end.getY()) < 0;
+		return (vert.y - this.begin.y) * (vert.y - this.end.y) < 0;
 	}
 	
 	
 	public boolean horizontal() {
-		return this.begin.getY() == this.end.getY();
+		return this.begin.y == this.end.y;
 	}
 	
 	
 	public boolean includeForX(Vertex vert) {
-		return (vert.getX() - this.begin.getX()) * (vert.getX() - this.end.getX()) < 0;
+		return (vert.x - this.begin.x) * (vert.x - this.end.x) < 0;
 	}
 	
 	/**
@@ -160,6 +167,6 @@ public class EdgeOfGraph extends Edge {
 	 */
 	public double angle() {
 		Point vector = this.begin.coordinateDistance(this.end);
-		return Math.atan2(vector.getY(), vector.getX()) + Math.PI;
+		return Math.atan2(vector.y, vector.x) + Math.PI;
 	}
 }

@@ -30,7 +30,12 @@ public class Graph<T extends Vertex> {
 		String yStr = sc.next().replace(',', '.');
 		double x = Double.parseDouble(xStr);
 		double y = Double.parseDouble(yStr);
-		T ans =  (T) new VertexOfDualGraph(name, x, y);
+		T ans = null;
+		if (ans instanceof VertexOfDualGraph) {
+			ans = (T) new VertexOfDualGraph(name, x, y);
+		} else {
+			ans =  (T) new Vertex(name, x, y);
+		}
 		return addVertex(ans);
 	}
 
@@ -39,10 +44,18 @@ public class Graph<T extends Vertex> {
 	public Graph<T> clone() {
 		Graph<T> result = new Graph<T>();
 		for (T begin : this.edges.keySet()) {
-			result.edges.put((T) new VertexOfDualGraph(begin.clone()), new HashMap<T, Edge>());
+			if (begin instanceof VertexOfDualGraph) {
+				result.edges.put((T) new VertexOfDualGraph(begin.clone()), new HashMap<T, Edge>());
+			} else {
+				result.edges.put((T) new Vertex(begin.clone()), new HashMap<T, Edge>());
+			}
 			for (T end : this.edges.get(begin).keySet()) {
 				Edge originalEdge = this.edges.get(begin).get(end);
-				result.edges.get(begin).put((T) new VertexOfDualGraph(end.clone()), originalEdge.clone());
+				if (begin instanceof VertexOfDualGraph) {
+					result.edges.get(begin).put((T) new VertexOfDualGraph(end.clone()), originalEdge.clone());
+				} else {
+					result.edges.get(begin).put((T) new Vertex(end.clone()), originalEdge.clone());
+				}
 			}
 		}
 		return result;
@@ -95,10 +108,10 @@ public class Graph<T extends Vertex> {
 		FileWriter out = new FileWriter(outFileName, false);
 		out.write(String.format("%d %n", edges.size()));
 		for (Vertex begin : edges.keySet()) {
-			out.write(String.format("%d %f %f %d ", begin.getName(), begin.getX(), begin.getY(),
+			out.write(String.format("%d %f %f %d ", begin.getName(), begin.x, begin.y,
 					edges.get(begin).size()));
 			for (Vertex end : edges.get(begin).keySet()) {
-				out.write(String.format("%d %f %f %f ", end.getName(), end.getX(), end.getY(),
+				out.write(String.format("%d %f %f %f ", end.getName(), end.x, end.y,
 						edges.get(begin).get(end).getLength()));
 			}
 			out.append('\n');
@@ -113,7 +126,7 @@ public class Graph<T extends Vertex> {
 		out.write(String.format("%f\n", cutWeight));
 		out.write(String.format("%d\n", part.size()));
 		for (T v : part) {
-			out.write(String.format("%d %f %f %f\n", v.getName(), v.getX(), v.getY(), v.getWeight()));
+			out.write(String.format("%d %f %f %f\n", v.getName(), v.x, v.y, v.getWeight()));
 		}
 		out.close();
 	}
@@ -234,7 +247,6 @@ public class Graph<T extends Vertex> {
 				break;
 
 			break;
-
 		}
 		if (!cycle)
 			return false;
@@ -330,7 +342,11 @@ public class Graph<T extends Vertex> {
 	public Graph<T> makeUndirectedGraph() {
 		Graph<T> graph = new Graph<T>();
 		for (T vertex : edges.keySet()) {
-			graph.addVertex((T) (new VertexOfDualGraph(vertex.clone())));
+			if (vertex instanceof VertexOfDualGraph) {
+				graph.addVertex((T) (new VertexOfDualGraph(vertex.clone())));
+			} else {
+				graph.addVertex((T) (new Vertex(vertex.clone())));
+			}
 		}
 		for (T begin : edges.keySet()) {
 			for (T end : edges.get(begin).keySet()) {
@@ -383,17 +399,19 @@ public class Graph<T extends Vertex> {
 		List<EdgeOfGraph> edges = Arrays.stream(edgesArray()).toList();
 		List<T> vertices = new ArrayList<>(verticesArray());
 
-		for (Vertex vertex : vertices) {
+		for (T vertex : vertices) {
 			if (verticesOfSubgraph.contains(vertex)) {
-				subgraph.addVertex((T) new VertexOfDualGraph(vertex.getName(), vertex, vertex.getWeight()));
+				subgraph.addVertex(vertex);
 			}
 		}
 
 		for (EdgeOfGraph edge : edges) {
-			EdgeOfGraph newEdge;
-			if (verticesOfSubgraph.contains(edge.getBegin()) && verticesOfSubgraph.contains(edge.getEnd())) {
-				newEdge = new EdgeOfGraph(edge.getBegin(), edge.getEnd(), edge.getLength());
-				subgraph.addEdge((T) new VertexOfDualGraph(newEdge.getBegin()), (T)  new VertexOfDualGraph(newEdge.getEnd()), newEdge.getLength());
+			if (verticesOfSubgraph.contains(edge.begin) && verticesOfSubgraph.contains(edge.end)) {
+				if (edge.begin instanceof VertexOfDualGraph) {
+					subgraph.addEdge((T) new VertexOfDualGraph(edge.begin), (T)  new VertexOfDualGraph(edge.end), edge.getLength());
+				} else {
+					subgraph.addEdge((T) new Vertex(edge.begin), (T)  new Vertex(edge.end), edge.getLength());
+				}
 			}
 		}
 
@@ -406,7 +424,11 @@ public class Graph<T extends Vertex> {
 
 		for (List<T> face : faces) {
 			for (T vertex : face) {
-				subgraph.addVertex((T) new VertexOfDualGraph(vertex.getName(), vertex, vertex.getWeight()));
+				if (vertex instanceof VertexOfDualGraph) {
+					subgraph.addVertex((T) new VertexOfDualGraph(vertex.getName(), vertex, vertex.getWeight()));
+				} else {
+					subgraph.addVertex((T) new Vertex(vertex.getName(), vertex, vertex.getWeight()));
+				}
 			}
 		}
 
@@ -427,8 +449,8 @@ public class Graph<T extends Vertex> {
 
 	private EdgeOfGraph findEdge(Vertex v1, Vertex v2) {
 		for (EdgeOfGraph edge : edgesArray()) {
-			if ((edge.getBegin().equals(v1) && edge.getEnd().equals(v2)) ||
-					(edge.getBegin().equals(v2) && edge.getEnd().equals(v1))) {
+			if ((edge.begin.equals(v1) && edge.end.equals(v2)) ||
+					(edge.begin.equals(v2) && edge.end.equals(v1))) {
 				return edge;
 			}
 		}
@@ -465,8 +487,7 @@ public class Graph<T extends Vertex> {
 					}
 				}
 			}
-		}
-		
+		}	
 	}
 	
 
