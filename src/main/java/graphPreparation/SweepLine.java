@@ -9,6 +9,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 
+enum ActionType {
+	ADD, DELETE, POINT
+}
+
+record Action(double x, int edgeNum, Vertex vertex, ActionType type) {
+}
+
 public class SweepLine {
 	double inaccuracy;
 
@@ -125,13 +132,13 @@ public class SweepLine {
 				if (!edgesList[actions.get(i).edgeNum()].intersect(actualEdge.get(edgeNum))) {
 					continue;
 				}
-				//check vertical
+				// check vertical
 				if (edgesList[actions.get(i).edgeNum()].vertical() && edgesList[edgeNum].vertical()) {
 					checkVerticalEdges(actions.get(i).edgeNum(), edgeNum, edgesList, intersectionPoints);
-				//check horizontal
+					// check horizontal
 				} else if (edgesList[actions.get(i).edgeNum()].horizontal() && edgesList[edgeNum].horizontal()) {
 					chechHorizontalEdges(actions.get(i).edgeNum(), edgeNum, edgesList, intersectionPoints);
-				//check normal (not vertical, not horizontal)
+					// check normal (not vertical, not horizontal)
 				} else {
 					Vertex intersecPoint = edgesList[actions.get(i).edgeNum()]
 							.intersectionPoint(actualEdge.get(edgeNum));
@@ -161,7 +168,7 @@ public class SweepLine {
 		if (edgesList[edgeNum2].includeForX(edgesList[edgeNum1].end)) {
 			intersectionPoints.get(edgeNum2).add(edgesList[edgeNum1].end);
 		}
-		
+
 	}
 
 	private void checkVerticalEdges(int edgeNum1, int edgeNum2, EdgeOfGraph[] edgesList,
@@ -178,14 +185,16 @@ public class SweepLine {
 		if (edgesList[edgeNum2].includeForY(edgesList[edgeNum1].end)) {
 			intersectionPoints.get(edgeNum2).add(edgesList[edgeNum1].end);
 		}
-		
+
 	}
 
 	private ArrayList<Action> initActions(EdgeOfGraph[] edgesList) {
 		ArrayList<Action> result = new ArrayList<Action>();
 		for (int i = 0; i < edgesList.length; i++) {
-			result.add(new Action(Math.min(edgesList[i].begin.getX(), edgesList[i].end.getX()), i, ActionType.ADD));
-			result.add(new Action(Math.max(edgesList[i].begin.getX(), edgesList[i].end.getX()), i, ActionType.DELETE));
+			result.add(
+					new Action(Math.min(edgesList[i].begin.getX(), edgesList[i].end.getX()), i, null, ActionType.ADD));
+			result.add(new Action(Math.max(edgesList[i].begin.getX(), edgesList[i].end.getX()), i, null,
+					ActionType.DELETE));
 		}
 		return result;
 	}
@@ -202,6 +211,7 @@ public class SweepLine {
 			HashMap<EdgeOfGraph, VertexOfDualGraph> returnFromSimplification, HashSet<Vertex> newVertices) {
 		HashMap<Vertex, VertexOfDualGraph> res = new HashMap<Vertex, VertexOfDualGraph>();
 		ArrayList<Action> actions = initActions(diagList);
+		addPointToActions(actions, newVertices);
 		// System.out.println("action size: " + actions.size());
 		Collections.sort(actions, new Comparator<Action>() {
 			@Override
@@ -212,29 +222,38 @@ public class SweepLine {
 		});
 		HashMap<Integer, EdgeOfGraph> actualEdge = new HashMap<Integer, EdgeOfGraph>();
 		for (int i = 0; i < actions.size(); i++) {
+			if (actions.get(i).type() == ActionType.DELETE) {
+				actualEdge.remove(actions.get(i).edgeNum());
+				continue;
+			}
 			if (actions.get(i).type() == ActionType.ADD) {
 				actualEdge.put(actions.get(i).edgeNum(), diagList[actions.get(i).edgeNum()]);
-				for (int edgeNum : actualEdge.keySet()) {
-					for (Vertex ver : newVertices) {
-						// System.out.println("face: " +
-						// returnFromSimplification.get(actualEdge.get(edgeNum)).getName() + " " +
-						// "vertex: " + ver.getName());
-						if (ver.inRectangle(actualEdge.get(edgeNum).begin, actualEdge.get(edgeNum).end)) {
-							// System.out.println("vertex: " + ver.getName() + " in rect " +
-							// returnFromSimplification.get(actualEdge.get(edgeNum)).getName());
-							if (ver.inFaceGeom(
-									returnFromSimplification.get(actualEdge.get(edgeNum)).getVerticesOfFace())) {
-								// System.out.println("vertex: " + ver.getName() + " in face " +
-								// returnFromSimplification.get(actualEdge.get(edgeNum)).getName());
-								res.put(ver, returnFromSimplification.get(actualEdge.get(edgeNum)));
-							}
-						}
+				continue;
+			}
+			for (int edgeNum : actualEdge.keySet()) {
+				Vertex ver = actions.get(i).vertex();
+				// System.out.println("face: " +
+				// returnFromSimplification.get(actualEdge.get(edgeNum)).getName() + " " +
+				// "vertex: " + ver.getName());
+				if (ver.inRectangle(actualEdge.get(edgeNum).begin, actualEdge.get(edgeNum).end)) {
+					// System.out.println("vertex: " + ver.getName() + " in rect " +
+					// returnFromSimplification.get(actualEdge.get(edgeNum)).getName());
+					if (ver.inFaceGeom(returnFromSimplification.get(actualEdge.get(edgeNum)).getVerticesOfFace())) {
+						// System.out.println("vertex: " + ver.getName() + " in face " +
+						// returnFromSimplification.get(actualEdge.get(edgeNum)).getName());
+						res.put(ver, returnFromSimplification.get(actualEdge.get(edgeNum)));
 					}
 				}
-			} else {
-				actualEdge.remove(actions.get(i).edgeNum());
+
 			}
 		}
 		return res;
+	}
+
+	private void addPointToActions(ArrayList<Action> actions, HashSet<Vertex> newVertices) {
+		for (Vertex ver : newVertices) {
+			actions.add(new Action(ver.getX(), -1, ver, ActionType.POINT));
+		}
+
 	}
 }

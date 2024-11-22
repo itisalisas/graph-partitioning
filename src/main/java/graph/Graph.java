@@ -24,18 +24,13 @@ public class Graph<T extends Vertex> {
 	}
 
 	
-	public T readVertex(Scanner sc) {
+	public Vertex readVertex(Scanner sc) {
 		long name = sc.nextLong();
 		String xStr = sc.next().replace(',', '.');
 		String yStr = sc.next().replace(',', '.');
 		double x = Double.parseDouble(xStr);
 		double y = Double.parseDouble(yStr);
-		T ans = null;
-		if (ans instanceof VertexOfDualGraph) {
-			ans = (T) new VertexOfDualGraph(name, x, y);
-		} else {
-			ans =  (T) new Vertex(name, x, y);
-		}
+		T ans = ans =  (T) new Vertex(name, x, y);
 		return addVertex(ans);
 	}
 
@@ -74,7 +69,7 @@ public class Graph<T extends Vertex> {
 		n = sc.nextInt();
 		int ni = 0;
 		double length = 0;
-		T vi;
+		Vertex vi;
 		for (int i = 0; i < n && sc.hasNext(); i++) {
 			// read Vertex..
 			vi = readVertex(sc);
@@ -87,7 +82,7 @@ public class Graph<T extends Vertex> {
 		n = sc.nextInt();
 		ni = 0;
 		length = 0;
-		T vj;
+		Vertex vj;
 		System.out.println("Readed all Vertices");
 		for (int i = 0; i < n && sc.hasNext(); i++) {
 			// read Vertex..
@@ -97,7 +92,7 @@ public class Graph<T extends Vertex> {
 				vj = readVertex(sc);
 				String lengthStr = sc.next().replace(',', '.');
 				length = Double.parseDouble(lengthStr);
-				edges.get(vi).put(vj, new Edge(length));
+				edges.get(vi).put((T) vj, new Edge(length));
 			}
 		}
 		sc.close();
