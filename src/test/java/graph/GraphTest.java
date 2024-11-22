@@ -53,7 +53,7 @@ class GraphTest {
             graph.addVertex(v);
         }
         for (EdgeOfGraph e : edges) {
-            graph.addEdge(e.getBegin(), e.getEnd(), e.getLength());
+            graph.addEdge(e.begin, e.end, e.getLength());
         }
     }
 

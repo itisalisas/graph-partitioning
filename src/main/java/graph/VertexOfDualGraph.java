@@ -46,6 +46,10 @@ public class VertexOfDualGraph extends Vertex{
 	}
 
 
+	/* TODO - когда методы в Vertex будут подправлены,
+	    заменить использование этих двух методов
+	    и удалить
+	 */
 	public static Vertex findCenter(ArrayList<Vertex> vertexIn) {
 		Vertex center = new Vertex();
 //		double minLengthSum = 0;
