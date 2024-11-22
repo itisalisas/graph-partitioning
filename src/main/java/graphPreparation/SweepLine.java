@@ -8,6 +8,8 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 enum ActionType {
 	ADD, DELETE, POINT
@@ -220,14 +222,48 @@ public class SweepLine {
 						: a1.x() > a2.x() ? 1 : a1.type() == ActionType.ADD ? 1 : a2.type() == ActionType.ADD ? -1 : 0;
 			}
 		});
+		TreeMap<Double, HashSet<VertexOfDualGraph>> actualEdges = new TreeMap<Double, HashSet<VertexOfDualGraph>>(
+				new Comparator<Double>() {
+					@Override
+					public int compare(Double o1, Double o2) {
+						return o1 < o2 ? -1 : o1 > o2 ? 1 : 0;
+					}
+
+				});
 		HashMap<Integer, EdgeOfGraph> actualEdge = new HashMap<Integer, EdgeOfGraph>();
 		for (int i = 0; i < actions.size(); i++) {
 			if (actions.get(i).type() == ActionType.DELETE) {
-				actualEdge.remove(actions.get(i).edgeNum());
+
+				//actualEdge.remove(actions.get(i).edgeNum());
+
+				EdgeOfGraph actionEdge = diagList[actions.get(i).edgeNum()];
+				VertexOfDualGraph faceToDelete = returnFromSimplification.get(actionEdge);
+				SortedMap<Double, HashSet<VertexOfDualGraph>> tmp = actualEdges.subMap(actionEdge.begin.getY(), actionEdge.end.getY());
+				for (Double d : tmp.keySet()) {
+					actualEdges.get(d).remove(faceToDelete);
+				}
+				tmp.clear();
+				actualEdges.remove(diagList[actions.get(i).edgeNum()].begin.getY());
+				actualEdges.remove(diagList[actions.get(i).edgeNum()].end.getY());
 				continue;
 			}
 			if (actions.get(i).type() == ActionType.ADD) {
-				actualEdge.put(actions.get(i).edgeNum(), diagList[actions.get(i).edgeNum()]);
+
+				//actualEdge.put(actions.get(i).edgeNum(), diagList[actions.get(i).edgeNum()]);
+				
+				EdgeOfGraph actionEdge = diagList[actions.get(i).edgeNum()];
+				HashSet<VertexOfDualGraph> intersectingFacesBegin = actualEdges.get(actualEdges.floorKey(actionEdge.begin.getY()));
+				HashSet<VertexOfDualGraph> intersectingFacesEnd = actualEdges.get(actualEdges.floorKey(actionEdge.end.getY()));
+				actualEdges.put(diagList[actions.get(i).edgeNum()].begin.getY(), intersectingFacesBegin);
+				actualEdges.remove(diagList[actions.get(i).edgeNum()].end.getY(), intersectingFacesEnd);
+				VertexOfDualGraph faceToAdd = returnFromSimplification.get(actionEdge);
+				SortedMap<Double, HashSet<VertexOfDualGraph>> tmp = actualEdges.subMap(actionEdge.begin.getY(), actionEdge.end.getY());
+				for (Double d : tmp.keySet()) {
+					actualEdges.get(d).add(faceToAdd);
+				}
+				intersectingFacesBegin.clear();
+				intersectingFacesEnd.clear();
+				tmp.clear();
 				continue;
 			}
 			for (int edgeNum : actualEdge.keySet()) {
