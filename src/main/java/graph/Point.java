@@ -1,5 +1,6 @@
 package graph;
 
+import java.util.ArrayList;
 
 public class Point {
 	
@@ -98,5 +99,45 @@ public class Point {
 	 */
 	public double module() {
 		return Math.sqrt(x * x + y * y);
+	}
+	
+	/**
+	 * @param <T extends Point>
+	 * @return vertex is in polygon
+	 */
+	public <T extends Point> boolean inFaceGeom(ArrayList<T> vertexIn) {
+		Point begin = vertexIn.get(vertexIn.size() - 1);
+		int count = 0;
+		for (int i = 0; i < vertexIn.size(); i++) {
+			if (this.inSegment(begin, vertexIn.get(i))) {
+				begin = vertexIn.get(i);
+				return true;
+			}
+			if (begin.y == vertexIn.get(i).y) {
+				begin = vertexIn.get(i);
+				continue;
+			}
+			if (this.y == Math.max(begin.y, vertexIn.get(i).y) 
+					&& this.x < Math.min(begin.x, vertexIn.get(i).x)) {
+				count++;
+				begin = vertexIn.get(i);
+				continue;
+			}
+			if (this.y == Math.min(begin.y, vertexIn.get(i).y)) {
+				begin = vertexIn.get(i);
+				continue;
+			}
+			if ((this.y - begin.y) * (this.y - vertexIn.get(i).y) < 0 &&
+					this.x < begin.x + (this.y - begin.y) * (vertexIn.get(i).x - begin.x) / (vertexIn.get(i).y - begin.y)) {
+				count++;
+				begin = vertexIn.get(i);
+				continue;
+			}
+		}
+		if (count % 2 == 0) {
+			return false;
+		} else {
+			return true;
+		}
 	}
 }

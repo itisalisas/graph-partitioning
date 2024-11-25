@@ -61,7 +61,7 @@ public class MakingDualGraph {
 			Assertions.assertTrue(verticesOfFace.size() >= 3);
 			vertName++;
 			//System.out.print(vertName + " ");
-			VertexOfDualGraph vert = new VertexOfDualGraph(vertName, VertexOfDualGraph.findCenter(verticesOfFace),
+			VertexOfDualGraph vert = new VertexOfDualGraph(vertName, Vertex.findCenter(verticesOfFace),
 					VertexOfDualGraph.sumVertexWeight(verticesOfFace), verticesOfFace);
 			res.addVertex(vert);
 			comparison.put(vert, vert);
