@@ -68,5 +68,10 @@ public class PartitionGraphVertex extends Vertex {
 
         return partitionGraph;
     }
+    
+    @Override
+    public PartitionGraphVertex copy() {
+    	return new PartitionGraphVertex(this.getName(), this.vertices);
+    }
 
 }

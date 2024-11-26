@@ -13,50 +13,38 @@ public class Graph<T extends Vertex> {
 	 */
 	private HashMap<T, HashMap<T, Edge>> edges;
 
-	
 	public Graph() {
 		this.edges = new HashMap<T, HashMap<T, Edge>>();
 	}
 
-	
 	public Graph(HashMap<T, HashMap<T, Edge>> edges) {
 		this.edges = edges;
 	}
-
-	
+	//перенести в GraphReader
 	public Vertex readVertex(Scanner sc) {
 		long name = sc.nextLong();
 		String xStr = sc.next().replace(',', '.');
 		String yStr = sc.next().replace(',', '.');
 		double x = Double.parseDouble(xStr);
 		double y = Double.parseDouble(yStr);
-		T ans = ans =  (T) new Vertex(name, x, y);
+		T ans = (T) new Vertex(name, x, y);
 		return addVertex(ans);
 	}
 
-	
 	@Override
 	public Graph<T> clone() {
 		Graph<T> result = new Graph<T>();
 		for (T begin : this.edges.keySet()) {
-			if (begin instanceof VertexOfDualGraph) {
-				result.edges.put((T) new VertexOfDualGraph(begin.clone()), new HashMap<T, Edge>());
-			} else {
-				result.edges.put((T) new Vertex(begin.clone()), new HashMap<T, Edge>());
-			}
+			result.edges.put((T) begin.copy(), new HashMap<T, Edge>());
 			for (T end : this.edges.get(begin).keySet()) {
 				Edge originalEdge = this.edges.get(begin).get(end);
-				if (begin instanceof VertexOfDualGraph) {
-					result.edges.get(begin).put((T) new VertexOfDualGraph(end.clone()), originalEdge.clone());
-				} else {
-					result.edges.get(begin).put((T) new Vertex(end.clone()), originalEdge.clone());
-				}
+				result.edges.get(begin).put((T) end.copy(), originalEdge.clone());
 			}
 		}
 		return result;
 	}
 
-	
+	//перенести в GraphReader
 	/*
 	 * file format: n (Vertices number) name x y (of Vertex) n1 (Number of out
 	 * edges) name1 x1 y1 (of out vertex) length1 (edge length) ... long double x2
@@ -76,7 +64,7 @@ public class Graph<T extends Vertex> {
 			sc.nextLine();
 		}
 		sc.close();
-		
+
 		sc = new Scanner(new File(inFilename));
 		n = 0;
 		n = sc.nextInt();
@@ -97,14 +85,12 @@ public class Graph<T extends Vertex> {
 		}
 		sc.close();
 	}
-	
-
+	//
 	public void printGraphToFile(String outFileName) throws IOException {
 		FileWriter out = new FileWriter(outFileName, false);
 		out.write(String.format("%d %n", edges.size()));
 		for (Vertex begin : edges.keySet()) {
-			out.write(String.format("%d %f %f %d ", begin.getName(), begin.x, begin.y,
-					edges.get(begin).size()));
+			out.write(String.format("%d %f %f %d ", begin.getName(), begin.x, begin.y, edges.get(begin).size()));
 			for (Vertex end : edges.get(begin).keySet()) {
 				out.write(String.format("%d %f %f %f ", end.getName(), end.x, end.y,
 						edges.get(begin).get(end).getLength()));
@@ -115,7 +101,6 @@ public class Graph<T extends Vertex> {
 
 	}
 
-	
 	public void writePartitionToFile(HashSet<T> part, Double cutWeight, File outFile) throws IOException {
 		FileWriter out = new FileWriter(outFile, false);
 		out.write(String.format("%f\n", cutWeight));
@@ -125,7 +110,7 @@ public class Graph<T extends Vertex> {
 		}
 		out.close();
 	}
-
+	//перенести в GraphReader
 	public void readGraphFromOSM(Point center, int dist) {
 
 	}
@@ -148,7 +133,6 @@ public class Graph<T extends Vertex> {
 	public Double verticesWeight() {
 		return verticesArray().stream().mapToDouble(T::getWeight).sum();
 	}
-
 
 	public void addEdge(T begin, T end, double length, double bandwidth) {
 		addVertex(begin);
@@ -201,7 +185,6 @@ public class Graph<T extends Vertex> {
 		return ans;
 	}
 
-
 	public int edgesNumberInComponentUndirGraph(HashSet<T> vertexInComponent) {
 		int edgesNumber = 0;
 		for (T begin : vertexInComponent) {
@@ -216,7 +199,6 @@ public class Graph<T extends Vertex> {
 		return edgesNumber;
 	}
 
-
 	public void deleteEmptyVertexUndirGraph() {
 		ArrayList<T> deleteV = new ArrayList<T>();
 		for (T v : this.edges.keySet()) {
@@ -227,8 +209,6 @@ public class Graph<T extends Vertex> {
 			this.deleteVertex(deleteV.get(i));
 		}
 	}
-
-
 
 	boolean findСycle(Graph<T> undirGraph, HashSet<T> component, ArrayList<Graph<T>> faces) {
 		HashMap<T, Integer> used = new HashMap<T, Integer>();
@@ -263,9 +243,8 @@ public class Graph<T extends Vertex> {
 
 	}
 
-	
-	private boolean dfsFindCycle(Graph<T> undirGraph, HashSet<T> component, HashMap<T, Integer> used,
-			ArrayList<T> path, boolean cycle, T begin, T prev) {
+	private boolean dfsFindCycle(Graph<T> undirGraph, HashSet<T> component, HashMap<T, Integer> used, ArrayList<T> path,
+			boolean cycle, T begin, T prev) {
 		if (cycle)
 			return true;
 		if (prev != null)
@@ -291,7 +270,6 @@ public class Graph<T extends Vertex> {
 
 	}
 
-
 	public ArrayList<HashSet<T>> splitForConnectedComponents() {
 		// make undirected
 		Graph<T> undirGraph = makeUndirectedGraph();
@@ -312,7 +290,6 @@ public class Graph<T extends Vertex> {
 		return component;
 	}
 
-	
 	private void dfsComponents(T begin, HashSet<T> actualComp, HashSet<T> visited) {
 		Stack<T> stack = new Stack<>();
 		stack.push(begin);
@@ -333,15 +310,10 @@ public class Graph<T extends Vertex> {
 		}
 	}
 
-	
 	public Graph<T> makeUndirectedGraph() {
 		Graph<T> graph = new Graph<T>();
 		for (T vertex : edges.keySet()) {
-			if (vertex instanceof VertexOfDualGraph) {
-				graph.addVertex((T) (new VertexOfDualGraph(vertex.clone())));
-			} else {
-				graph.addVertex((T) (new Vertex(vertex.clone())));
-			}
+			graph.addVertex((T) vertex.copy());
 		}
 		for (T begin : edges.keySet()) {
 			for (T end : edges.get(begin).keySet()) {
@@ -351,11 +323,9 @@ public class Graph<T extends Vertex> {
 		}
 		return graph;
 	}
-	
-	
-	public void dfsBridges(HashSet<T> vertexInComponent, T begin, T prev,
-			HashSet<T> used, int timer, HashMap<T, Integer> inTime, HashMap<T, Integer> returnTime,
-			ArrayList<EdgeOfGraph> bridges) {
+
+	public void dfsBridges(HashSet<T> vertexInComponent, T begin, T prev, HashSet<T> used, int timer,
+			HashMap<T, Integer> inTime, HashMap<T, Integer> returnTime, ArrayList<EdgeOfGraph> bridges) {
 		used.add(begin);
 		timer++;
 		inTime.put(begin, timer);
@@ -377,7 +347,8 @@ public class Graph<T extends Vertex> {
 				if (returnTime.containsKey(out) && returnTime.get(out) < returnTime.get(begin)) {
 					returnTime.replace(begin, returnTime.get(begin), returnTime.get(out));
 				}
-				if (!returnTime.containsKey(out) || (returnTime.containsKey(out) && inTime.get(begin) < returnTime.get(out))) {
+				if (!returnTime.containsKey(out)
+						|| (returnTime.containsKey(out) && inTime.get(begin) < returnTime.get(out))) {
 					// delete bridge
 					bridges.add(new EdgeOfGraph(begin, out, edges.get(begin).get(out).getLength()));
 //					undirGraph.deleteEdge(begin, out);
@@ -388,7 +359,6 @@ public class Graph<T extends Vertex> {
 		}
 	}
 
-	
 	public Graph<T> createSubgraph(Set<T> verticesOfSubgraph) {
 		Graph<T> subgraph = new Graph<T>();
 		List<EdgeOfGraph> edges = Arrays.stream(edgesArray()).toList();
@@ -402,18 +372,14 @@ public class Graph<T extends Vertex> {
 
 		for (EdgeOfGraph edge : edges) {
 			if (verticesOfSubgraph.contains(edge.begin) && verticesOfSubgraph.contains(edge.end)) {
-				if (edge.begin instanceof VertexOfDualGraph) {
-					subgraph.addEdge((T) new VertexOfDualGraph(edge.begin), (T)  new VertexOfDualGraph(edge.end), edge.getLength());
-				} else {
-					subgraph.addEdge((T) new Vertex(edge.begin), (T)  new Vertex(edge.end), edge.getLength());
-				}
+				subgraph.addEdge((T) edge.begin.copy(), (T) edge.end.copy(), edge.getLength());
 			}
 		}
 
 		return subgraph;
 	}
 
-
+	// убрать параметризацию
 	public Graph<T> createSubgraphFromFaces(List<List<T>> faces) {
 		Graph<T> subgraph = new Graph<T>();
 
@@ -444,26 +410,24 @@ public class Graph<T extends Vertex> {
 
 	private EdgeOfGraph findEdge(Vertex v1, Vertex v2) {
 		for (EdgeOfGraph edge : edgesArray()) {
-			if ((edge.begin.equals(v1) && edge.end.equals(v2)) ||
-					(edge.begin.equals(v2) && edge.end.equals(v1))) {
+			if ((edge.begin.equals(v1) && edge.end.equals(v2)) || (edge.begin.equals(v2) && edge.end.equals(v1))) {
 				return edge;
 			}
 		}
 		return null;
 	}
 
-
 	public Graph<T> getLargestConnectedComponent() {
 		List<HashSet<T>> connectivityComponents = this.makeUndirectedGraph().splitForConnectedComponents();
-		HashSet<T> largestComponent = connectivityComponents.stream().max(Comparator.comparingInt(HashSet::size)).orElseThrow();
+		HashSet<T> largestComponent = connectivityComponents.stream().max(Comparator.comparingInt(HashSet::size))
+				.orElseThrow();
 		return this.createSubgraph(largestComponent);
 	}
 
 	public boolean isConnected() {
 		return splitForConnectedComponents().size() == 1;
 	}
-	
-	
+
 	public double verticesSumWeight() {
 		double ans = 0;
 		for (Vertex ver : edges.keySet()) {
@@ -472,7 +436,6 @@ public class Graph<T extends Vertex> {
 		return ans;
 	}
 
-	
 	public void correctVerticesWeight() {
 		for (Vertex begin : edges.keySet()) {
 			for (Vertex end : edges.get(begin).keySet()) {
@@ -482,9 +445,8 @@ public class Graph<T extends Vertex> {
 					}
 				}
 			}
-		}	
+		}
 	}
-	
 
 	public int countZeroWeightVertices() {
 		int ans = 0;
@@ -495,8 +457,7 @@ public class Graph<T extends Vertex> {
 		}
 		return ans;
 	}
-	
-	
+
 	public HashMap<Vertex, Integer> initVertexInFaceCounter() {
 		HashMap<Vertex, Integer> res = new HashMap<Vertex, Integer>();
 		for (Vertex v : this.edges.keySet()) {
@@ -507,10 +468,10 @@ public class Graph<T extends Vertex> {
 
 	public HashMap<Vertex, TreeSet<EdgeOfGraph>> arrangeByAngle() {
 		Comparator<EdgeOfGraph> edgeComp = (o1, o2) -> {
-            double a1 = o1.getCorner();
-            double a2 = o2.getCorner();
-            return Double.compare(a1, a2);
-        };
+			double a1 = o1.getCorner();
+			double a2 = o2.getCorner();
+			return Double.compare(a1, a2);
+		};
 		HashMap<Vertex, TreeSet<EdgeOfGraph>> res = new HashMap<Vertex, TreeSet<EdgeOfGraph>>();
 		for (Vertex begin : this.getEdges().keySet()) {
 			res.put(begin, new TreeSet<EdgeOfGraph>(edgeComp));

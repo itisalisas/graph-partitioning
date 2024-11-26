@@ -189,4 +189,9 @@ public class Vertex extends Point {
 		}
 		return sum;
 	}
+	
+	
+	public Vertex copy() {
+		return new Vertex(this.getName(), this, this.getWeight());
+	}
 }
