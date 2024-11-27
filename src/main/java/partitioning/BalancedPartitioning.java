@@ -4,6 +4,7 @@ import graph.EdgeOfGraph;
 import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
+import readWrite.PartitionWriter;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -80,7 +81,7 @@ public class BalancedPartitioning {
 				throw new RuntimeException("Can't create output file");
 			}
 			try {
-				bp.graph.writePartitionToFile(part, cutEdgesMap.get(part), outputFile);
+				PartitionWriter.writePartitionToFile(part, cutEdgesMap.get(part), outputFile);
 			} catch (Exception e) {
 				throw new RuntimeException("Can't write partition to file: " + e.getMessage());
 			}

@@ -8,6 +8,7 @@ import graphPreparation.GraphPreparation;
 import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
+import readWrite.*;
 
 public class Main {
 
@@ -44,7 +45,7 @@ public class Main {
 		Graph<Vertex> graph = new Graph<Vertex>();
 
 		try {
-			graph.readGraphFromFile(resourcesDirectory + pathToFile);
+			GraphReader.readGraphFromFile(graph, resourcesDirectory + pathToFile);
 		} catch (Exception e) {
 			throw new RuntimeException("Can't read graph from file: " + e.getMessage());
 		}

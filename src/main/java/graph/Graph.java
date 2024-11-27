@@ -20,16 +20,6 @@ public class Graph<T extends Vertex> {
 	public Graph(HashMap<T, HashMap<T, Edge>> edges) {
 		this.edges = edges;
 	}
-	//перенести в GraphReader
-	public Vertex readVertex(Scanner sc) {
-		long name = sc.nextLong();
-		String xStr = sc.next().replace(',', '.');
-		String yStr = sc.next().replace(',', '.');
-		double x = Double.parseDouble(xStr);
-		double y = Double.parseDouble(yStr);
-		T ans = (T) new Vertex(name, x, y);
-		return addVertex(ans);
-	}
 
 	@Override
 	public Graph<T> clone() {
@@ -42,77 +32,6 @@ public class Graph<T extends Vertex> {
 			}
 		}
 		return result;
-	}
-
-	//перенести в GraphReader
-	/*
-	 * file format: n (Vertices number) name x y (of Vertex) n1 (Number of out
-	 * edges) name1 x1 y1 (of out vertex) length1 (edge length) ... long double x2
-	 * long long double x2 double
-	 */
-	public void readGraphFromFile(String inFilename) throws FileNotFoundException {
-		edges.clear();
-		Scanner sc = new Scanner(new File(inFilename));
-		int n = 0;
-		n = sc.nextInt();
-		int ni = 0;
-		double length = 0;
-		Vertex vi;
-		for (int i = 0; i < n && sc.hasNext(); i++) {
-			// read Vertex..
-			vi = readVertex(sc);
-			sc.nextLine();
-		}
-		sc.close();
-
-		sc = new Scanner(new File(inFilename));
-		n = 0;
-		n = sc.nextInt();
-		ni = 0;
-		length = 0;
-		Vertex vj;
-		System.out.println("Readed all Vertices");
-		for (int i = 0; i < n && sc.hasNext(); i++) {
-			// read Vertex..
-			vi = readVertex(sc);
-			ni = sc.nextInt();
-			for (int j = 0; j < ni && sc.hasNext(); j++) {
-				vj = readVertex(sc);
-				String lengthStr = sc.next().replace(',', '.');
-				length = Double.parseDouble(lengthStr);
-				edges.get(vi).put((T) vj, new Edge(length));
-			}
-		}
-		sc.close();
-	}
-	//
-	public void printGraphToFile(String outFileName) throws IOException {
-		FileWriter out = new FileWriter(outFileName, false);
-		out.write(String.format("%d %n", edges.size()));
-		for (Vertex begin : edges.keySet()) {
-			out.write(String.format("%d %f %f %d ", begin.getName(), begin.x, begin.y, edges.get(begin).size()));
-			for (Vertex end : edges.get(begin).keySet()) {
-				out.write(String.format("%d %f %f %f ", end.getName(), end.x, end.y,
-						edges.get(begin).get(end).getLength()));
-			}
-			out.append('\n');
-		}
-		out.close();
-
-	}
-
-	public void writePartitionToFile(HashSet<T> part, Double cutWeight, File outFile) throws IOException {
-		FileWriter out = new FileWriter(outFile, false);
-		out.write(String.format("%f\n", cutWeight));
-		out.write(String.format("%d\n", part.size()));
-		for (T v : part) {
-			out.write(String.format("%d %f %f %f\n", v.getName(), v.x, v.y, v.getWeight()));
-		}
-		out.close();
-	}
-	//перенести в GraphReader
-	public void readGraphFromOSM(Point center, int dist) {
-
 	}
 
 	public T addVertex(T v) {
@@ -379,24 +298,20 @@ public class Graph<T extends Vertex> {
 		return subgraph;
 	}
 
-	// убрать параметризацию
-	public Graph<T> createSubgraphFromFaces(List<List<T>> faces) {
-		Graph<T> subgraph = new Graph<T>();
+	public Graph<Vertex> createSubgraphFromFaces(List<List<Vertex>> faces) {
+		Graph<Vertex> subgraph = new Graph<Vertex>();
 
-		for (List<T> face : faces) {
-			for (T vertex : face) {
-				if (vertex instanceof VertexOfDualGraph) {
-					subgraph.addVertex((T) new VertexOfDualGraph(vertex.getName(), vertex, vertex.getWeight()));
-				} else {
-					subgraph.addVertex((T) new Vertex(vertex.getName(), vertex, vertex.getWeight()));
-				}
+		for (List<Vertex> face : faces) {
+			for (Vertex vertex : face) {
+				subgraph.addVertex(vertex.copy());
+
 			}
 		}
 
-		for (List<T> face : faces) {
+		for (List<Vertex> face : faces) {
 			for (int i = 0; i < face.size(); i++) {
-				T v1 = face.get(i);
-				T v2 = face.get((i + 1) % face.size());
+				Vertex v1 = face.get(i);
+				Vertex v2 = face.get((i + 1) % face.size());
 
 				EdgeOfGraph edge = findEdge(v1, v2);
 				if (edge != null) {
