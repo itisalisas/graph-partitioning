@@ -45,7 +45,8 @@ public class Main {
 		Graph<Vertex> graph = new Graph<Vertex>();
 
 		try {
-			GraphReader.readGraphFromFile(graph, resourcesDirectory + pathToFile);
+			GraphReader gr = new GraphReader();
+			gr.readGraphFromFile(graph, resourcesDirectory + pathToFile);
 		} catch (Exception e) {
 			throw new RuntimeException("Can't read graph from file: " + e.getMessage());
 		}
@@ -94,8 +95,9 @@ public class Main {
 		String pathToResultDirectory = args[3];
 
 		// partitioning.savePartitionToDirectory(outputDirectory + pathToResultDirectory, partitionResult);
-		partitioning.savePartitionToDirectory(outputDirectory + pathToResultDirectory, partitionResultForFaces);
-		partitioning.printBound(bounds, outputDirectory + pathToResultDirectory);
+		PartitionWriter pw = new PartitionWriter();
+		pw.savePartitionToDirectory(partitioning, partitioning.bp ,outputDirectory + pathToResultDirectory, partitionResultForFaces);
+		pw.printBound(bounds, outputDirectory + pathToResultDirectory);
 		// partitioning.printHull(graphBoundEnd, outputDirectory + pathToResultDirectory, "end_bound.txt");
 	}
 

@@ -1,13 +1,15 @@
 package readWrite;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.List;
 
 import graph.*;
 
 public class GraphWriter {
-	//
-	public static void printGraphToFile(Graph<Vertex> graph, String outFileName) throws IOException {
+
+	public void printGraphToFile(Graph<Vertex> graph, String outFileName) throws IOException {
 		FileWriter out = new FileWriter(outFileName, false);
 		out.write(String.format("%d %n", graph.getEdges().size()));
 		for (Vertex begin : graph.getEdges().keySet()) {
@@ -19,6 +21,15 @@ public class GraphWriter {
 			out.append('\n');
 		}
 		out.close();
-
+	}
+	
+	public void printVerticesToFile(List<Vertex> vertices, File file) {
+		for (Vertex vertex : vertices) {
+			try {
+				vertex.printVertexToFile(file);
+			} catch (Exception e) {
+				throw new RuntimeException("Can't print vertex to file " + file.getName());
+			}
+		}
 	}
 }

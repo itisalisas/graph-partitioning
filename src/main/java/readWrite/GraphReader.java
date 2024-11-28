@@ -8,7 +8,7 @@ import graph.*;
 
 public class GraphReader {
 	
-	public static Vertex readVertex(Graph<Vertex> graph, Scanner sc) {
+	public Vertex readVertex(Graph<Vertex> graph, Scanner sc) {
 		long name = sc.nextLong();
 		String xStr = sc.next().replace(',', '.');
 		String yStr = sc.next().replace(',', '.');
@@ -23,7 +23,7 @@ public class GraphReader {
 	 * edges) name1 x1 y1 (of out vertex) length1 (edge length) ... long double x2
 	 * long long double x2 double
 	 */
-	public static void readGraphFromFile(Graph<Vertex> graph, String inFilename) throws FileNotFoundException {
+	public void readGraphFromFile(Graph<Vertex> graph, String inFilename) throws FileNotFoundException {
 		graph.getEdges().clear();
 		Scanner sc = new Scanner(new File(inFilename));
 		int n = 0;
