@@ -73,4 +73,10 @@ public class VertexOfDualGraph extends Vertex{
 		return verticesOfFace;
 	}
 
+	@Override
+	public VertexOfDualGraph copy() {
+		return new VertexOfDualGraph(this.getName(),new Point(this.x, this.y), this.weight, this.verticesOfFace);
+	}
+	
+	
 }

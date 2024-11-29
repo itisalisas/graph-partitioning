@@ -39,7 +39,7 @@ public class Point {
 		if (obj == this) return true;
 		if ((obj == null) || (obj.getClass() != this.getClass())) return false;
 		Point v = (Point) obj;
-		return v.getX() == this.getX() && v.getY() == this.getY();
+		return v.x == this.x && v.y == this.y;
 	}
 	
 	
@@ -91,7 +91,7 @@ public class Point {
 	 * @return is point in rectangle
 	 */
 	public boolean inRectangle(Point a, Point b) {
-		return (a.x - this.x) * (b.x - this.x) < 0 && (a.y - this.y) * (b.y - this.y) < 0;
+		return (a.x - this.x) * (b.x - this.x) <= 0 && (a.y - this.y) * (b.y - this.y) <= 0;
 	}
 	
 	/**
