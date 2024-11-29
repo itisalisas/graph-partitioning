@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Objects;
 import java.util.Random;
 
@@ -119,6 +120,8 @@ public class Vertex extends Point {
 	 */
 	public static <T extends Vertex> Point findCenter(ArrayList<T> vertexIn) {
 		Point center = new Point();
+		
+		
 //		double minLengthSum = 0;
 //		double lengthSum = 0;
 //		for (Vertex begin : vertexIn) {
@@ -135,50 +138,101 @@ public class Vertex extends Point {
 //				minLengthSum = lengthSum;
 //			}
 //		}
+		
+		
+		
+//		if (vertexIn.size() <= 0) {
+//			return null;
+//		} else if (vertexIn.size() == 1) {
+//			return vertexIn.get(0);
+//		} else if (vertexIn.size() == 2) {
+//			center = new Point(	vertexIn.get(0).x + vertexIn.get(0).coordinateDistance(vertexIn.get(1)).x / 2,
+//								vertexIn.get(0).y + vertexIn.get(0).coordinateDistance(vertexIn.get(1)).y / 2);
+//		} else {
+//			//change to func find longest edge
+//			Point begin = vertexIn.get(0);
+//			Vertex end = vertexIn.get(1);
+//			double maxLength = begin.getLength(end);
+//			for (int i = 1; i < vertexIn.size(); i++) {
+//				if (maxLength < vertexIn.get(i - 1).getLength(vertexIn.get(i))) {
+//					maxLength = vertexIn.get(i - 1).getLength(vertexIn.get(i));
+//					begin = vertexIn.get(i - 1);
+//					end = vertexIn.get(i);
+//				}
+//			}
+//			Point edgeCenter = new Point(begin.x + begin.coordinateDistance(end).x / 2,
+//										begin.y + begin.coordinateDistance(end).y / 2);
+//			Point coordinateLength = begin.coordinateDistance(end);
+//			double normalDir = 0;
+//			if (coordinateLength.y == 0) {
+//				normalDir = 1;
+//				center = new Point(edgeCenter.x, edgeCenter.y + 0.000001);
+//			} else if (coordinateLength.x == 0) {
+//				normalDir = 0;
+//				center = new Point(edgeCenter.x + 0.000001, edgeCenter.y);
+//			} else {
+//				normalDir = -1 / Math.atan2(coordinateLength.y, coordinateLength.x);
+//				center = new Point(edgeCenter.x + 0.000001 / Math.sqrt(1 + normalDir * normalDir),
+//									edgeCenter.y + 0.000001 * normalDir / Math.sqrt(1 + normalDir * normalDir));
+//			}
+//
+//			if (center.inFaceGeom(vertexIn)) {
+//				return center;
+//			} else {
+//				Point diff = center.coordinateDistance(edgeCenter);
+//				center.addCoordinateDistance(diff);
+//				center.addCoordinateDistance(diff);
+//			}
+//		}
+		
 		if (vertexIn.size() <= 0) {
 			return null;
-		} else if (vertexIn.size() == 1) {
+		} 
+		if (vertexIn.size() == 1) {
 			return vertexIn.get(0);
-		} else if (vertexIn.size() == 2) {
-			center = new Point(	vertexIn.get(0).x + vertexIn.get(0).coordinateDistance(vertexIn.get(1)).x / 2,
-								vertexIn.get(0).y + vertexIn.get(0).coordinateDistance(vertexIn.get(1)).y / 2);
-		} else {
-			//change to func find longest edge
-			Point begin = vertexIn.get(0);
-			Vertex end = vertexIn.get(1);
-			double maxLength = begin.getLength(end);
-			for (int i = 1; i < vertexIn.size(); i++) {
-				if (maxLength < vertexIn.get(i - 1).getLength(vertexIn.get(i))) {
-					maxLength = vertexIn.get(i - 1).getLength(vertexIn.get(i));
-					begin = vertexIn.get(i - 1);
-					end = vertexIn.get(i);
-				}
-			}
-			Point edgeCenter = new Point(begin.x + begin.coordinateDistance(end).x / 2,
-										begin.y + begin.coordinateDistance(end).y / 2);
-			Point coordinateLength = begin.coordinateDistance(end);
-			double normalDir = 0;
-			if (coordinateLength.y == 0) {
-				normalDir = 1;
-				center = new Point(edgeCenter.x, edgeCenter.y + 0.000001);
-			} else if (coordinateLength.x == 0) {
-				normalDir = 0;
-				center = new Point(edgeCenter.x + 0.000001, edgeCenter.y);
-			} else {
-				normalDir = -1 / Math.atan2(coordinateLength.y, coordinateLength.x);
-				center = new Point(edgeCenter.x + 0.000001 / Math.sqrt(1 + normalDir * normalDir),
-									edgeCenter.y + 0.000001 * normalDir / Math.sqrt(1 + normalDir * normalDir));
-			}
-
-			if (center.inFaceGeom(vertexIn)) {
-				return center;
-			} else {
-				Point diff = center.coordinateDistance(edgeCenter);
-				center.addCoordinateDistance(diff);
-				center.addCoordinateDistance(diff);
-			}
 		}
+		if (vertexIn.size() == 2) {
+			return new Point(	vertexIn.get(0).x + vertexIn.get(0).coordinateDistance(vertexIn.get(1)).x / 2,
+					vertexIn.get(0).y + vertexIn.get(0).coordinateDistance(vertexIn.get(1)).y / 2);
+		}
+		
+		HashMap<T, Double> edgeWeight = countEdgeWeightForVertices(vertexIn);
+//		System.out.println(edgeWeight);
+		center = countVerticesEdgeWeightCenter(vertexIn, edgeWeight);
+		
 		return center;
+	}
+
+
+	private static <T extends Vertex> HashMap<T, Double> countEdgeWeightForVertices(ArrayList<T> vertexIn) {
+		HashMap<T, Double> edgeWeight = new HashMap<>();
+		T vertex = vertexIn.get(0);
+		T prev = vertexIn.get(vertexIn.size() - 1);
+		T next = vertexIn.get(1);
+		edgeWeight.put(vertex, vertex.getLength(prev) + vertex.getLength(next));
+		for (int i = 1; i < vertexIn.size() - 1; i++) {
+			prev = vertexIn.get(i - 1);
+			next = vertexIn.get(i + 1);
+			edgeWeight.put(vertexIn.get(i), vertexIn.get(i).getLength(prev) + vertexIn.get(i).getLength(next));
+		}
+		vertex = vertexIn.get(vertexIn.size() - 1);
+		prev = vertexIn.get(vertexIn.size() - 2);
+		next = vertexIn.get(0);	
+		edgeWeight.put(vertex, vertex.getLength(prev) + vertex.getLength(next));
+		return edgeWeight;
+	}
+
+
+	private static <T extends Vertex> Point countVerticesEdgeWeightCenter(ArrayList<T> vertexIn, HashMap<T, Double> edgeWeight) {
+		Double xSum = 0.0;
+		Double ySum = 0.0;
+		Double fullLengthSum2 = 0.0;
+		for (int i = 0; i < vertexIn.size(); i++) {
+			xSum = xSum + vertexIn.get(i).x * edgeWeight.get(vertexIn.get(i));
+			ySum = ySum + vertexIn.get(i).y * edgeWeight.get(vertexIn.get(i));
+			fullLengthSum2 = fullLengthSum2 + edgeWeight.get(vertexIn.get(i));
+		}
+		return new Point(xSum / fullLengthSum2, ySum / fullLengthSum2);
 	}
 
 
