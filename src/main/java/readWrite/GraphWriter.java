@@ -5,11 +5,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
 
-import graph.*;
+import graph.Graph;
+import graph.Vertex;
 
 public class GraphWriter {
 
-	public void printGraphToFile(Graph<Vertex> graph, String outFileName) throws IOException {
+	public <T extends Vertex> void printGraphToFile(Graph<T> graph, String outFileName) throws IOException {
 		FileWriter out = new FileWriter(outFileName, false);
 		out.write(String.format("%d %n", graph.getEdges().size()));
 		for (Vertex begin : graph.getEdges().keySet()) {
