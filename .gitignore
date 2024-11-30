@@ -11,3 +11,4 @@ src/main/output/*
 src/main/resources/testGraphs/*.html
 src/main/resources/testGraphs/*_dual.txt
 .vscode/
+cache/
