@@ -1,16 +1,16 @@
 package partitioning;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import graph.EdgeOfGraph;
 import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
-import readWrite.PartitionWriter;
-
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.text.DecimalFormat;
-import java.util.*;
 
 public class BalancedPartitioning {
 	public BalancedPartitioningOfPlanarGraphs bp;
@@ -79,4 +79,16 @@ public class BalancedPartitioning {
         }
 		return ans;
 	}
+
+	public HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber() {
+		HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber = new HashMap<>();
+		ArrayList<HashSet<VertexOfDualGraph>> partition = bp.partition;
+		for (int i = 0; i < partition.size(); i++) {
+			for (VertexOfDualGraph vertex : partition.get(i)) {
+				dualVertexToPartNumber.put(vertex, i);
+			}
+		}
+		return dualVertexToPartNumber;
+	}
+
 }

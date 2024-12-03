@@ -5,7 +5,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 public class PartitionGraphVertex extends Vertex {
-    ArrayList<VertexOfDualGraph> vertices;
+    public ArrayList<VertexOfDualGraph> vertices;
 
     public PartitionGraphVertex(long partitionId) {
         super(partitionId, 0, 0, 0);
@@ -13,9 +13,15 @@ public class PartitionGraphVertex extends Vertex {
     }
 
     public PartitionGraphVertex(long partitionId, ArrayList<VertexOfDualGraph> vertices) {
-        super(partitionId, 0, 0);
+        super(partitionId);
         this.vertices = new ArrayList<>(vertices);
         this.weight = calculateTotalWeight(vertices);
+        calculateCenter();
+    }
+
+    public <T extends Vertex> PartitionGraphVertex(T v) {
+        super(v.getName(), v.x, v.y, v.getWeight());
+        this.vertices = null;
     }
 
     public void addVertex(VertexOfDualGraph vertex) {
@@ -33,32 +39,47 @@ public class PartitionGraphVertex extends Vertex {
         return vertices.stream().mapToDouble(VertexOfDualGraph::getWeight).sum();
     }
 
+    public void addVertices(ArrayList<VertexOfDualGraph> vertices) {
+        vertices.stream().forEach(vertex -> addVertex(vertex));
+        this.weight = calculateTotalWeight(this.vertices);
+        calculateCenter();
+    }
+
+    public void removeVertices(ArrayList<VertexOfDualGraph> vertices) {
+        vertices.stream().forEach(vertex -> removeVertex(vertex));
+        this.weight = calculateTotalWeight(this.vertices);
+        calculateCenter();
+    }
+
+    private void calculateCenter() {
+        Point center = Vertex.findCenter(this.vertices);
+        this.x = center.x;
+        this.y = center.y;
+    }
+
     static public Graph<PartitionGraphVertex> buildPartitionGraph(Graph<VertexOfDualGraph> dualGraph,
-                                                                  ArrayList<HashSet<VertexOfDualGraph>> partition) {
+                                                                  ArrayList<HashSet<VertexOfDualGraph>> partition,
+                                                                  HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber) {
         Graph<PartitionGraphVertex> partitionGraph = new Graph<>();
 
-        for (int i = 0; i < partition.size(); i++) {
-            partitionGraph.addVertex(new PartitionGraphVertex(i, new ArrayList<>(partition.get(i))));
-        }
+        ArrayList<PartitionGraphVertex> vertices = new ArrayList<>();
 
-        HashMap<VertexOfDualGraph, Integer> vertexToPartition = new HashMap<>();
         for (int i = 0; i < partition.size(); i++) {
-            for (VertexOfDualGraph vertex : partition.get(i)) {
-                vertexToPartition.put(vertex, i);
-            }
+            PartitionGraphVertex v = new PartitionGraphVertex(i, new ArrayList<>(partition.get(i)));
+            vertices.add(v);
+            partitionGraph.addVertex(v);
         }
 
         for (VertexOfDualGraph v1 : dualGraph.getEdges().keySet()) {
-            int partition1 = vertexToPartition.get(v1);
+            int partition1 = dualVertexToPartNumber.get(v1);
             for (VertexOfDualGraph v2 : dualGraph.getEdges().get(v1).keySet()) {
-                int partition2 = vertexToPartition.get(v2);
+                int partition2 = dualVertexToPartNumber.get(v2);
                 if (partition1 != partition2) {
                     double edgeLength = dualGraph.getEdges().get(v1).get(v2).getLength();
-                    PartitionGraphVertex pv1 = partitionGraph.verticesArray().get(partition1);
-                    PartitionGraphVertex pv2 = partitionGraph.verticesArray().get(partition2);
+                    PartitionGraphVertex pv1 = vertices.get(partition1);
+                    PartitionGraphVertex pv2 = vertices.get(partition2);
 
-                    if (!partitionGraph.getEdges().containsKey(pv1) ||
-                            !partitionGraph.getEdges().get(pv1).containsKey(pv2)) {
+                    if (!partitionGraph.getEdges().get(pv2).containsKey(pv1)) {
                         partitionGraph.addEdge(pv1, pv2, edgeLength);
                         partitionGraph.addEdge(pv2, pv1, edgeLength);
                     }

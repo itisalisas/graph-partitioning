@@ -16,7 +16,7 @@ def load_vertex_data(file_path):
 
 def generate_colors(n):
     cmap = plt.get_cmap('RdYlGn')
-    return [mcolors.rgb2hex(cmap(i / (n - 1))) for i in range(n)]
+    return [mcolors.rgb2hex(cmap(i / (n))) for i in range(n)]
 
 if len(sys.argv) != 3:
     print("Usage: python script.py <directory_path> <output_file.html>")

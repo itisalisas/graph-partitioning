@@ -1,18 +1,29 @@
-import graph.*;
-import graph.Vertex;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.junit.jupiter.api.Assertions;
+
+import graph.BoundSearcher;
+import graph.Graph;
+import graph.PartitionGraphVertex;
+import graph.Vertex;
+import graph.VertexOfDualGraph;
+import graphPreparation.GraphPreparation;
 import partitioning.BalancedPartitioning;
 import partitioning.InertialFlowPartitioning;
-import graphPreparation.GraphPreparation;
-
-import java.io.File;
-import java.util.*;
-import java.util.stream.Collectors;
-import readWrite.*;
+import readWrite.GraphReader;
+import readWrite.GraphWriter;
+import readWrite.PartitionWriter;
 
 public class Main {
 
-	public static void main(String[] args) throws RuntimeException {
+	public static void main(String[] args) throws RuntimeException, IOException {
 
 		if (args.length < 4) {
 			throw new RuntimeException("Use : <algorithm-name> <path-to-file> <max-sum-vertices-weight> <output-directory-name> [param]");
@@ -69,7 +80,18 @@ public class Main {
 			Assertions.assertNotNull(v.getVerticesOfFace());
 		}
 
+		GraphWriter gw = new GraphWriter();
+		String pathToResultDirectory = args[3];
+
 		ArrayList<HashSet<VertexOfDualGraph>> partitionResultForFaces = partitioning.partition(preparedGraph, maxSumVerticesWeight);
+		HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber = partitioning.dualVertexToPartNumber();
+
+		Graph<PartitionGraphVertex> partitionGraph = PartitionGraphVertex.buildPartitionGraph(preparedGraph, partitionResultForFaces, dualVertexToPartNumber);
+		gw.printGraphToFile(partitionGraph,  outputDirectory + pathToResultDirectory, "part_graph.txt");
+		System.err.println("smallest vertex before = " + partitionGraph.smallestVertex().getWeight());
+		//Balancer balancer = new Balancer(partitionGraph, preparedGraph);
+		//balancer.rebalanceSmallestRegion();
+		System.err.println("smallest vertex after = " + partitionGraph.smallestVertex().getWeight());
 
 		System.out.println("Partition size: " + partitionResultForFaces.size());
 
@@ -92,8 +114,7 @@ public class Main {
 						.collect(Collectors.toList())
 		);
 
-		String pathToResultDirectory = args[3];
-
+		gw.printDualGraphToFile(preparedGraph, dualVertexToPartNumber, partitionResultForFaces.size(), outputDirectory + pathToResultDirectory, "dual.txt");
 		// partitioning.savePartitionToDirectory(outputDirectory + pathToResultDirectory, partitionResult);
 		PartitionWriter pw = new PartitionWriter();
 		pw.savePartitionToDirectory(partitioning, partitioning.bp ,outputDirectory + pathToResultDirectory, partitionResultForFaces);

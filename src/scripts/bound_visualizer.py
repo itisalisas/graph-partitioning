@@ -4,6 +4,7 @@ import os
 import sys
 from matplotlib import colors as mcolors
 from matplotlib import pyplot as plt
+from natsort import natsorted
 
 def load_vertex_data(file_path):
     with open(file_path, 'r') as file:
@@ -34,6 +35,8 @@ if not os.path.exists(directory_path):
 file_paths = [os.path.join(directory_path, f) for f in os.listdir(directory_path)
               if f.startswith("bound_") and f.endswith(".txt")]
 
+file_paths = natsorted(file_paths)
+
 colors = generate_colors(len(file_paths))
 
 all_points = []
@@ -60,7 +63,8 @@ for i, file_path in enumerate(file_paths):
         color=color,
         fill=True,
         fill_color=color,
-        fill_opacity=0.5
+        fill_opacity=0.5,
+        tooltip=f"Part {i}"
     ).add_to(m)
 
 min_lat = min(p[0] for p in all_points)

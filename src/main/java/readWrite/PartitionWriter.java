@@ -25,7 +25,7 @@ public class PartitionWriter {
 		out.close();
 	}
 	
-	private void createOutputDirectory(String outputDirectory) {
+	public static void createOutputDirectory(String outputDirectory) {
 		File outputDirectoryFile = new File(outputDirectory);
 		if (!outputDirectoryFile.exists()) {
 			if (!outputDirectoryFile.mkdirs()) {
@@ -59,6 +59,7 @@ public class PartitionWriter {
 			}
 			GraphWriter gw = new GraphWriter();
 			gw.printVerticesToFile(bounds.get(i), boundFile);
+			System.out.println(bounds.get(i).get(0).getX() + " " + bounds.get(i).get(0).getY());
 		}
 	}
 
