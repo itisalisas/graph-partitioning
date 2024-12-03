@@ -164,7 +164,7 @@ class GraphTest {
         graphReader.readGraphFromFile(g, "src/main/resources/testGraphs/test_graph_1.txt".replace('/', File.separatorChar));
         GraphPreparation preparation = new GraphPreparation();
         Graph<VertexOfDualGraph> dualGraph = preparation.prepareGraph(g, 1e-9);
-        graphWriter.printGraphToFile(dualGraph, "src/main/resources/testGraphs/test_graph_1_dual.txt");
+        graphWriter.printGraphToFile(dualGraph, "src/main/resources/testGraphs", "test_graph_1_dual.txt");
         Assertions.assertEquals(6, dualGraph.verticesNumber());
     }
 
@@ -175,7 +175,7 @@ class GraphTest {
         graphReader.readGraphFromFile(g, "src/main/resources/testGraphs/test_graph_2.txt".replace('/', File.separatorChar));
         GraphPreparation preparation = new GraphPreparation();
         Graph<VertexOfDualGraph> dualGraph = preparation.prepareGraph(g, 1e-9);
-        graphWriter.printGraphToFile(dualGraph, "src/main/resources/testGraphs/test_graph_2_dual.txt");
+        graphWriter.printGraphToFile(dualGraph, "src/main/resources/testGraphs", "test_graph_2_dual.txt");
         Assertions.assertEquals(3, dualGraph.verticesNumber());
     }
 
