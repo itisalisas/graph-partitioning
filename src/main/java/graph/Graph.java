@@ -92,12 +92,12 @@ public class Graph<T extends Vertex> {
 		return res;
 	}
 
-	public EdgeOfGraph[] edgesArray() {
+	public EdgeOfGraph<T>[] edgesArray() {
 		int iter = 0;
-		EdgeOfGraph[] ans = new EdgeOfGraph[edgesNumber()];
+		EdgeOfGraph<T>[] ans = new EdgeOfGraph[edgesNumber()];
 		for (T begin : edges.keySet()) {
 			for (T end : edges.get(begin).keySet()) {
-				ans[iter++] = new EdgeOfGraph(begin, end, edges.get(begin).get(end).getLength(),
+				ans[iter++] = new EdgeOfGraph((T)begin, (T)end, edges.get(begin).get(end).getLength(),
 						edges.get(begin).get(end).flow, edges.get(begin).get(end).getBandwidth());
 			}
 		}
@@ -280,7 +280,7 @@ public class Graph<T extends Vertex> {
 
 	public Graph<T> createSubgraph(Set<T> verticesOfSubgraph) {
 		Graph<T> subgraph = new Graph<T>();
-		List<EdgeOfGraph> edges = Arrays.stream(edgesArray()).toList();
+		List<EdgeOfGraph<T>> edges = Arrays.stream(edgesArray()).toList();
 		List<T> vertices = new ArrayList<>(verticesArray());
 
 		for (T vertex : vertices) {

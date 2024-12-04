@@ -2,26 +2,26 @@ package graph;
 
 import java.util.Objects;
 
-public class EdgeOfGraph extends Edge {
+public class EdgeOfGraph<T extends Vertex> extends Edge {
 	
-	public Vertex begin;
-	public Vertex end;
+	public T begin;
+	public T end;
 	
-	public EdgeOfGraph(Vertex begin,Vertex end, double length) {
+	public EdgeOfGraph(T begin, T end, double length) {
 		super(length);
 		this.begin = begin;
 		this.end = end;
 	}
 	
 	
-	public EdgeOfGraph(Vertex begin, Vertex end, double length, double flow, double bandwidth) {
+	public EdgeOfGraph(T begin, T end, double length, double flow, double bandwidth) {
 		super(length, flow, bandwidth);
 		this.begin = begin;
 		this.end = end;
 	}
 	
 	
-	public EdgeOfGraph(Vertex begin, Vertex end, double length, double flow, double bandwidth, boolean road) {
+	public EdgeOfGraph(T begin, T end, double length, double flow, double bandwidth, boolean road) {
 		super(length, flow, bandwidth, road);
 		this.begin = begin;
 		this.end = end;
