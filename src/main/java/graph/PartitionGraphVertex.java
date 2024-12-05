@@ -39,14 +39,8 @@ public class PartitionGraphVertex extends Vertex {
         return vertices.stream().mapToDouble(VertexOfDualGraph::getWeight).sum();
     }
 
-    public void addVertices(ArrayList<VertexOfDualGraph> vertices) {
-        vertices.stream().forEach(vertex -> addVertex(vertex));
-        this.weight = calculateTotalWeight(this.vertices);
-        calculateCenter();
-    }
-
-    public void removeVertices(ArrayList<VertexOfDualGraph> vertices) {
-        vertices.stream().forEach(vertex -> removeVertex(vertex));
+    public void changeVertices(ArrayList<VertexOfDualGraph> vertices) {
+        this.vertices = vertices;
         this.weight = calculateTotalWeight(this.vertices);
         calculateCenter();
     }

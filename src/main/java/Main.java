@@ -16,6 +16,7 @@ import graph.Vertex;
 import graph.VertexOfDualGraph;
 import graphPreparation.GraphPreparation;
 import partitioning.BalancedPartitioning;
+import partitioning.Balancer;
 import partitioning.InertialFlowPartitioning;
 import readWrite.GraphReader;
 import readWrite.GraphWriter;
@@ -89,8 +90,8 @@ public class Main {
 		Graph<PartitionGraphVertex> partitionGraph = PartitionGraphVertex.buildPartitionGraph(preparedGraph, partitionResultForFaces, dualVertexToPartNumber);
 		gw.printGraphToFile(partitionGraph,  outputDirectory + pathToResultDirectory, "part_graph.txt");
 		System.err.println("smallest vertex before = " + partitionGraph.smallestVertex().getWeight());
-		//Balancer balancer = new Balancer(partitionGraph, preparedGraph);
-		//balancer.rebalanceSmallestRegion();
+		Balancer balancer = new Balancer(partitionGraph, preparedGraph);
+		partitionResultForFaces = balancer.rebalancing();
 		System.err.println("smallest vertex after = " + partitionGraph.smallestVertex().getWeight());
 
 		System.out.println("Partition size: " + partitionResultForFaces.size());

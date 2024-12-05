@@ -1,6 +1,7 @@
 package partitioning;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 
 import org.junit.jupiter.api.Assertions;
@@ -36,11 +37,22 @@ public class Balancer {
         ArrayList<HashSet<VertexOfDualGraph>> newPartition = bp.partition(regionsSubgraph, (int) regionsSubgraph.verticesSumWeight() - 1);
         Assertions.assertEquals(2, newPartition.size());
 
-        smallestVertex.removeVertices(smallestVertex.vertices);
-        smallestVertex.addVertices(new ArrayList<>(newPartition.get(0)));
+        smallestVertex.changeVertices(new ArrayList<>(newPartition.get(0)));
 
-        smallestVertex.removeVertices(biggestNeighbor.vertices);
-        smallestVertex.addVertices(new ArrayList<>(newPartition.get(1)));
+        biggestNeighbor.changeVertices(new ArrayList<>(newPartition.get(1)));
+
+        ArrayList<HashSet<VertexOfDualGraph>> newParts = new ArrayList<>(partitionGraph.verticesArray().stream().map(v -> new HashSet<VertexOfDualGraph>(v.vertices)).toList());
+
+        HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber = new HashMap<>();
+		for (int i = 0; i < newParts.size(); i++) {
+			for (VertexOfDualGraph vertex : newParts.get(i)) {
+				dualVertexToPartNumber.put(vertex, i);
+			}
+		}
+
+        Assertions.assertEquals(dualGraph.verticesNumber(), dualVertexToPartNumber.size());
+
+        this.partitionGraph = PartitionGraphVertex.buildPartitionGraph(dualGraph, newParts, dualVertexToPartNumber);
 
         /* балансировка - берем как истоки все вершины меньшей части, как стоки - w_1 вершин второй части
         VertexOfDualGraph source = new VertexOfDualGraph(-1);
@@ -63,6 +75,11 @@ public class Balancer {
 
         Graph<VertexOfDualGraph> regionsSubgraphWithSourceSink = InertialFlowPartitioning.createGraphWithSourceSink(regionsSubgraph, sourceSet, source, sinkSet, sink);
         */
+    }
+
+    public ArrayList<HashSet<VertexOfDualGraph>> rebalancing() {
+        rebalanceSmallestRegion();
+        return new ArrayList<>(partitionGraph.verticesArray().stream().map(v -> new HashSet<VertexOfDualGraph>(v.vertices)).toList());
     }
     
 }
