@@ -88,11 +88,18 @@ public class Main {
 		HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber = partitioning.dualVertexToPartNumber();
 
 		Graph<PartitionGraphVertex> partitionGraph = PartitionGraphVertex.buildPartitionGraph(preparedGraph, partitionResultForFaces, dualVertexToPartNumber);
-		gw.printGraphToFile(partitionGraph,  outputDirectory + pathToResultDirectory, "part_graph.txt");
 		System.err.println("smallest vertex before = " + partitionGraph.smallestVertex().getWeight());
-		Balancer balancer = new Balancer(partitionGraph, preparedGraph);
+		Balancer balancer = new Balancer(partitionGraph, preparedGraph, maxSumVerticesWeight);
 		partitionResultForFaces = balancer.rebalancing();
+		HashMap<VertexOfDualGraph, Integer> newDualVertexToPartNumber = new HashMap<>();
+		for (int i = 0; i < partitionResultForFaces.size(); i++) {
+			for (VertexOfDualGraph vertex : partitionResultForFaces.get(i)) {
+				newDualVertexToPartNumber.put(vertex, i);
+			}
+		}
+		partitionGraph = PartitionGraphVertex.buildPartitionGraph(preparedGraph, partitionResultForFaces, newDualVertexToPartNumber);
 		System.err.println("smallest vertex after = " + partitionGraph.smallestVertex().getWeight());
+		gw.printGraphToFile(partitionGraph,  outputDirectory + pathToResultDirectory, "part_graph.txt");
 
 		System.out.println("Partition size: " + partitionResultForFaces.size());
 

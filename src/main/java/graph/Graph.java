@@ -425,8 +425,8 @@ public class Graph<T extends Vertex> {
 		return edges.keySet().stream().min(Comparator.comparingDouble(v -> v.weight)).orElse(null);
 	}
 
-	public T findBiggestNeighbor(T vertex) {
-		return edges.get(vertex).keySet().stream().max(Comparator.comparingDouble(v -> v.weight)).orElse(null);
+	public List<T> sortNeighbors(T vertex) {
+		return edges.get(vertex).keySet().stream().sorted(Comparator.comparingDouble(v -> -v.weight)).toList();
 	}
 
 }
