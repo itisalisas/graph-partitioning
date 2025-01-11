@@ -23,7 +23,7 @@ public class LocalizationPoints {
 		int tmp = 0;
 		for (VertexOfDualGraph ver : dualGraph.getEdges().keySet()) {
 			coordConst = new CoordinateConstraintsForFace(ver.getVerticesOfFace());
-			diagonal = new EdgeOfGraph(new Vertex(0, coordConst.getMinX(), coordConst.getMinY()),
+			diagonal = new EdgeOfGraph<Vertex>(new Vertex(0, coordConst.getMinX(), coordConst.getMinY()),
 					new Vertex(0, coordConst.getMaxX(), coordConst.getMaxY()), 0);
 
 			//System.out.println(ver.getName() + " " + diagonal.getBegin().getX() + " " + diagonal.getBegin().getY() + " " + diagonal.getEnd().getX() + " " + diagonal.getEnd().getY());

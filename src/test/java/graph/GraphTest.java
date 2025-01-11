@@ -6,6 +6,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import partitioning.BalancedPartitioning;
 import partitioning.InertialFlowPartitioning;
+import readWrite.GraphReader;
+import readWrite.GraphWriter;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -145,7 +147,8 @@ class GraphTest {
     @Test
     void testDualGraphSimple() throws IOException {
         Graph<Vertex> g = new Graph<>();
-        g.readGraphFromFile("src/main/resources/testGraphs/test_graph_0.txt".replace('/', File.separatorChar));
+        GraphReader gr = new GraphReader();
+        gr.readGraphFromFile(g, "src/main/resources/testGraphs/test_graph_0.txt".replace('/', File.separatorChar));
         GraphPreparation preparation = new GraphPreparation();
         Graph<VertexOfDualGraph> dualGraph = preparation.prepareGraph(g, 1e-9);
         Assertions.assertEquals(1, dualGraph.verticesNumber());
@@ -155,10 +158,12 @@ class GraphTest {
     @Test
     void testDualGraph() throws IOException {
         Graph<Vertex> g = new Graph<>();
-        g.readGraphFromFile("src/main/resources/testGraphs/test_graph_1.txt".replace('/', File.separatorChar));
+        GraphReader gr = new GraphReader();
+        gr.readGraphFromFile(g, "src/main/resources/testGraphs/test_graph_1.txt".replace('/', File.separatorChar));
         GraphPreparation preparation = new GraphPreparation();
         Graph<VertexOfDualGraph> dualGraph = preparation.prepareGraph(g, 1e-9);
-        dualGraph.printGraphToFile("src/main/resources/testGraphs/test_graph_1_dual.txt");
+        GraphWriter gw = new GraphWriter();
+        gw.printGraphToFile(dualGraph, "src/main/resources/testGraphs/test_graph_1_dual.txt");
         Assertions.assertEquals(6, dualGraph.verticesNumber());
     }
 
@@ -166,10 +171,12 @@ class GraphTest {
     @Test
     void testDualGraphWithInnerEdge() throws IOException {
         Graph<Vertex> g = new Graph<>();
-        g.readGraphFromFile("src/main/resources/testGraphs/test_graph_2.txt".replace('/', File.separatorChar));
+        GraphReader gr = new GraphReader();
+        gr.readGraphFromFile(g, "src/main/resources/testGraphs/test_graph_2.txt".replace('/', File.separatorChar));
         GraphPreparation preparation = new GraphPreparation();
         Graph<VertexOfDualGraph> dualGraph = preparation.prepareGraph(g, 1e-9);
-        dualGraph.printGraphToFile("src/main/resources/testGraphs/test_graph_2_dual.txt");
+        GraphWriter gw = new GraphWriter();
+        gw.printGraphToFile(dualGraph, "src/main/resources/testGraphs/test_graph_2_dual.txt");
         Assertions.assertEquals(3, dualGraph.verticesNumber());
     }
 

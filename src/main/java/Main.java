@@ -1,6 +1,8 @@
 import graph.*;
-import graph.Vertex;
+
 import org.junit.jupiter.api.Assertions;
+
+import addingPoints.LocalizationPoints;
 import partitioning.BalancedPartitioning;
 import partitioning.InertialFlowPartitioning;
 import graphPreparation.GraphPreparation;

@@ -245,17 +245,47 @@ public class SweepLine {
 			
 			if (actions.get(i).type() == ActionType.DELETE) {
 				//System.out.println("DELETE");
-
 				//actualEdge.remove(actions.get(i).edgeNum());
 
 				EdgeOfGraph actionEdge = diagList[actions.get(i).edgeNum()];
 				SortedMap<Double, HashSet<EdgeOfGraph>> tmp = actualEdges.subMap(actionEdge.begin.getY(), actionEdge.end.getY());
 				for (Double d : tmp.keySet()) {
-					actualEdges.get(d).remove(actionEdge);
+					if (actualEdges.get(d) != null) {
+						actualEdges.get(d).remove(diagList[actions.get(i).edgeNum()]);
+						// if (actualEdges.get(d).size() == 0) {
+						// 	actualEdges.remove(d);
+						// }
+					}
 				}
-				tmp.clear();
-				actualEdges.remove(diagList[actions.get(i).edgeNum()].begin.getY());
-				actualEdges.remove(diagList[actions.get(i).edgeNum()].end.getY());
+				
+				if (actualEdges.get(diagList[actions.get(i).edgeNum()].begin.getY()) != null) {
+					actualEdges.get(diagList[actions.get(i).edgeNum()].begin.getY()).remove(diagList[actions.get(i).edgeNum()]);
+					if (actualEdges.get(diagList[actions.get(i).edgeNum()].begin.getY()).size() == 0) {
+						actualEdges.remove(diagList[actions.get(i).edgeNum()].begin.getY());
+					}
+				}
+				
+				if (actualEdges.get(diagList[actions.get(i).edgeNum()].end.getY()) != null) {
+					actualEdges.get(diagList[actions.get(i).edgeNum()].end.getY()).remove(diagList[actions.get(i).edgeNum()]);
+					if (actualEdges.get(diagList[actions.get(i).edgeNum()].end.getY()).size() == 0) {
+						actualEdges.remove(diagList[actions.get(i).edgeNum()].end.getY());
+					}
+				}
+				
+				
+				// for (Double d : actualEdges.keySet()) {
+				// 	System.out.println("	key:" + d + " :");
+				// 	for (EdgeOfGraph ed : actualEdges.get(d)) {
+				// 		System.out.println("	 " + returnFromSimplification.get(ed).getName());
+				// 		System.out.print("	");
+				// 		for (Vertex v : returnFromSimplification.get(ed).getVerticesOfFace()) {
+				// 			System.out.print(" " + v.getName());
+				// 		}
+				// 		System.out.println();
+				// 	}
+				// 	System.out.println();
+				// }
+				// System.out.println(actualEdges);
 				continue;
 			}
 			if (actions.get(i).type() == ActionType.ADD) {
@@ -288,19 +318,56 @@ public class SweepLine {
 				SortedMap<Double, HashSet<EdgeOfGraph>> tmp = actualEdges.subMap(actionEdge.begin.getY(), actionEdge.end.getY());
 				for (Double d : tmp.keySet()) {
 					if (actionEdge != null) {
-//						System.out.println("edge " + actionEdge.begin.getY() + " " + actionEdge.end.getY());
+						//System.out.println("edge " + actionEdge.begin.getY() + " " + actionEdge.end.getY());
 						actualEdges.get(d).add(actionEdge);
-//						System.out.println(d + " " + actualEdges.get(d).size() + "  " + actualEdges.get(d));
+						//System.out.println(d + " " + actualEdges.get(d).size() + "  " + actualEdges.get(d));
 					}
 				}
+
+				// for (Double d : actualEdges.keySet()) {
+				// 	System.out.println("	key:" + d + " size " + actualEdges.get(d).size() +  " :");
+				// 	for (EdgeOfGraph ed : actualEdges.get(d)) {
+				// 		System.out.println("	 " + returnFromSimplification.get(ed).getName());
+				// 		System.out.print("	");
+				// 		for (Vertex v : returnFromSimplification.get(ed).getVerticesOfFace()) {
+				// 			System.out.print(" " + v.getName());
+				// 		}
+				// 		System.out.println();
+				// 	}
+				// 	System.out.println();
+				// }
+				// System.out.println(actualEdges);
 				continue;
 			}
 			//System.out.println("POINT");
 			Vertex vertex = actions.get(i).vertex();
+			
+			// for (Double d : actualEdges.keySet()) {
+			// 	System.out.println("	key:" + d + " :");
+			// 	for (EdgeOfGraph ed : actualEdges.get(d)) {
+			// 		System.out.println("	 " + returnFromSimplification.get(ed).getName());
+			// 		System.out.print("	");
+			// 		for (Vertex v : returnFromSimplification.get(ed).getVerticesOfFace()) {
+			// 			System.out.print(" " + v.getName());
+			// 		}
+			// 		System.out.println();
+			// 	}
+			// 	System.out.println();
+			// }
+			// System.out.println(actualEdges);
+			if (actualEdges.floorKey(vertex.getY()) == null) {
+				continue;
+			}
 			for (EdgeOfGraph vert : actualEdges.get(actualEdges.floorKey(vertex.getY()))) {
+				// for (int k = 0; k < returnFromSimplification.get(vert).getVerticesOfFace().size(); k++) {
+				// 	System.out.print(" " + returnFromSimplification.get(vert).getVerticesOfFace().get(k).getName());
+
+				// }
+				// System.out.println();
 				if (!vertex.inRectangle(vert.begin, vert.end)) {
 					continue;
 				}
+				
 				if (vertex.inFaceGeom(returnFromSimplification.get(vert).getVerticesOfFace())) {
 					res.put(vertex, returnFromSimplification.get(vert));
 				}

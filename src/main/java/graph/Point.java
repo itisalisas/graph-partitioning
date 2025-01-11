@@ -133,7 +133,10 @@ public class Point {
 				begin = vertexIn.get(i);
 				continue;
 			}
+			
+			begin = vertexIn.get(i);
 		}
+		//System.out.println(count);
 		if (count % 2 == 0) {
 			return false;
 		} else {

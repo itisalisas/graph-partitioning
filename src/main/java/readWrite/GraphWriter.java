@@ -9,7 +9,7 @@ import graph.*;
 
 public class GraphWriter {
 
-	public void printGraphToFile(Graph<Vertex> graph, String outFileName) throws IOException {
+	public <E extends Vertex> void printGraphToFile(Graph<E> graph, String outFileName) throws IOException {
 		FileWriter out = new FileWriter(outFileName, false);
 		out.write(String.format("%d %n", graph.getEdges().size()));
 		for (Vertex begin : graph.getEdges().keySet()) {
