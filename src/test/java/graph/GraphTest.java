@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 
 import partitioning.BalancedPartitioning;
 import partitioning.InertialFlowPartitioning;
+import readWrite.GraphReader;
+import readWrite.GraphWriter;
 
 import java.io.File;
 import java.io.FileNotFoundException;
