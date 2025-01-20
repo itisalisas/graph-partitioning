@@ -71,12 +71,12 @@ for u, v, data in G.edges(data=True):
         locations=[u_coords, v_coords],
         color="green",
         #opacity=0.3,
-        weight=2.5
-        # tooltip=f"Length: {data['length']}"
+        weight=2.5,
+        tooltip=f"Length: {data['length']}"
     ).add_to(map_osm)
 
 for node, data in G.nodes(data=True):
-    color = colors[vertex_part_map[node]]
+    color = colors[vertex_part_map[node] % len(colors)]
     folium.CircleMarker(
         location=(data["y"], data["x"]),
         radius=2,

@@ -1,9 +1,11 @@
 package partitioning;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.PriorityQueue;
 
 import org.junit.jupiter.api.Assertions;
 
@@ -40,7 +42,7 @@ public class Balancer {
         Graph<VertexOfDualGraph> regionsSubgraph = dualGraph.createSubgraph(balancingVerticesSet);
         Assertions.assertEquals(balancingVerticesSet.size(), regionsSubgraph.verticesNumber());
         Assertions.assertTrue(regionsSubgraph.isConnected());
-        BalancedPartitioning bp = new BalancedPartitioning(new InertialFlowPartitioning(0.45));
+        BalancedPartitioning bp = new BalancedPartitioning(new InertialFlowPartitioning(0.4));
         ArrayList<HashSet<VertexOfDualGraph>> newPartition = bp.partition(regionsSubgraph, maxWeight);
         Assertions.assertEquals(2, newPartition.size());
 
@@ -94,7 +96,9 @@ public class Balancer {
             previousSmallestWeight = currentSmallestWeight;
             variance = calculateVariance();
         }
-
+        for (PartitionGraphVertex vertex : partitionGraph.verticesArray()) {
+            Assertions.assertTrue(vertex.getWeight() <= maxWeight);
+        }
         return new ArrayList<>(partitionGraph.verticesArray().stream().map(v -> new HashSet<VertexOfDualGraph>(v.vertices)).toList());
     }
 
@@ -143,15 +147,31 @@ public class Balancer {
         if (availableWeight < smallestVertex.getWeight()) {
             return false;
         }
-        
+
         List<VertexOfDualGraph> verticesToRedistribute = new ArrayList<>(smallestVertex.vertices);
 
         boolean progressMade;
         do {
             progressMade = false;
             for (VertexOfDualGraph vertex : new ArrayList<>(verticesToRedistribute)) {
-                // Find possible neighboring partitions where this vertex can be moved
+                // Priority queue to choose the best neighbor
+                PriorityQueue<PartitionGraphVertex> priorityQueue = new PriorityQueue<>(
+                    Comparator.comparingDouble((PartitionGraphVertex neighbor) -> {
+                        // Calculate priority based on:
+                        // 1. Number of neighbors in the partition
+                        // 2. Free space in the partition
+                        double freeSpace = maxWeight - neighbor.getWeight();
+                        // Combine factors (you can adjust weights as needed)
+                        return - (freeSpace / maxWeight);
+                    })
+                );
+    
                 for (PartitionGraphVertex neighbor : neighbors) {
+                    priorityQueue.add(neighbor);
+                }
+    
+                while (!priorityQueue.isEmpty()) {
+                    PartitionGraphVertex neighbor = priorityQueue.poll();
                     // Check if vertex has neighbors in the neighbor partition
                     boolean hasNeighborInPartition = false;
                     for (VertexOfDualGraph neighborVertex : neighbor.vertices) {
