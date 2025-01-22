@@ -4,7 +4,7 @@ import os
 import sys
 
 if len(sys.argv) != 3:
-    print("Usage: python bound_visualizer.py <directory_path> <output_file.html>")
+    print("Usage: python graph_visualizer.py <directory_path> <output_file.html>")
     sys.exit(1)
 
 file_name = sys.argv[1]

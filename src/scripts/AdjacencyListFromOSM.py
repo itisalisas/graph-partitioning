@@ -20,12 +20,12 @@ def get_bounding_box(center, distance):
 print("write x coordinate or -:")
 inputX = input()
 if inputX != '-':
-    center_x = float(inputX)
+    center_lat = float(inputX)
 
 print("write y coordinate or -:")
 inputY = input()
 if inputY != '-':
-    center_y = float(inputY)
+    center_lon = float(inputY)
 
 print("write dist or -:")
 inputDist = input()

@@ -1,23 +1,45 @@
 package partitioning;
 
-import graph.*;
-import org.junit.jupiter.api.Assertions;
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Queue;
+import java.util.Set;
+import java.util.Stack;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.junit.jupiter.api.Assertions;
+
+import graph.Edge;
+import graph.Graph;
+import graph.Point;
+import graph.Vertex;
+import graph.VertexOfDualGraph;
+
 public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs {
 
-    private final double PARAMETER;
+    private final double PARAMETER_SOURCE, PARAMETER_SINK;
 
     public InertialFlowPartitioning() {
-        this.PARAMETER = 0.25;
+        this.PARAMETER_SOURCE = 0.25;
+        this.PARAMETER_SINK = 0.25;
     }
 
     public InertialFlowPartitioning(double parameter) {
-        this.PARAMETER = parameter;
+        this.PARAMETER_SOURCE = parameter;
+        this.PARAMETER_SINK = parameter; 
+    }
+
+
+    public InertialFlowPartitioning(double parameterSource, double parameterSink) {
+        this.PARAMETER_SOURCE = parameterSource;
+        this.PARAMETER_SINK = parameterSink; 
     }
 
     private static class Vector2D {
@@ -75,7 +97,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
             List<VertexOfDualGraph> vertices = new ArrayList<>(currentGraph.verticesArray());
             if (currentGraph.verticesWeight() < maxSumVerticesWeight) {
-                partition.add(new HashSet<VertexOfDualGraph>(currentGraph.verticesArray()));
+                partition.add(new HashSet<>(currentGraph.verticesArray()));
                 continue;
             }
 
@@ -113,7 +135,8 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
 
             double totalWeight = vertices.stream().mapToDouble(VertexOfDualGraph::getWeight).sum();
-            double targetWeight = (int) (PARAMETER * totalWeight);
+            double targetWeightSource = PARAMETER_SOURCE * totalWeight;
+            double targetWeightSink = PARAMETER_SINK * totalWeight;
 
             long maxIndex = vertices.stream().max(Comparator.comparingLong(VertexOfDualGraph::getName)).get().getName();
 
@@ -122,8 +145,8 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
             Set<VertexOfDualGraph> sourceSet = new HashSet<>();
             int index = 0;
-            while (index < vertices.size() && sourceSet.stream().mapToDouble(VertexOfDualGraph::getWeight).sum() < targetWeight) {
-                sourceSet = selectVerticesForSet(vertices, index, targetWeight, new HashSet<>(), currentGraph);
+            while (index < vertices.size() && sourceSet.stream().mapToDouble(VertexOfDualGraph::getWeight).sum() < targetWeightSource) {
+                sourceSet = selectVerticesForSet(vertices, index, targetWeightSource, new HashSet<>(), currentGraph);
                 index++;
             }
 
@@ -134,8 +157,8 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             Set<VertexOfDualGraph> sinkSet = new HashSet<>();
             Set<VertexOfDualGraph> maxSinkSet = new HashSet<>();
             index = 1;
-            while (index <= vertices.size() && sinkSet.stream().mapToDouble(Vertex::getWeight).sum() < targetWeight) {
-                sinkSet = selectVerticesForSet(vertices, vertices.size() - index, targetWeight, sourceSet, currentGraph);
+            while (index <= vertices.size() && sinkSet.stream().mapToDouble(Vertex::getWeight).sum() < targetWeightSink) {
+                sinkSet = selectVerticesForSet(vertices, vertices.size() - index, targetWeightSink, sourceSet, currentGraph);
                 if (sinkSet.stream().mapToDouble(Vertex::getWeight).sum() >
                         maxSinkSet.stream().mapToDouble(Vertex::getWeight).sum()) {
                     maxSinkSet = sinkSet;
@@ -162,7 +185,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
     }
 
-    private Set<VertexOfDualGraph> selectVerticesForSet(List<VertexOfDualGraph> vertices, int startIndex, double targetWeight, Set<VertexOfDualGraph> sourceSet, Graph<VertexOfDualGraph> currentGraph) {
+    public Set<VertexOfDualGraph> selectVerticesForSet(List<VertexOfDualGraph> vertices, int startIndex, double targetWeight, Set<VertexOfDualGraph> sourceSet, Graph<VertexOfDualGraph> currentGraph) {
         Set<VertexOfDualGraph> vertexSet = new HashSet<>();
         int currentWeight = 0;
         Queue<VertexOfDualGraph> queue = new LinkedList<>();
@@ -213,7 +236,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
         queue.add(source);
         isConnectedWithSource.put(source, true);
         while (!queue.isEmpty()) {
-        	Vertex vertex = queue.poll();
+        	VertexOfDualGraph vertex = queue.poll();
             for (Entry<VertexOfDualGraph, Edge> connectedVertex : graph.getEdges().get(vertex).entrySet()) {
                 if (!isConnectedWithSource.get(connectedVertex.getKey()) &&
                         connectedVertex.getValue().flow < connectedVertex.getValue().getBandwidth()) {
@@ -225,7 +248,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
     }
 
-    public Graph<VertexOfDualGraph> createGraphWithSourceSink(Graph<VertexOfDualGraph> currentGraph, Set<VertexOfDualGraph> sourceSet, VertexOfDualGraph source, Set<VertexOfDualGraph> sinkSet, VertexOfDualGraph sink) {
+    public static Graph<VertexOfDualGraph> createGraphWithSourceSink(Graph<VertexOfDualGraph> currentGraph, Set<VertexOfDualGraph> sourceSet, VertexOfDualGraph source, Set<VertexOfDualGraph> sinkSet, VertexOfDualGraph sink) {
         Graph<VertexOfDualGraph> newGraph = currentGraph.clone();
 
         for (VertexOfDualGraph s : sourceSet) {

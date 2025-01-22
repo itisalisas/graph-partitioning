@@ -1,9 +1,11 @@
 package graph;
 
 import graphPreparation.GraphPreparation;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import partitioning.BalancedPartitioning;
 import partitioning.InertialFlowPartitioning;
 import readWrite.GraphReader;
@@ -17,12 +19,16 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import readWrite.GraphReader;
+import readWrite.GraphWriter;
+
 class GraphTest {
 
     private Graph<Vertex> graph;
     private List<Vertex> vs;
     private List<EdgeOfGraph> edges;
-
+    private GraphReader graphReader = new GraphReader();
+    private GraphWriter graphWriter = new GraphWriter();
 
     @BeforeEach
     void setUp() {
@@ -147,8 +153,7 @@ class GraphTest {
     @Test
     void testDualGraphSimple() throws IOException {
         Graph<Vertex> g = new Graph<>();
-        GraphReader gr = new GraphReader();
-        gr.readGraphFromFile(g, "src/main/resources/testGraphs/test_graph_0.txt".replace('/', File.separatorChar));
+        graphReader.readGraphFromFile(g, "src/main/resources/testGraphs/test_graph_0.txt".replace('/', File.separatorChar));
         GraphPreparation preparation = new GraphPreparation();
         Graph<VertexOfDualGraph> dualGraph = preparation.prepareGraph(g, 1e-9);
         Assertions.assertEquals(1, dualGraph.verticesNumber());
@@ -158,12 +163,10 @@ class GraphTest {
     @Test
     void testDualGraph() throws IOException {
         Graph<Vertex> g = new Graph<>();
-        GraphReader gr = new GraphReader();
-        gr.readGraphFromFile(g, "src/main/resources/testGraphs/test_graph_1.txt".replace('/', File.separatorChar));
+        graphReader.readGraphFromFile(g, "src/main/resources/testGraphs/test_graph_1.txt".replace('/', File.separatorChar));
         GraphPreparation preparation = new GraphPreparation();
         Graph<VertexOfDualGraph> dualGraph = preparation.prepareGraph(g, 1e-9);
-        GraphWriter gw = new GraphWriter();
-        gw.printGraphToFile(dualGraph, "src/main/resources/testGraphs/test_graph_1_dual.txt");
+        graphWriter.printGraphToFile(dualGraph, "src/main/resources/testGraphs", "test_graph_1_dual.txt");
         Assertions.assertEquals(6, dualGraph.verticesNumber());
     }
 
@@ -171,12 +174,10 @@ class GraphTest {
     @Test
     void testDualGraphWithInnerEdge() throws IOException {
         Graph<Vertex> g = new Graph<>();
-        GraphReader gr = new GraphReader();
-        gr.readGraphFromFile(g, "src/main/resources/testGraphs/test_graph_2.txt".replace('/', File.separatorChar));
+        graphReader.readGraphFromFile(g, "src/main/resources/testGraphs/test_graph_2.txt".replace('/', File.separatorChar));
         GraphPreparation preparation = new GraphPreparation();
         Graph<VertexOfDualGraph> dualGraph = preparation.prepareGraph(g, 1e-9);
-        GraphWriter gw = new GraphWriter();
-        gw.printGraphToFile(dualGraph, "src/main/resources/testGraphs/test_graph_2_dual.txt");
+        graphWriter.printGraphToFile(dualGraph, "src/main/resources/testGraphs", "test_graph_2_dual.txt");
         Assertions.assertEquals(3, dualGraph.verticesNumber());
     }
 

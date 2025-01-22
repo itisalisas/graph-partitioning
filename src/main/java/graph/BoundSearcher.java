@@ -1,9 +1,18 @@
 package graph;
 
-import org.junit.jupiter.api.Assertions;
-
-import java.util.*;
+import static java.lang.Double.max;
+import static java.lang.Math.abs;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
+
+import org.junit.jupiter.api.Assertions;
 
 public class BoundSearcher {
 
@@ -194,6 +203,30 @@ public class BoundSearcher {
             }
         }
         return bestEdge == null? sortedEdges.last() : bestEdge;
+    }
+
+    private static double leftTurn(Point a, Point b, Point c) {
+        return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
+    }
+
+    public static double findDiameter(List<Vertex> vertices) {
+        List<Vertex> hull = findConvexHull(vertices);
+        double diameter = 0.0;
+        int n = hull.size();
+        if (n == 1) return 0;
+        if (n == 2) return hull.get(0).getLength(hull.get(0));
+        int k = 1;
+        while (abs(leftTurn(hull.get(n-1), hull.get(0), hull.get((k+1) % n))) > abs(leftTurn(hull.get(n-1), hull.get(0), hull.get(k)))) {
+            k++;
+        }
+        for (int i = 0, j = k; i <= k && j < n; i++) {
+            diameter = max(diameter, hull.get(i).getLength(hull.get(j)));
+            while (j < n && abs(leftTurn(hull.get(i), hull.get((i + 1) % n), hull.get((j + 1) % n))) > abs(leftTurn(hull.get(i), hull.get((i + 1) % n), hull.get(j)))) {
+                diameter = max(diameter, hull.get(i).getLength(hull.get((j + 1) % n)));
+                j++;
+            }
+        }
+        return diameter;
     }
 
 }
