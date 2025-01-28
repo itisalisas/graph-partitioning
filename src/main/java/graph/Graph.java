@@ -24,21 +24,35 @@ public class Graph<T extends Vertex> {
 	@Override
 	public Graph<T> clone() {
 		Graph<T> result = new Graph<T>();
+		HashMap<T, T> oldNewVertices = new HashMap<T, T>();
+		//copy vertices
 		for (T begin : this.edges.keySet()) {
-			if (begin instanceof VertexOfDualGraph) {
-				result.edges.put((T) new VertexOfDualGraph(begin.clone()), new HashMap<T, Edge>());
-			} else {
-				result.edges.put((T) new Vertex(begin.clone()), new HashMap<T, Edge>());
-			}
+			T newVertex = (T) begin.copy();
+			result.edges.put(newVertex , new HashMap<T, Edge>());
+			oldNewVertices.put(begin, newVertex);
+		}
+		//copy edges
+		for (T begin : this.edges.keySet()) {
 			for (T end : this.edges.get(begin).keySet()) {
 				Edge originalEdge = this.edges.get(begin).get(end);
-				if (begin instanceof VertexOfDualGraph) {
-					result.edges.get(begin).put((T) new VertexOfDualGraph(end.clone()), originalEdge.clone());
-				} else {
-					result.edges.get(begin).put((T) new Vertex(end.clone()), originalEdge.clone());
-				}
+				result.edges.get(oldNewVertices.get(begin)).put(oldNewVertices.get(end), originalEdge.clone());
 			}
 		}
+		// for (T begin : this.edges.keySet()) {
+		// 	if (begin instanceof VertexOfDualGraph) {
+		// 		result.edges.put((T) new VertexOfDualGraph(begin.clone()), new HashMap<T, Edge>());
+		// 	} else {
+		// 		result.edges.put((T) new Vertex(begin.clone()), new HashMap<T, Edge>());
+		// 	}
+		// 	for (T end : this.edges.get(begin).keySet()) {
+		// 		Edge originalEdge = this.edges.get(begin).get(end);
+		// 		if (begin instanceof VertexOfDualGraph) {
+		// 			result.edges.get(begin).put((T) new VertexOfDualGraph(end.clone()), originalEdge.clone());
+		// 		} else {
+		// 			result.edges.get(begin).put((T) new Vertex(end.clone()), originalEdge.clone());
+		// 		}
+		// 	}
+		// }
 		return result;
 	}
 

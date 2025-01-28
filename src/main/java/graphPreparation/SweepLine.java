@@ -35,6 +35,15 @@ public class SweepLine {
 		EdgeOfGraph[] edgesList = gph.edgesArray();
 		ArrayList<LinkedList<Vertex>> intersectionPoints = findPointsOfIntersection(edgesList);
 		addIntersectionPoints(gph, edgesList, intersectionPoints);
+		int smallEdgesNum = 0;
+		for (Vertex begin : gph.getEdges().keySet()) {
+			for (Vertex end : gph.getEdges().get(begin).keySet()) {
+				if (gph.getEdges().get(begin).get(end).length < 0.001) {
+					smallEdgesNum++;
+				}
+			}
+		}
+		System.out.println("small edges num after sweepline: " + smallEdgesNum);
 
 	}
 

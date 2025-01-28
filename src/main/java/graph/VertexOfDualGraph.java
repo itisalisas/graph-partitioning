@@ -15,13 +15,13 @@ public class VertexOfDualGraph extends Vertex{
 	
 	public VertexOfDualGraph(long name, Vertex center, double weightSum) {
 		super(name, center, weightSum);
-		this.verticesOfFace = null;
+		this.verticesOfFace = new ArrayList<Vertex>();
 	}
 	
 	
 	public VertexOfDualGraph(long name, Point center, double weightSum) {
 		super(name, center, weightSum);
-		this.verticesOfFace = null;
+		this.verticesOfFace = new ArrayList<Vertex>();
 	}
 	
 	
@@ -41,22 +41,22 @@ public class VertexOfDualGraph extends Vertex{
 	
 	public VertexOfDualGraph(long name, double x, double y) {
 		super(name, x , y);
-		this.verticesOfFace = null;
+		this.verticesOfFace = new ArrayList<Vertex>();
 	}
 	
 	public VertexOfDualGraph(long name) {
 		super(name);
-		this.verticesOfFace = null;
+		this.verticesOfFace = new ArrayList<Vertex>();
 	}
 	
 	public VertexOfDualGraph(long name, double x, double y, double weight) {
 		super(name, x , y, weight);
-		this.verticesOfFace = null;
+		this.verticesOfFace = new ArrayList<Vertex>();
 	}
 	
 	public <T extends Vertex> VertexOfDualGraph(T v) {
 		super(v.getName(), v.x, v.y, v.getWeight());
-		this.verticesOfFace = null;
+		this.verticesOfFace = new ArrayList<Vertex>();
 	}
 
 

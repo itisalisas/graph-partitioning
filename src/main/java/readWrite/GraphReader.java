@@ -45,6 +45,7 @@ public class GraphReader {
 		length = 0;
 		Vertex vj;
 		System.out.println("Readed all Vertices");
+		int smallEdgesNum = 0;
 		for (int i = 0; i < n && sc.hasNext(); i++) {
 			// read Vertex..
 			vi = readVertex(graph, sc);
@@ -53,9 +54,13 @@ public class GraphReader {
 				vj = readVertex(graph, sc);
 				String lengthStr = sc.next().replace(',', '.');
 				length = Double.parseDouble(lengthStr);
+				if (length < 0.001) {
+					smallEdgesNum++;
+				}
 				graph.getEdges().get(vi).put(vj, new Edge(length));
 			}
 		}
+		System.out.println("small edges of graph number: " + smallEdgesNum);
 		sc.close();
 	}
 	

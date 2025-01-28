@@ -35,15 +35,41 @@ public class MakingDualGraph {
 			if (inFace.get(edge).equals((inFace).get(back))) {
 				continue;
 			}
-			oldLength = 0;
-			if (res.getEdges().get(inFace.get(edge)).containsKey(inFace.get(back))) {
-				oldLength = res.getEdges().get(inFace.get(edge)).get(inFace.get(back)).getLength();
-				res.getEdges().get(inFace.get(edge)).remove(inFace.get(back));
-				res.getEdges().get(inFace.get(back)).remove(inFace.get(edge));
+			if (!res.getEdges().containsKey(inFace.get(edge))) {
+				if (res.getEdges().get(inFace.get(edge)).containsKey(inFace.get(back))) {
+					Edge dualEdge = res.getEdges().get(inFace.get(edge)).get(inFace.get(back));
+					dualEdge.length += edge.length;
+				}
+			} else {
+				//create new edge
+				res.getEdges().get(inFace.get(edge)).put(inFace.get(back), new Edge(edge.length));
 			}
-			res.getEdges().get(inFace.get(edge)).put(inFace.get(back), new Edge(oldLength + edge.getLength() / 2));
-			res.getEdges().get(inFace.get(back)).put(inFace.get(edge), new Edge(oldLength + edge.getLength() / 2));
 		}
+		int smallEdgesNumDualGraph = 0;
+		for (VertexOfDualGraph begin : res.getEdges().keySet()) {
+			for (VertexOfDualGraph end : res.getEdges().get(begin).keySet()) {
+				if (res.getEdges().get(begin).get(end).getLength() < 0.001) {
+					smallEdgesNumDualGraph++;
+				}
+			}
+		}
+		System.out.println("small edges number of dual graph: " + smallEdgesNumDualGraph);
+
+
+		// for (EdgeOfGraph edge : inFace.keySet()) {
+		// 	back = new EdgeOfGraph(edge.end, edge.begin, edge.getLength());
+		// 	if (inFace.get(edge).equals((inFace).get(back))) {
+		// 		continue;
+		// 	}
+		// 	oldLength = 0;
+		// 	if (res.getEdges().get(inFace.get(edge)).containsKey(inFace.get(back))) {
+		// 		oldLength = res.getEdges().get(inFace.get(edge)).get(inFace.get(back)).getLength();
+		// 		res.getEdges().get(inFace.get(edge)).remove(inFace.get(back));
+		// 		res.getEdges().get(inFace.get(back)).remove(inFace.get(edge));
+		// 	}
+		// 	res.getEdges().get(inFace.get(edge)).put(inFace.get(back), new Edge(oldLength + edge.getLength() / 2));
+		// 	res.getEdges().get(inFace.get(back)).put(inFace.get(edge), new Edge(oldLength + edge.getLength() / 2));
+		// }
 
 	}
 

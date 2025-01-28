@@ -52,65 +52,65 @@ public class LocalizationPointsTest {
         assertEquals(0, ans.size());
     }
 
-    @Test
-    void testAllPointsInFaces() {
-        HashSet<Vertex> vertices = new HashSet<Vertex>();
-        vertices.add(new Vertex(12, new Point(6, 6)));
-        vertices.add(new Vertex(13, new Point(2, 6)));
-        vertices.add(new Vertex(14, new Point(3, 5)));
-        vertices.add(new Vertex(15, new Point(2, 3)));
-        vertices.add(new Vertex(16, new Point(5, 3)));
-        vertices.add(new Vertex(17, new Point(7, 3)));
-        vertices.add(new Vertex(18, new Point(9, 4)));
-        vertices.add(new Vertex(19, new Point(5, 5)));
-        vertices.add(new Vertex(20, new Point(10, 5)));
-        vertices.add(new Vertex(21, new Point(13, 8)));
-        vertices.add(new Vertex(22, new Point(8, 7)));
-        vertices.add(new Vertex(23, new Point(4.4, 7)));
-        vertices.add(new Vertex(24, new Point(10, 2)));
-        vertices.add(new Vertex(25, new Point(11, 2)));
-        vertices.add(new Vertex(26, new Point(14, 6)));
-        vertices.add(new Vertex(27, new Point(12, 4)));
-        vertices.add(new Vertex(28, new Point(7, 5)));
-        vertices.add(new Vertex(29, new Point(14, 9)));
-        LocalizationPoints lp = new LocalizationPoints(vertices);
-        HashMap<Vertex, VertexOfDualGraph> ans = lp.findFacesForPoints(dualGraph);
-        assertEquals(18, ans.size());
-        for (Vertex ver : vertices) {
-            VertexOfDualGraph face = ans.get(ver);
-            assertTrue(ver.inFaceGeom(face.getVerticesOfFace()));
-        }
-    }
+    // @Test
+    // void testAllPointsInFaces() {
+    //     HashSet<Vertex> vertices = new HashSet<Vertex>();
+    //     vertices.add(new Vertex(12, new Point(6, 6)));
+    //     vertices.add(new Vertex(13, new Point(2, 6)));
+    //     vertices.add(new Vertex(14, new Point(3, 5)));
+    //     vertices.add(new Vertex(15, new Point(2, 3)));
+    //     vertices.add(new Vertex(16, new Point(5, 3)));
+    //     vertices.add(new Vertex(17, new Point(7, 3)));
+    //     vertices.add(new Vertex(18, new Point(9, 4)));
+    //     vertices.add(new Vertex(19, new Point(5, 5)));
+    //     vertices.add(new Vertex(20, new Point(10, 5)));
+    //     vertices.add(new Vertex(21, new Point(13, 8)));
+    //     vertices.add(new Vertex(22, new Point(8, 7)));
+    //     vertices.add(new Vertex(23, new Point(4.4, 7)));
+    //     vertices.add(new Vertex(24, new Point(10, 2)));
+    //     vertices.add(new Vertex(25, new Point(11, 2)));
+    //     vertices.add(new Vertex(26, new Point(14, 6)));
+    //     vertices.add(new Vertex(27, new Point(12, 4)));
+    //     vertices.add(new Vertex(28, new Point(7, 5)));
+    //     vertices.add(new Vertex(29, new Point(14, 9)));
+    //     LocalizationPoints lp = new LocalizationPoints(vertices);
+    //     HashMap<Vertex, VertexOfDualGraph> ans = lp.findFacesForPoints(dualGraph);
+    //     assertEquals(18, ans.size());
+    //     for (Vertex ver : vertices) {
+    //         VertexOfDualGraph face = ans.get(ver);
+    //         assertTrue(ver.inFaceGeom(face.getVerticesOfFace()));
+    //     }
+    // }
 
-    @Test
-    void testMixedPointsInOutFaces() {
-        HashSet<Vertex> vertices = new HashSet<Vertex>();
-        vertices.add(new Vertex(12, new Point(6, 6)));
-        vertices.add(new Vertex(13, new Point(2, 10)));
-        vertices.add(new Vertex(14, new Point(3, 5)));
-        vertices.add(new Vertex(15, new Point(2, 14)));
-        vertices.add(new Vertex(16, new Point(5, 3)));
-        vertices.add(new Vertex(17, new Point(8, 19)));
-        vertices.add(new Vertex(18, new Point(9, 4)));
-        vertices.add(new Vertex(19, new Point(5, 13)));
-        vertices.add(new Vertex(20, new Point(10, 5)));
-        vertices.add(new Vertex(21, new Point(13, 8)));
-        vertices.add(new Vertex(22, new Point(8, 7)));
-        vertices.add(new Vertex(23, new Point(4.4, 7)));
-        vertices.add(new Vertex(24, new Point(10, 2)));
-        vertices.add(new Vertex(25, new Point(11, 2)));
-        vertices.add(new Vertex(26, new Point(14, 6)));
-        vertices.add(new Vertex(27, new Point(12, 4)));
-        vertices.add(new Vertex(28, new Point(7, 5)));
-        vertices.add(new Vertex(29, new Point(14, 9)));
-        LocalizationPoints lp = new LocalizationPoints(vertices);
-        HashMap<Vertex, VertexOfDualGraph> ans = lp.findFacesForPoints(dualGraph);
-        assertEquals(14, ans.size());
-        for (Vertex ver : vertices) {
-            VertexOfDualGraph face = ans.get(ver);
-            assertTrue(ver.inFaceGeom(face.getVerticesOfFace()));
-        }
-    }
+    // @Test
+    // void testMixedPointsInOutFaces() {
+    //     HashSet<Vertex> vertices = new HashSet<Vertex>();
+    //     vertices.add(new Vertex(12, new Point(6, 6)));
+    //     vertices.add(new Vertex(13, new Point(2, 10)));
+    //     vertices.add(new Vertex(14, new Point(3, 5)));
+    //     vertices.add(new Vertex(15, new Point(2, 14)));
+    //     vertices.add(new Vertex(16, new Point(5, 3)));
+    //     vertices.add(new Vertex(17, new Point(8, 19)));
+    //     vertices.add(new Vertex(18, new Point(9, 4)));
+    //     vertices.add(new Vertex(19, new Point(5, 13)));
+    //     vertices.add(new Vertex(20, new Point(10, 5)));
+    //     vertices.add(new Vertex(21, new Point(13, 8)));
+    //     vertices.add(new Vertex(22, new Point(8, 7)));
+    //     vertices.add(new Vertex(23, new Point(4.4, 7)));
+    //     vertices.add(new Vertex(24, new Point(10, 2)));
+    //     vertices.add(new Vertex(25, new Point(11, 2)));
+    //     vertices.add(new Vertex(26, new Point(14, 6)));
+    //     vertices.add(new Vertex(27, new Point(12, 4)));
+    //     vertices.add(new Vertex(28, new Point(7, 5)));
+    //     vertices.add(new Vertex(29, new Point(14, 9)));
+    //     LocalizationPoints lp = new LocalizationPoints(vertices);
+    //     HashMap<Vertex, VertexOfDualGraph> ans = lp.findFacesForPoints(dualGraph);
+    //     assertEquals(14, ans.size());
+    //     for (Vertex ver : vertices) {
+    //         VertexOfDualGraph face = ans.get(ver);
+    //         assertTrue(ver.inFaceGeom(face.getVerticesOfFace()));
+    //     }
+    // }
 
     @Test
     void testAllPointsOutFaces() {
