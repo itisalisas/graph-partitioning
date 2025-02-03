@@ -4,8 +4,8 @@ import java.util.ArrayList;
 
 public class Point {
 	
-	protected double x;
-	protected double y;
+	public double x;
+	public double y;
 	
 	public Point() {
 		this.x = -1;

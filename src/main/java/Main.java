@@ -59,7 +59,7 @@ public class Main {
 
 		try {
 			GraphReader gr = new GraphReader();
-			gr.readGraphFromFile(graph, resourcesDirectory + pathToFile);
+			gr.readGraphFromFile(graph, resourcesDirectory + pathToFile, true);
 		} catch (Exception e) {
 			throw new RuntimeException("Can't read graph from file: " + e.getMessage());
 		}
@@ -100,7 +100,7 @@ public class Main {
 		}
 		partitionGraph = PartitionGraphVertex.buildPartitionGraph(preparedGraph, partitionResultForFaces, newDualVertexToPartNumber);
 		System.err.println("smallest vertex after = " + partitionGraph.smallestVertex().getWeight());
-		gw.printGraphToFile(partitionGraph,  outputDirectory + pathToResultDirectory, "part_graph.txt");
+		gw.printGraphToFile(partitionGraph,  outputDirectory + pathToResultDirectory, "part_graph.txt", true);
 
 		System.out.println("Partition size: " + partitionResultForFaces.size());
 
@@ -123,11 +123,11 @@ public class Main {
 						.collect(Collectors.toList())
 		);
 
-		gw.printDualGraphToFile(preparedGraph, dualVertexToPartNumber, partitionResultForFaces.size(), outputDirectory + pathToResultDirectory, "dual.txt");
+		gw.printDualGraphToFile(preparedGraph, dualVertexToPartNumber, partitionResultForFaces.size(), outputDirectory + pathToResultDirectory, "dual.txt", true);
 		// partitioning.savePartitionToDirectory(outputDirectory + pathToResultDirectory, partitionResult);
 		PartitionWriter pw = new PartitionWriter();
-		pw.savePartitionToDirectory(partitioning, partitioning.bp ,outputDirectory + pathToResultDirectory, partitionResultForFaces);
-		pw.printBound(bounds, outputDirectory + pathToResultDirectory);
+		pw.savePartitionToDirectory(partitioning, partitioning.bp ,outputDirectory + pathToResultDirectory, partitionResultForFaces, true);
+		pw.printBound(bounds, outputDirectory + pathToResultDirectory, true);
 		// partitioning.printHull(graphBoundEnd, outputDirectory + pathToResultDirectory, "end_bound.txt");
 	}
 

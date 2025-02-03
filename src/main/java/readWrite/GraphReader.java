@@ -8,13 +8,17 @@ import graph.*;
 
 public class GraphReader {
 	
-	public Vertex readVertex(Graph<Vertex> graph, Scanner sc) {
+	public Vertex readVertex(Graph<Vertex> graph, Scanner sc, boolean geodetic) {
 		long name = sc.nextLong();
 		String xStr = sc.next().replace(',', '.');
 		String yStr = sc.next().replace(',', '.');
 		double x = Double.parseDouble(xStr);
 		double y = Double.parseDouble(yStr);
 		Vertex ans = new Vertex(name, x, y);
+		if (geodetic) {
+			CoordinateConversion cc = new CoordinateConversion();
+			cc.toEuclidean(ans, null);
+		}
 		return graph.addVertex(ans);
 	}
 
@@ -23,7 +27,7 @@ public class GraphReader {
 	 * edges) name1 x1 y1 (of out vertex) length1 (edge length) ... long double x2
 	 * long long double x2 double
 	 */
-	public void readGraphFromFile(Graph<Vertex> graph, String inFilename) throws FileNotFoundException {
+	public void readGraphFromFile(Graph<Vertex> graph, String inFilename, boolean geodetic) throws FileNotFoundException {
 		graph.getEdges().clear();
 		Scanner sc = new Scanner(new File(inFilename));
 		int n = 0;
@@ -33,7 +37,7 @@ public class GraphReader {
 		Vertex vi;
 		for (int i = 0; i < n && sc.hasNext(); i++) {
 			// read Vertex..
-			vi = readVertex(graph, sc);
+			vi = readVertex(graph, sc, geodetic);
 			sc.nextLine();
 		}
 		sc.close();
@@ -48,10 +52,10 @@ public class GraphReader {
 		int smallEdgesNum = 0;
 		for (int i = 0; i < n && sc.hasNext(); i++) {
 			// read Vertex..
-			vi = readVertex(graph, sc);
+			vi = readVertex(graph, sc, geodetic);
 			ni = sc.nextInt();
 			for (int j = 0; j < ni && sc.hasNext(); j++) {
-				vj = readVertex(graph, sc);
+				vj = readVertex(graph, sc, geodetic);
 				String lengthStr = sc.next().replace(',', '.');
 				length = Double.parseDouble(lengthStr);
 				if (length < 0.001) {

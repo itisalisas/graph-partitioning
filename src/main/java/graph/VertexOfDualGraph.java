@@ -1,6 +1,7 @@
 package graph;
 
 import java.util.ArrayList;
+import java.util.Objects;
 
 public class VertexOfDualGraph extends Vertex{
 	
@@ -77,6 +78,19 @@ public class VertexOfDualGraph extends Vertex{
 	public VertexOfDualGraph copy() {
 		return new VertexOfDualGraph(this.getName(),new Point(this.x, this.y), this.weight, this.verticesOfFace);
 	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (obj == this) return true;
+		if (! (obj instanceof VertexOfDualGraph)) return false;
+		VertexOfDualGraph v = (VertexOfDualGraph) obj;
+		return v.x == this.x
+				&& v.y == this.y && v.getName() == this.getName();
+	}
 	
+	@Override
+	public int hashCode() { 
+		return Objects.hash(this.x, this.y, this.getName());
+	}
 	
 }
