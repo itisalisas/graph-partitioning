@@ -15,7 +15,6 @@ import graph.PartitionGraphVertex;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
 import graphPreparation.GraphPreparation;
-
 import partitioning.BalancedPartitioning;
 import partitioning.Balancer;
 import partitioning.InertialFlowPartitioning;
@@ -83,14 +82,25 @@ public class Main {
 		}
 
 		GraphWriter gw = new GraphWriter();
+		gw.printGraphToFile(preparedGraph, outputDirectory, "for_kahip.graph");
 		String pathToResultDirectory = args[3];
 
 		ArrayList<HashSet<VertexOfDualGraph>> partitionResultForFaces = partitioning.partition(preparedGraph, maxSumVerticesWeight);
+		for (HashSet<VertexOfDualGraph> hs : partitionResultForFaces) {
+			for (VertexOfDualGraph v : hs) {
+				Assertions.assertNotNull(v.getVerticesOfFace());
+			}
+		}
 		HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber = partitioning.dualVertexToPartNumber();
-
+		for (HashSet<VertexOfDualGraph> hs : partitionResultForFaces) {
+			for (VertexOfDualGraph v : hs) {
+				Assertions.assertNotNull(v.getVerticesOfFace());
+			}
+		}
 		Graph<PartitionGraphVertex> partitionGraph = PartitionGraphVertex.buildPartitionGraph(preparedGraph, partitionResultForFaces, dualVertexToPartNumber);
 		System.err.println("smallest vertex before = " + partitionGraph.smallestVertex().getWeight());
-		Balancer balancer = new Balancer(partitionGraph, preparedGraph, maxSumVerticesWeight);
+		System.err.println("Partition size: " + partitionResultForFaces.size());
+		Balancer balancer = new Balancer(partitionGraph, preparedGraph, graph, maxSumVerticesWeight);
 		partitionResultForFaces = balancer.rebalancing();
 		HashMap<VertexOfDualGraph, Integer> newDualVertexToPartNumber = new HashMap<>();
 		for (int i = 0; i < partitionResultForFaces.size(); i++) {
@@ -108,6 +118,8 @@ public class Main {
 		HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph = preparation.getComparisonForDualGraph();
 		List<List<Vertex>> bounds = new ArrayList<>();
 
+		long startBoundTime = System.currentTimeMillis();
+
 		for (int i = 0; i < partitionResultForFaces.size(); i++) {
 			partitionResult.add(new HashSet<Vertex>());
 			for (VertexOfDualGraph face : partitionResultForFaces.get(i)) {
@@ -117,18 +129,67 @@ public class Main {
 			// System.out.println("Added " + (i + 1) + " bound");
 		}
 
+		long endBoundTime = System.currentTimeMillis();
+		System.out.println("bound search: " + ((double) (endBoundTime - startBoundTime)) / 1000 + " sec");
+
 		List<Vertex> graphBoundEnd = BoundSearcher.findConvexHull(
 				partitionResult.stream()
 						.flatMap(Set::stream)
 						.collect(Collectors.toList())
 		);
 
-		gw.printDualGraphToFile(preparedGraph, dualVertexToPartNumber, partitionResultForFaces.size(), outputDirectory + pathToResultDirectory, "dual.txt");
+		gw.printDualGraphToFile(preparedGraph, newDualVertexToPartNumber, partitionResultForFaces.size(), outputDirectory + pathToResultDirectory, "dual.txt");
 		// partitioning.savePartitionToDirectory(outputDirectory + pathToResultDirectory, partitionResult);
 		PartitionWriter pw = new PartitionWriter();
 		pw.savePartitionToDirectory(partitioning, partitioning.bp ,outputDirectory + pathToResultDirectory, partitionResultForFaces);
 		pw.printBound(bounds, outputDirectory + pathToResultDirectory);
 		// partitioning.printHull(graphBoundEnd, outputDirectory + pathToResultDirectory, "end_bound.txt");
+		/*
+		ArrayList<HashSet<VertexOfDualGraph>> partitionResultForFacesKahip = new ArrayList<>();
+
+		Scanner sc = new Scanner(new File("./kahip_prepare/kahip_partition.txt"));
+        int n = Integer.parseInt(sc.nextLine().trim());
+        
+        // Временное хранилище для сбора информации о частях
+        Map<Integer, HashSet<VertexOfDualGraph>> tempMap = new HashMap<>();
+        
+        // Чтение данных о разбиении
+        while(sc.hasNextLine()) {
+            String line = sc.nextLine().trim();
+            if(line.isEmpty()) continue;
+            
+            String[] parts = line.split(" ");
+            int oldName = Integer.parseInt(parts[0]);
+            int part = Integer.parseInt(parts[1]);
+            
+            // Получаем вершину по имени
+            VertexOfDualGraph vertex = preparedGraph.getVertexByName(oldName);
+            
+            // Добавляем в соответствующую часть
+            tempMap.computeIfAbsent(part, k -> new HashSet<>()).add(vertex);
+        }
+        sc.close();
+        
+        // Определение максимального номера части
+        int maxPart = tempMap.keySet().stream()
+            .max(Comparator.naturalOrder())
+            .orElse(-1);
+        
+        // Заполнение результирующего списка
+        for(int i = 0; i <= maxPart; i++) {
+            partitionResultForFacesKahip.add(tempMap.getOrDefault(i, new HashSet<>()));
+        }
+
+		List<List<Vertex>> boundsKahip = new ArrayList<>();
+
+		for (int i = 0; i < partitionResultForFacesKahip.size(); i++) {
+			//boundsKahip.add(BoundSearcher.findBound(graph, partitionResultForFacesKahip.get(i), comparisonForDualGraph));
+			// System.out.println("Added " + (i + 1) + " bound");
+		}
+
+		// pw.printBound(boundsKahip, outputDirectory + pathToResultDirectory + "/kahip");
+		*/
+
 	}
 
 }

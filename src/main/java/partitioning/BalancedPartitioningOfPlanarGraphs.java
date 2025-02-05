@@ -1,11 +1,12 @@
 package partitioning;
 
-import graph.Graph;
-import graph.Vertex;
-import graph.VertexOfDualGraph;
-
 import java.util.ArrayList;
 import java.util.HashSet;
+
+import org.junit.jupiter.api.Assertions;
+
+import graph.Graph;
+import graph.VertexOfDualGraph;
 
 public abstract class BalancedPartitioningOfPlanarGraphs {
 
@@ -17,6 +18,11 @@ public abstract class BalancedPartitioningOfPlanarGraphs {
 	public abstract void balancedPartitionAlgorithm(Graph<VertexOfDualGraph> graph, int maxSumVerticesWeight);
 
 	public ArrayList<HashSet<VertexOfDualGraph>> getPartition() {
+		for (HashSet<VertexOfDualGraph> hs : partition) {
+			for (VertexOfDualGraph v : hs) {
+				Assertions.assertNotNull(v.getVerticesOfFace());
+			}
+		}
 		return partition;
 	}
 	//return name of failed condition or ""

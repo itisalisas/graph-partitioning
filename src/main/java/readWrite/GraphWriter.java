@@ -17,7 +17,26 @@ public class GraphWriter {
 		FileWriter out = new FileWriter(outputDirectory + File.separator + outFileName, false);
 		out.write(String.format("%d %n", graph.getEdges().size()));
 		for (Vertex begin : graph.getEdges().keySet()) {
-			out.write(String.format("%d %f %f %d ", begin.getName(), begin.getX(), begin.getY(), graph.getEdges().get(begin).size()));
+			out.write(String.format("%d %f %f %d %d ", begin.getName(), begin.getX(), begin.getY(), (int)begin.getWeight(), graph.getEdges().get(begin).size()));
+			for (Vertex end : graph.getEdges().get(begin).keySet()) {
+				out.write(String.format("%d %f %f %f ", end.getName(), end.getX(), end.getY(),
+						graph.getEdges().get(begin).get(end).getLength()));
+			}
+			out.append('\n');
+		}
+		out.close();
+	}
+
+		public <T extends Vertex> void printDualGraphWithWeightsToFile(Graph<VertexOfDualGraph> graph, 
+														HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber,
+														int partsNumber,
+														String outputDirectory, 
+														String outFileName) throws IOException {
+		PartitionWriter.createOutputDirectory(outputDirectory);
+		FileWriter out = new FileWriter(outputDirectory + File.separator + outFileName, false);
+		out.write(String.format("%d\n", graph.getEdges().size()));
+		for (Vertex begin : graph.getEdges().keySet()) {
+			out.write(String.format("%d %f %f %d %d ", begin.getName(), begin.getX(), begin.getY(), begin.getWeight(), graph.getEdges().get(begin).size()));
 			for (Vertex end : graph.getEdges().get(begin).keySet()) {
 				out.write(String.format("%d %f %f %f ", end.getName(), end.getX(), end.getY(),
 						graph.getEdges().get(begin).get(end).getLength()));

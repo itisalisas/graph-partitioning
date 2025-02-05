@@ -137,14 +137,14 @@ class GraphTest {
 
     @Test
     void testAngles() {
-        HashMap<Vertex, TreeSet<EdgeOfGraph>> orderedEdges = graph.arrangeByAngle();
-        TreeSet<EdgeOfGraph> orderedEdgesForV1 = orderedEdges.get(vs.get(1));
+        HashMap<Vertex, TreeSet<EdgeOfGraph<Vertex>>> orderedEdges = graph.arrangeByAngle();
+        TreeSet<EdgeOfGraph<Vertex>> orderedEdgesForV1 = orderedEdges.get(vs.get(1));
         List<EdgeOfGraph> expectedOrderedEdgesForV1 = List.of(edges.get(3), edges.get(4), edges.get(1), edges.get(2));
         int ptr = 0;
         for (EdgeOfGraph e : orderedEdgesForV1) {
             assertEquals(expectedOrderedEdgesForV1.get(ptr++), e);
         }
-        TreeSet<EdgeOfGraph> orderedEdgesForV8 = orderedEdges.get(vs.get(8));
+        TreeSet<EdgeOfGraph<Vertex>> orderedEdgesForV8 = orderedEdges.get(vs.get(8));
         assertEquals(1, orderedEdgesForV8.size());
         assertEquals(edges.get(14), orderedEdgesForV8.first());
     }

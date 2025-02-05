@@ -6,29 +6,33 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.PriorityQueue;
+import java.util.Set;
 
 import org.junit.jupiter.api.Assertions;
 
 import graph.Graph;
 import graph.PartitionGraphVertex;
+import graph.Vertex;
 import graph.VertexOfDualGraph;
 
 public class Balancer {
 
     Graph<PartitionGraphVertex> partitionGraph;
     Graph<VertexOfDualGraph> dualGraph;
+    Graph<Vertex> startGraph;
     HashSet<HashSet<VertexOfDualGraph>> wasMerged = new HashSet<>();
     int maxWeight;
 
     public Balancer() {}
 
-    public Balancer(Graph<PartitionGraphVertex> partitionGraph, Graph<VertexOfDualGraph> dualGraph, int maxWeight) {
+    public Balancer(Graph<PartitionGraphVertex> partitionGraph, Graph<VertexOfDualGraph> dualGraph, Graph<Vertex> startGraph, int maxWeight) {
         this.partitionGraph = partitionGraph;
         this.dualGraph = dualGraph;
+        this.startGraph = startGraph;
         this.maxWeight = maxWeight;
     }
 
-    public boolean rebalanceSmallestRegion() {
+    private boolean rebalanceSmallestRegion() {
         PartitionGraphVertex smallestVertex = partitionGraph.smallestVertex().copy();
         PartitionGraphVertex biggestNeighbor = findBiggestUnmergedNeighbor(partitionGraph.smallestVertex()).copy();
         if (biggestNeighbor == null) {
@@ -62,11 +66,11 @@ public class Balancer {
 
 
         HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber = new HashMap<>();
-		for (int i = 0; i < newParts.size(); i++) {
-			for (VertexOfDualGraph vertex : newParts.get(i)) {
-				dualVertexToPartNumber.put(vertex, i);
-			}
-		}
+        for (int i = 0; i < newParts.size(); i++) {
+            for (VertexOfDualGraph vertex : newParts.get(i)) {
+                dualVertexToPartNumber.put(vertex, i);
+            }
+        }
 
         Assertions.assertEquals(dualGraph.verticesNumber(), dualVertexToPartNumber.size());
         Graph<PartitionGraphVertex> newPartitionGraph = PartitionGraphVertex.buildPartitionGraph(dualGraph, newParts, dualVertexToPartNumber);
@@ -79,14 +83,16 @@ public class Balancer {
     }
 
     public ArrayList<HashSet<VertexOfDualGraph>> rebalancing() {
-        while (removeSmallestRegion()) {}
+        long bal = System.currentTimeMillis();
+        while (removeSmallestRegion()) { System.out.println("New iteration of removing, size = " + partitionGraph.verticesNumber());}
+        System.out.println("removing time = " + (System.currentTimeMillis() - bal) / 1000 + " sec");
+        System.out.println("End of removing");
         double threshold = partitionGraph.verticesWeight() * 0.1;
         double previousSmallestWeight = partitionGraph.smallestVertex().getWeight();
         double variance = calculateVariance();
 
         while (variance > threshold) {
             if (!rebalanceSmallestRegion()) {
-                System.out.println("cant rebalance");
                 break;
             }
             double currentSmallestWeight = partitionGraph.smallestVertex().getWeight();
@@ -135,69 +141,74 @@ public class Balancer {
     } 
     
     private boolean removeSmallestRegion() {
+        long time1 = System.currentTimeMillis();
         PartitionGraphVertex smallestVertex = partitionGraph.smallestVertex().copy();
         List<PartitionGraphVertex> neighbors = new ArrayList<>();
         for (PartitionGraphVertex neighbor : partitionGraph.sortNeighbors(smallestVertex)) {
             neighbors.add(neighbor.copy());
         }
-        double availableWeight = 0;
-        for (PartitionGraphVertex currentNeighbor : neighbors) {
-            availableWeight += currentNeighbor.getWeight();
-        }
+        long time2 = System.currentTimeMillis();
+        System.out.println("time2 - time1 = " + (double) (time2 - time1) / 1000);
+        double availableWeight = neighbors.stream().mapToDouble(PartitionGraphVertex::getWeight).sum();
         if (availableWeight < smallestVertex.getWeight()) {
             return false;
         }
+        long time3 = System.currentTimeMillis();
+        System.out.println("time3 - time2 = " + (double) (time3 - time2) / 1000);
 
         List<VertexOfDualGraph> verticesToRedistribute = new ArrayList<>(smallestVertex.vertices);
+        HashSet<VertexOfDualGraph> wasRedistributed = new HashSet<>();
 
-        boolean progressMade;
-        do {
-            progressMade = false;
-            for (VertexOfDualGraph vertex : new ArrayList<>(verticesToRedistribute)) {
-                // Priority queue to choose the best neighbor
-                PriorityQueue<PartitionGraphVertex> priorityQueue = new PriorityQueue<>(
-                    Comparator.comparingDouble((PartitionGraphVertex neighbor) -> {
-                        // Calculate priority based on:
-                        // 1. Number of neighbors in the partition
-                        // 2. Free space in the partition
-                        double freeSpace = maxWeight - neighbor.getWeight();
-                        // Combine factors (you can adjust weights as needed)
-                        return - (freeSpace / maxWeight);
-                    })
-                );
-    
-                for (PartitionGraphVertex neighbor : neighbors) {
-                    priorityQueue.add(neighbor);
-                }
-    
-                while (!priorityQueue.isEmpty()) {
-                    PartitionGraphVertex neighbor = priorityQueue.poll();
-                    // Check if vertex has neighbors in the neighbor partition
-                    boolean hasNeighborInPartition = false;
-                    for (VertexOfDualGraph neighborVertex : neighbor.vertices) {
-                        if (dualGraph.getEdges().get(vertex).containsKey(neighborVertex)) {
-                            hasNeighborInPartition = true;
-                            break;
+        PriorityQueue<Comp> priorityQueue = new PriorityQueue<>(
+            Comparator.comparingDouble((Comp comp) -> {
+                return - comp.ratio;
+            })
+        );
+
+        long time4 = System.currentTimeMillis();
+        System.out.println("time4 - time3 = " + (double) (time4 - time3) / 1000);
+
+        for (VertexOfDualGraph vertex : verticesToRedistribute) {
+            for (PartitionGraphVertex neighbor : neighbors) {
+                priorityQueue.add(new Comp(vertex, neighbor));
+            }
+        }
+
+        long time5 = System.currentTimeMillis();
+        System.out.println("time5 - time4 = " + (double) (time5 - time4) / 1000);
+
+        while (!priorityQueue.isEmpty()) {
+            Comp comp = priorityQueue.poll();
+            VertexOfDualGraph vertex = comp.vertex;
+            PartitionGraphVertex neighbor = comp.part;
+            
+            if (wasRedistributed.contains(vertex) || comp.ratio == 0.0) {
+                continue;
+            }
+
+            double newWeight = neighbor.getWeight() + vertex.getWeight();
+            
+            if (newWeight <= maxWeight) {
+                neighbor.addVertex(vertex);
+                smallestVertex.removeVertex(vertex);
+                wasRedistributed.add(vertex);
+                for (VertexOfDualGraph dualVertex : verticesToRedistribute) {
+                    if (verticesToRedistribute.contains(dualVertex) && !wasRedistributed.contains(dualVertex) && dualGraph.getEdges().get(vertex).containsKey(dualVertex)) {
+                        for (PartitionGraphVertex part : neighbors) {
+                            priorityQueue.add(new Comp(dualVertex, part));
                         }
-                    }
-                    if (!hasNeighborInPartition) {
-                        continue;
-                    }
-                    // Check if moving this vertex to the neighbor partition won't exceed maxWeight
-                    double newWeight = neighbor.getWeight() + vertex.getWeight();
-                    if (newWeight <= maxWeight) {
-                        neighbor.addVertex(vertex);
-                        smallestVertex.removeVertex(vertex);
-                        verticesToRedistribute.remove(vertex);
-                        progressMade = true;
-                        break;
                     }
                 }
             }
-        } while (progressMade && !verticesToRedistribute.isEmpty());
+            System.out.println("queue size = " + priorityQueue.size() + ", need to move = " + (verticesToRedistribute.size() - wasRedistributed.size()));
+            
+        }
+
+        long time6 = System.currentTimeMillis();
+        System.out.println("time6 - time5 = " + (double) (time6 - time5) / 1000);
         
         // If there are still vertices left that couldn't be moved, return false
-        if (!verticesToRedistribute.isEmpty()) {
+        if (wasRedistributed.size() != verticesToRedistribute.size()) {
             return false;
         }
         
@@ -209,9 +220,15 @@ public class Balancer {
             }
         }
 
+        long time7 = System.currentTimeMillis();
+        System.out.println("time7 - time6 = " + (double) (time7 - time6) / 1000);
+
         for (PartitionGraphVertex v : neighbors) {
             newParts.add(new HashSet<>(v.vertices));
         }
+
+        long time8 = System.currentTimeMillis();
+        System.out.println("time8 - time7 = " + (double) (time8 - time7) / 1000);
 
         HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber = new HashMap<>();
         for (int i = 0; i < newParts.size(); i++) {
@@ -220,9 +237,44 @@ public class Balancer {
             }
         }
 
+        long time9 = System.currentTimeMillis();
+        System.out.println("time9 - time8 = " + (double) (time9 - time8) / 1000);
+
         Graph<PartitionGraphVertex> newPartitionGraph = PartitionGraphVertex.buildPartitionGraph(dualGraph, newParts, dualVertexToPartNumber);
 
         this.partitionGraph = newPartitionGraph;
+
+        long time10 = System.currentTimeMillis();
+        System.out.println("time10 - time9 = " + (double) (time10 - time9) / 1000);
         return true;
+    }
+
+    class Comp {
+        VertexOfDualGraph vertex;
+        PartitionGraphVertex part;
+        double ratio;
+
+        public Comp() {
+        }
+
+        public Comp(VertexOfDualGraph vertex, PartitionGraphVertex part) { 
+            this.vertex = vertex;
+            this.part = part;
+            List<Vertex> face = vertex.getVerticesOfFace();
+            PartitionGraphVertex neighbor = part;
+            startGraph = startGraph.makeUndirectedGraph();
+            Graph<Vertex> neighborSubgraph = startGraph.createSubgraph(Set.copyOf(neighbor.vertices.stream().flatMap(v -> v.getVerticesOfFace().stream()).toList())).makeUndirectedGraph();
+            double countInnerEdges = 0;
+            double countOuterEdges = 0;
+            for (int i = 0; i < face.size(); i++) {
+                if (neighborSubgraph.getEdges().containsKey(face.get(i)) &&
+                    neighborSubgraph.getEdges().get(face.get(i)).containsKey(face.get((i + 1) % face.size()))) {
+                    countInnerEdges += 1;
+                } else {
+                    countOuterEdges += 1;
+                }
+            }
+            this.ratio = countInnerEdges / countOuterEdges;
+        }
     }
 }
