@@ -378,16 +378,6 @@ public class Graph<T extends Vertex> {
 		}
 	}
 
-	private EdgeOfGraph findEdge(Vertex v1, Vertex v2) {
-		for (EdgeOfGraph edge : edgesArray()) {
-			if ((edge.begin.equals(v1) && edge.end.equals(v2)) ||
-					(edge.begin.equals(v2) && edge.end.equals(v1))) {
-				return edge;
-			}
-		}
-		return null;
-	}
-
 	public Graph<T> getLargestConnectedComponent() {
 		List<HashSet<T>> connectivityComponents = this.makeUndirectedGraph().splitForConnectedComponents();
 		HashSet<T> largestComponent = connectivityComponents.stream().max(Comparator.comparingInt(HashSet::size)).orElseThrow();

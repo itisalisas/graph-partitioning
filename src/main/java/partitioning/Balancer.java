@@ -28,7 +28,7 @@ public class Balancer {
     public Balancer(Graph<PartitionGraphVertex> partitionGraph, Graph<VertexOfDualGraph> dualGraph, Graph<Vertex> startGraph, int maxWeight) {
         this.partitionGraph = partitionGraph;
         this.dualGraph = dualGraph;
-        this.startGraph = startGraph;
+        this.startGraph = startGraph.makeUndirectedGraph();
         this.maxWeight = maxWeight;
     }
 
@@ -262,19 +262,20 @@ public class Balancer {
             this.part = part;
             List<Vertex> face = vertex.getVerticesOfFace();
             PartitionGraphVertex neighbor = part;
-            startGraph = startGraph.makeUndirectedGraph();
-            Graph<Vertex> neighborSubgraph = startGraph.createSubgraph(Set.copyOf(neighbor.vertices.stream().flatMap(v -> v.getVerticesOfFace().stream()).toList())).makeUndirectedGraph();
+            Set<Vertex> neighborVertices = Set.copyOf(neighbor.vertices.stream().flatMap(v -> v.getVerticesOfFace().stream()).toList());
             double countInnerEdges = 0;
             double countOuterEdges = 0;
             for (int i = 0; i < face.size(); i++) {
-                if (neighborSubgraph.getEdges().containsKey(face.get(i)) &&
-                    neighborSubgraph.getEdges().get(face.get(i)).containsKey(face.get((i + 1) % face.size()))) {
+                if (neighborVertices.contains(face.get(i)) &&
+                    neighborVertices.contains(face.get((i + 1) % face.size())) &&
+                    startGraph.getEdges().get(face.get(i)).containsKey(face.get((i + 1) % face.size()))) {
                     countInnerEdges += 1;
                 } else {
                     countOuterEdges += 1;
                 }
             }
             this.ratio = countInnerEdges / countOuterEdges;
+            System.out.println("ratio = " + ratio);
         }
     }
 }
