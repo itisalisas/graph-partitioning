@@ -1,6 +1,11 @@
 package partitioning;
 
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
 
 import graph.Edge;
 import graph.Graph;
@@ -50,14 +55,16 @@ public class MaxFlow {
 
 
     public FlowResult dinic() {
+        int countIterations = 0;
         while (bfs()) {
-
+            countIterations++;
             lastNeighbourIndex.replaceAll((vertex, integer) -> 0);
             double pushed;
             while ((pushed = dfs(source, Integer.MAX_VALUE)) != 0) {
                 flow += pushed;
             }
         }
+        System.out.println("Number of bfs iterations in dinic: " + countIterations + ", vertices: " + graph.verticesNumber() + ", edges: " + graph.edgesNumber());
         return new FlowResult(flow, graph, source, sink);
     }
 

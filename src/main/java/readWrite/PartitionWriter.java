@@ -59,7 +59,6 @@ public class PartitionWriter {
 			}
 			GraphWriter gw = new GraphWriter();
 			gw.printVerticesToFile(bounds.get(i), boundFile);
-			System.out.println(bounds.get(i).get(0).getX() + " " + bounds.get(i).get(0).getY());
 		}
 	}
 

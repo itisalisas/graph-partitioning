@@ -108,7 +108,8 @@ public class MakingDualGraph {
     EdgeOfGraph<T> actualEdge = null;
     //sortedGraph.get(prev).remove(firstEdge);
     do {
-      // System.out.println("begin = " + begin.getName() + ", prev = " + prev.getName());
+      //System.out.println("begin = " + begin.getName() + ", prev = " + prev.getName());
+      //System.out.println("STARTED: " + firstEdge.begin.getName() + " -> " + firstEdge.end.getName());
       if (sortedGraph.get(begin).isEmpty()) {
         //System.out.println("end");
         //System.out.println("empty vertex");

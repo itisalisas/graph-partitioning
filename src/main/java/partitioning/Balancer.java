@@ -141,20 +141,16 @@ public class Balancer {
     } 
     
     private boolean removeSmallestRegion() {
-        long time1 = System.currentTimeMillis();
         PartitionGraphVertex smallestVertex = partitionGraph.smallestVertex().copy();
         List<PartitionGraphVertex> neighbors = new ArrayList<>();
         for (PartitionGraphVertex neighbor : partitionGraph.sortNeighbors(smallestVertex)) {
             neighbors.add(neighbor.copy());
         }
-        long time2 = System.currentTimeMillis();
-        System.out.println("time2 - time1 = " + (double) (time2 - time1) / 1000);
+        
         double availableWeight = neighbors.stream().mapToDouble(PartitionGraphVertex::getWeight).sum();
         if (availableWeight < smallestVertex.getWeight()) {
             return false;
         }
-        long time3 = System.currentTimeMillis();
-        System.out.println("time3 - time2 = " + (double) (time3 - time2) / 1000);
 
         List<VertexOfDualGraph> verticesToRedistribute = new ArrayList<>(smallestVertex.vertices);
         HashSet<VertexOfDualGraph> wasRedistributed = new HashSet<>();
@@ -165,8 +161,6 @@ public class Balancer {
             })
         );
 
-        long time4 = System.currentTimeMillis();
-        System.out.println("time4 - time3 = " + (double) (time4 - time3) / 1000);
 
         for (VertexOfDualGraph vertex : verticesToRedistribute) {
             for (PartitionGraphVertex neighbor : neighbors) {
@@ -174,8 +168,6 @@ public class Balancer {
             }
         }
 
-        long time5 = System.currentTimeMillis();
-        System.out.println("time5 - time4 = " + (double) (time5 - time4) / 1000);
 
         while (!priorityQueue.isEmpty()) {
             Comp comp = priorityQueue.poll();
@@ -200,12 +192,10 @@ public class Balancer {
                     }
                 }
             }
-            System.out.println("queue size = " + priorityQueue.size() + ", need to move = " + (verticesToRedistribute.size() - wasRedistributed.size()));
+            // System.out.println("queue size = " + priorityQueue.size() + ", need to move = " + (verticesToRedistribute.size() - wasRedistributed.size()));
             
         }
 
-        long time6 = System.currentTimeMillis();
-        System.out.println("time6 - time5 = " + (double) (time6 - time5) / 1000);
         
         // If there are still vertices left that couldn't be moved, return false
         if (wasRedistributed.size() != verticesToRedistribute.size()) {
@@ -220,15 +210,11 @@ public class Balancer {
             }
         }
 
-        long time7 = System.currentTimeMillis();
-        System.out.println("time7 - time6 = " + (double) (time7 - time6) / 1000);
 
         for (PartitionGraphVertex v : neighbors) {
             newParts.add(new HashSet<>(v.vertices));
         }
 
-        long time8 = System.currentTimeMillis();
-        System.out.println("time8 - time7 = " + (double) (time8 - time7) / 1000);
 
         HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber = new HashMap<>();
         for (int i = 0; i < newParts.size(); i++) {
@@ -237,15 +223,11 @@ public class Balancer {
             }
         }
 
-        long time9 = System.currentTimeMillis();
-        System.out.println("time9 - time8 = " + (double) (time9 - time8) / 1000);
 
         Graph<PartitionGraphVertex> newPartitionGraph = PartitionGraphVertex.buildPartitionGraph(dualGraph, newParts, dualVertexToPartNumber);
 
         this.partitionGraph = newPartitionGraph;
 
-        long time10 = System.currentTimeMillis();
-        System.out.println("time10 - time9 = " + (double) (time10 - time9) / 1000);
         return true;
     }
 
@@ -275,7 +257,6 @@ public class Balancer {
                 }
             }
             this.ratio = countInnerEdges / countOuterEdges;
-            System.out.println("ratio = " + ratio);
         }
     }
 }
