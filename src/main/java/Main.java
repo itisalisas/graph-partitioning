@@ -74,7 +74,7 @@ public class Main {
 
 		System.out.println("Graph weight before: " + graph.verticesSumWeight());
 
-		GraphPreparation preparation = new GraphPreparation();
+		GraphPreparation preparation = new GraphPreparation(true, false);
 
 		Graph<VertexOfDualGraph> preparedGraph = preparation.prepareGraph(graph, 0.0000001);
 
@@ -129,6 +129,10 @@ public class Main {
 		pw.savePartitionToDirectory(partitioning, partitioning.bp ,outputDirectory + pathToResultDirectory, partitionResultForFaces, true);
 		pw.printBound(bounds, outputDirectory + pathToResultDirectory, true);
 		// partitioning.printHull(graphBoundEnd, outputDirectory + pathToResultDirectory, "end_bound.txt");
+
+
+		
+
 	}
 
 }

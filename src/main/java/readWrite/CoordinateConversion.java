@@ -5,14 +5,14 @@ import graph.Vertex;
 
 public class CoordinateConversion {
     private Point referencePoint = new Point(59.93893094417527, 30.32268115454809);
-    private double c = 111701;//meters in degree
+    private double c = 111321.377778;//meters in degree
     public <T extends Vertex> void toEuclidean(T p, Point referPoint) {
         if (referPoint == null) {
             referPoint = referencePoint;
         }
         double lat = p.x;
         double lon = p.y;
-        p.x = c * Math.cos(referPoint.y) * (lat - referPoint.x);
+        p.x = c * Math.cos(referPoint.y * Math.PI / 180) * (lat - referPoint.x);
         p.y = c * (lon - referPoint.y);
     }
 
@@ -24,7 +24,7 @@ public class CoordinateConversion {
         double x = p.x;
         double y = p.y;
         ver.y = y / c + referPoint.y;
-        ver.x = x / c /  Math.cos(referPoint.y) + referPoint.x;
+        ver.x = x / c /  Math.cos(referPoint.y * Math.PI / 180) + referPoint.x;
         return ver;
     }
 }

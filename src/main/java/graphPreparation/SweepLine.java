@@ -1,6 +1,7 @@
 package graphPreparation;
 
 import graph.*;
+import graph.Point;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -10,6 +11,14 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.SortedMap;
 import java.util.TreeMap;
+
+import java.lang.Object;
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 
 import addingPoints.CoordinateConstraintsForFace;
 
@@ -24,17 +33,23 @@ public class SweepLine {
 	double inaccuracy;
 
 	public SweepLine() {
-		this.inaccuracy = 0.000000000001;
+		this.inaccuracy = 0.00001;
 	}
 
 	public SweepLine(double inaccuracy) {
 		this.inaccuracy = inaccuracy;
 	}
 
+
 	public void makePlanar(Graph<Vertex> gph) {
+		Point minPoint = findMinPoint(gph);
+		Point maxPoint = findMaxPoint(gph);
+		BufferedImage im = new BufferedImage((int) (maxPoint.x - minPoint.x) * 10, (int) (maxPoint.y - minPoint.y) * 10,
+					 BufferedImage.TYPE_INT_RGB);
+		drawGraph(im, minPoint, gph);
 		EdgeOfGraph[] edgesList = gph.edgesArray();
-		ArrayList<LinkedList<Vertex>> intersectionPoints = findPointsOfIntersection(edgesList);
-		addIntersectionPoints(gph, edgesList, intersectionPoints);
+		ArrayList<LinkedList<Vertex>> intersectionPoints = findPointsOfIntersection(edgesList, im, minPoint);
+		addIntersectionPoints(gph, edgesList, intersectionPoints, im, minPoint);
 		int smallEdgesNum = 0;
 		for (Vertex begin : gph.getEdges().keySet()) {
 			for (Vertex end : gph.getEdges().get(begin).keySet()) {
@@ -44,11 +59,76 @@ public class SweepLine {
 			}
 		}
 		System.out.println("small edges num after sweepline: " + smallEdgesNum);
-
+			
 	}
 
+	private void drawGraph(BufferedImage im, Point minPoint, Graph<Vertex> gph) {
+		Graphics g = im.getGraphics();
+		g.setColor(Color.GREEN);
+		for (Vertex v : gph.getEdges().keySet()) {
+			g.setColor(Color.GREEN);
+			g.fillOval((int) (v.x - minPoint.x) * 10, (int) (v.y - minPoint.y) * 10, 8, 8);
+			for (Vertex ver : gph.getEdges().get(v).keySet()) {
+				g.setColor(Color.BLUE);
+				g.drawLine((int) (v.x - minPoint.x) * 10, (int) (v.y - minPoint.y) * 10, (int) (ver.x - minPoint.x) * 10, (int) (ver.y - minPoint.y) * 10);
+			}
+		}
+        g.dispose();
+		try {
+			ImageIO.write(im, "PNG", 
+				new File("src/main/output/drawSweepLine/first.png".replace('/', File.separatorChar)));
+		} catch (IOException e) {
+			System.out.println("write image error");
+			e.printStackTrace();
+		}
+	}
+		
+	private Point findMinPoint(Graph<Vertex> gph) {
+		Point ans = new Point();
+		boolean firstPoint = true;
+		for (Vertex v : gph.getEdges().keySet()) {
+			if (firstPoint) {
+				ans.x = v.x;
+				ans.y = v.y;
+				firstPoint = false;
+			} else {
+				if (ans.x > v.x) {
+					ans.x = v.x;
+				}
+				if (ans.y > v.y) {
+					ans.y = v.y;
+				}
+			}
+		}
+		ans.x = ans.x - 10;
+		ans.y = ans.y - 10;
+		return ans;
+	}
+
+	private Point findMaxPoint(Graph<Vertex> gph) {
+		Point ans = new Point();
+		boolean firstPoint = true;
+		for (Vertex v : gph.getEdges().keySet()) {
+			if (firstPoint) {
+				ans.x = v.x;
+				ans.y = v.y;
+				firstPoint = false;
+			} else {
+				if (ans.x < v.x) {
+					ans.x = v.x;
+				}
+				if (ans.y < v.y) {
+					ans.y = v.y;
+				}
+			}
+		}ans.x = ans.x + 10;
+		ans.y = ans.y + 10;
+		return ans;
+	}
+		
 	private void addIntersectionPoints(Graph<Vertex> gph, EdgeOfGraph[] edgesList,
-			ArrayList<LinkedList<Vertex>> intersectionPoints) {
+		ArrayList<LinkedList<Vertex>> intersectionPoints, BufferedImage im, Point minPoint) {
+			int imNum = 0;
 		for (int i = 0; i < edgesList.length; i++) {
 			if (intersectionPoints.get(i) == null
 					|| (intersectionPoints.get(i) != null && intersectionPoints.get(i).size() == 0)) {
@@ -101,12 +181,29 @@ public class SweepLine {
 					if (intersectionPoints.get(i).get(j - 1).getLength(edgesList[i].begin) <= inaccuracy) {
 						intersectionPoints.get(i).remove(j);
 						intersectionPoints.get(i).add(j, edgesList[i].begin);
+						
 					} else if (intersectionPoints.get(i).get(j).getLength(edgesList[i].end) <= inaccuracy) {
 						gph.deleteEdge(intersectionPoints.get(i).get(j - uselessPointsNum - 1),
 								intersectionPoints.get(i).get(j - uselessPointsNum));
 						gph.deleteVertex(intersectionPoints.get(i).get(j - uselessPointsNum));
 						gph.addEdge(intersectionPoints.get(i).get(j - uselessPointsNum - 1), edgesList[i].end,
 								intersectionPoints.get(i).get(j - uselessPointsNum - 1).getLength(edgesList[i].end));
+
+						if (imNum % 10 == 0) {
+							Graphics g = im.getGraphics();
+							g.setColor(Color.PINK);
+							g.fillOval((int) (intersectionPoints.get(i).get(j - uselessPointsNum - 1).x - minPoint.x) * 10,
+							 (int) (intersectionPoints.get(i).get(j - uselessPointsNum - 1).y - minPoint.y) * 10, 8, 8);
+        					g.dispose();
+							try {
+								ImageIO.write(im, "PNG", 
+									new File(("src/main/output/drawSweepLine/2_" + imNum + ".png").replace('/', File.separatorChar)));
+							} catch (IOException e) {
+								System.out.println("write image error");
+								e.printStackTrace();
+							}
+						}
+						imNum++;
 						break;
 					} else {
 						intersectionPoints.get(i).remove(j);
@@ -115,14 +212,29 @@ public class SweepLine {
 					continue;
 				}
 				gph.addEdge(intersectionPoints.get(i).get(j - 1), intersectionPoints.get(i).get(j),
-						intersectionPoints.get(i).get(j - 1).getLength(intersectionPoints.get(i).get(j)));
+					intersectionPoints.get(i).get(j - 1).getLength(intersectionPoints.get(i).get(j)));
+				if (imNum % 10 == 0) {
+					Graphics g = im.getGraphics();
+					g.setColor(Color.PINK);
+					g.fillOval((int) (intersectionPoints.get(i).get(j - 1).x - minPoint.x) * 10,
+					 (int) (intersectionPoints.get(i).get(j - 1).y - minPoint.y) * 10, 8, 8);
+        			g.dispose();
+					try {
+						ImageIO.write(im, "PNG", 
+							new File(("src/main/output/drawSweepLine/2_" + imNum + ".png").replace('/', File.separatorChar)));
+					} catch (IOException e) {
+						System.out.println("write image error");
+						e.printStackTrace();
+					}
+				}
+				imNum++;
 				uselessPointsNum = 0;
 			}
 		}
 
 	}
 
-	public ArrayList<LinkedList<Vertex>> findPointsOfIntersection(EdgeOfGraph[] edgesList) {
+	public ArrayList<LinkedList<Vertex>> findPointsOfIntersection(EdgeOfGraph[] edgesList, BufferedImage im, Point minPoint) {
 		ArrayList<LinkedList<Vertex>> intersectionPoints = new ArrayList<LinkedList<Vertex>>();
 		for (int i = 0; i < edgesList.length; i++) {
 			intersectionPoints.add(new LinkedList<Vertex>());
@@ -136,6 +248,7 @@ public class SweepLine {
 			}
 		});
 		HashMap<Integer, EdgeOfGraph> actualEdge = new HashMap<Integer, EdgeOfGraph>();
+		int imNum = 0;
 		for (int i = 0; i < actions.size(); i++) {
 			if (actions.get(i).type() != ActionType.ADD) {
 				actualEdge.remove(actions.get(i).edgeNum());
@@ -157,6 +270,20 @@ public class SweepLine {
 							.intersectionPoint(actualEdge.get(edgeNum));
 					if (intersecPoint != null) {
 						intersectionPoints.get(actions.get(i).edgeNum()).add(intersecPoint);
+						if (imNum % 10 == 0) {
+							Graphics g = im.getGraphics();
+							g.setColor(Color.RED);
+							g.fillOval((int) (intersecPoint.x - minPoint.x) * 10, (int) (intersecPoint.y - minPoint.y) * 10, 8, 8);
+        					g.dispose();
+							try {
+								ImageIO.write(im, "PNG", 
+									new File(("src/main/output/drawSweepLine/" + imNum + ".png").replace('/', File.separatorChar)));
+							} catch (IOException e) {
+								System.out.println("write image error");
+								e.printStackTrace();
+							}
+						}	
+						imNum++;
 						intersectionPoints.get(edgeNum).add(intersecPoint);
 					}
 				}

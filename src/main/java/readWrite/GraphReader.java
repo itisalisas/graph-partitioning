@@ -35,12 +35,17 @@ public class GraphReader {
 		int ni = 0;
 		double length = 0;
 		Vertex vi;
+		int countBigCoordinate = 0;
 		for (int i = 0; i < n && sc.hasNext(); i++) {
 			// read Vertex..
 			vi = readVertex(graph, sc, geodetic);
+			if (vi.x > 1000000 || vi.y > 1000000) {
+				countBigCoordinate++;
+			}
 			sc.nextLine();
 		}
 		sc.close();
+		System.out.println("Number of Vertices x or y > 1000000: " + countBigCoordinate);
 
 		sc = new Scanner(new File(inFilename));
 		n = 0;
@@ -49,7 +54,9 @@ public class GraphReader {
 		length = 0;
 		Vertex vj;
 		System.out.println("Readed all Vertices");
+
 		int smallEdgesNum = 0;
+		int countUncorrectedges = 0;
 		for (int i = 0; i < n && sc.hasNext(); i++) {
 			// read Vertex..
 			vi = readVertex(graph, sc, geodetic);
@@ -58,13 +65,18 @@ public class GraphReader {
 				vj = readVertex(graph, sc, geodetic);
 				String lengthStr = sc.next().replace(',', '.');
 				length = Double.parseDouble(lengthStr);
-				if (length < 0.001) {
-					smallEdgesNum++;
-				}
+				// if (length < 0.001) {
+				// 	smallEdgesNum++;
+				// }
 				graph.getEdges().get(vi).put(vj, new Edge(length));
+				// System.out.println(vi.getLength(vj) + " " + length);
+				// if (Math.abs(vi.getLength(vj) - length) > 50) {
+				// 	countUncorrectedges++;
+				// }
 			}
 		}
-		System.out.println("small edges of graph number: " + smallEdgesNum);
+		// System.out.println("small edges of graph number: " + smallEdgesNum);
+		// System.out.println("num edges length err > 50    " + countUncorrectedges);
 		sc.close();
 	}
 	
