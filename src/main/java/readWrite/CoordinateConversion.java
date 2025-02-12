@@ -4,7 +4,7 @@ import graph.Point;
 import graph.Vertex;
 
 public class CoordinateConversion {
-    private Point referencePoint = new Point(59.93893094417527, 30.32268115454809);
+    private Point referencePoint = new Point(30.32268115454809, 59.93893094417527);
     private double c = 111321.377778;//meters in degree
     public <T extends Vertex> void toEuclidean(T p, Point referPoint) {
         if (referPoint == null) {

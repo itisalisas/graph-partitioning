@@ -74,9 +74,9 @@ public class Main {
 
 		System.out.println("Graph weight before: " + graph.verticesSumWeight());
 
-		GraphPreparation preparation = new GraphPreparation(true, false);
+		GraphPreparation preparation = new GraphPreparation(false, false);
 
-		Graph<VertexOfDualGraph> preparedGraph = preparation.prepareGraph(graph, 0.0000001);
+		Graph<VertexOfDualGraph> preparedGraph = preparation.prepareGraph(graph, 0.001);
 
 		for (VertexOfDualGraph v : preparedGraph.verticesArray()) {
 			Assertions.assertNotNull(v.getVerticesOfFace());

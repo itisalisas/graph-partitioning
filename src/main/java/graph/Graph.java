@@ -85,12 +85,16 @@ public class Graph<T extends Vertex> {
 		addVertex(begin);
 		addVertex(end);
 		edges.get(begin).put(end, new Edge(length));
+		edges.get(end).put(begin, new Edge(length));
 
 	}
 
 	public void deleteEdge(T begin, T end) {
 		if (edges.get(begin) != null) {
 			edges.get(begin).remove(end);
+		}
+		if (edges.get(end) != null) {
+			edges.get(end).remove(begin);
 		}
 	}
 
@@ -119,7 +123,7 @@ public class Graph<T extends Vertex> {
 		EdgeOfGraph<T>[] ans = new EdgeOfGraph[edgesNumber()];
 		for (T begin : edges.keySet()) {
 			for (T end : edges.get(begin).keySet()) {
-				ans[iter++] = new EdgeOfGraph((T)begin, (T)end, edges.get(begin).get(end).getLength(),
+				ans[iter++] = new EdgeOfGraph<T>((T)begin, (T)end, edges.get(begin).get(end).getLength(),
 						edges.get(begin).get(end).flow, edges.get(begin).get(end).getBandwidth());
 			}
 		}

@@ -35,17 +35,13 @@ public class GraphReader {
 		int ni = 0;
 		double length = 0;
 		Vertex vi;
-		int countBigCoordinate = 0;
+		System.out.println("Vertices num: " + n);
 		for (int i = 0; i < n && sc.hasNext(); i++) {
 			// read Vertex..
 			vi = readVertex(graph, sc, geodetic);
-			if (vi.x > 1000000 || vi.y > 1000000) {
-				countBigCoordinate++;
-			}
 			sc.nextLine();
 		}
 		sc.close();
-		System.out.println("Number of Vertices x or y > 1000000: " + countBigCoordinate);
 
 		sc = new Scanner(new File(inFilename));
 		n = 0;
@@ -55,8 +51,6 @@ public class GraphReader {
 		Vertex vj;
 		System.out.println("Readed all Vertices");
 
-		int smallEdgesNum = 0;
-		int countUncorrectedges = 0;
 		for (int i = 0; i < n && sc.hasNext(); i++) {
 			// read Vertex..
 			vi = readVertex(graph, sc, geodetic);

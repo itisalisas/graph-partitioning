@@ -73,8 +73,14 @@ public class MakingDualGraph {
 
 	}
 
-	private void buildDualVertices(Graph<VertexOfDualGraph> res, HashMap<EdgeOfGraph, VertexOfDualGraph> inFace,
-								   HashMap<Vertex, TreeSet<EdgeOfGraph>> sortedGraph, EdgeOfGraph[] edgesList, HashMap<Vertex, Integer> vertexInFaceNumber) {
+	private void buildDualVertices(Graph<VertexOfDualGraph> res,
+								   HashMap<EdgeOfGraph, 
+								   VertexOfDualGraph> inFace,
+								   HashMap<Vertex, 
+								   TreeSet<EdgeOfGraph>> sortedGraph, 
+								   EdgeOfGraph[] edgesList, 
+								   HashMap<Vertex, Integer> vertexInFaceNumber) {
+									
 		ArrayList<Vertex> verticesOfFace = new ArrayList<Vertex>();
 		HashSet<EdgeOfGraph> inActualFace = new HashSet<EdgeOfGraph>();
 		long vertName = 0;

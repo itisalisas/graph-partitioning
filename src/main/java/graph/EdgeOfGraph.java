@@ -46,8 +46,8 @@ public class EdgeOfGraph<T extends Vertex> extends Edge {
 	public boolean intersect(EdgeOfGraph edge) {
 		return intersectForOneCoordinate(this.begin.x, this.end.x, edge.begin.x, edge.end.x) 
 				&& intersectForOneCoordinate(this.begin.y, this.end.y, edge.begin.y, edge.end.y)
-				&& this.area(edge.begin) * this.area(edge.end) <= 0
-				&& edge.area(this.begin) * edge.area(this.end) <= 0;
+				&& this.area(edge.begin) * this.area(edge.end) < 0
+				&& edge.area(this.begin) * edge.area(this.end) < 0;
 	}
 	
 	
@@ -69,7 +69,7 @@ public class EdgeOfGraph<T extends Vertex> extends Edge {
 			begin2x = end2x;
 			end2x = tmp;
 		}
-		return Math.max(begin1x, begin2x) <= Math.min(end1x, end2x);
+		return Math.max(begin1x, begin2x) < Math.min(end1x, end2x);
 	}
 	
 	
