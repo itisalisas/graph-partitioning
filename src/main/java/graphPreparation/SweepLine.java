@@ -247,26 +247,30 @@ public class SweepLine {
 		});
 		HashMap<Integer, EdgeOfGraph<Vertex>> actualEdge = new HashMap<Integer, EdgeOfGraph<Vertex>>();
 		for (int i = 0; i < actions.size(); i++) {
-			if (actions.get(i).type() != ActionType.ADD) {
-				actualEdge.remove(actions.get(i).edgeNum());
+			Action currAct = actions.get(i);
+			int currEdgeInd = currAct.edgeNum();
+			EdgeOfGraph<Vertex> currEdge = edgesList[currEdgeInd];
+			if (currAct.type() != ActionType.ADD) {
+				actualEdge.remove(currEdgeInd);
 				continue;
 			}
 			for (int edgeNum : actualEdge.keySet()) {
-				if (!edgesList[actions.get(i).edgeNum()].intersect(actualEdge.get(edgeNum))) {
+				EdgeOfGraph<Vertex> edgeToCheck = edgesList[edgeNum];
+				EdgeOfGraph<Vertex> actEdge = actualEdge.get(edgeNum);
+				if (!currEdge.intersect(actEdge)) {
 					continue;
 				}
 				// check vertical
-				if (edgesList[actions.get(i).edgeNum()].vertical() && edgesList[edgeNum].vertical()) {
-					checkVerticalEdges(actions.get(i).edgeNum(), edgeNum, edgesList, intersectionPoints);
+				if (currEdge.vertical() && edgeToCheck.vertical()) {
+					checkVerticalEdges(currEdgeInd, edgeNum, edgesList, intersectionPoints);
 					// check horizontal
-				} else if (edgesList[actions.get(i).edgeNum()].horizontal() && edgesList[edgeNum].horizontal()) {
-					chechHorizontalEdges(actions.get(i).edgeNum(), edgeNum, edgesList, intersectionPoints);
+				} else if (currEdge.horizontal() && edgeToCheck.horizontal()) {
+					chechHorizontalEdges(currEdgeInd, edgeNum, edgesList, intersectionPoints);
 					// check normal (not vertical, not horizontal)
 				} else {
-					Vertex intersecPoint = edgesList[actions.get(i).edgeNum()]
-							.intersectionPoint(actualEdge.get(edgeNum));
+					Vertex intersecPoint = currEdge.intersectionPoint(actEdge);
 					if (intersecPoint != null) {
-						intersectionPoints.get(actions.get(i).edgeNum()).add(intersecPoint);
+						intersectionPoints.get(currEdgeInd).add(intersecPoint);
 						intersectionPoints.get(edgeNum).add(intersecPoint);
 					}
 				}
@@ -277,51 +281,67 @@ public class SweepLine {
 		return intersectionPoints;
 	}
 
+	//добавить пояснения
 	private <T extends Vertex> void chechHorizontalEdges(int edgeNum1,
-									  int edgeNum2,
-									  EdgeOfGraph<T>[] edgesList,
-									  ArrayList<ArrayList<Vertex>> intersectionPoints) {
-		if (edgesList[edgeNum1].includeForX(edgesList[edgeNum2].begin)) {
-			intersectionPoints.get(edgeNum1).add(edgesList[edgeNum2].begin);
+									  					int edgeNum2,
+									  					EdgeOfGraph<T>[] edgesList,
+									  					ArrayList<ArrayList<Vertex>> intersectionPoints) {
+		EdgeOfGraph<T> edge1 = edgesList[edgeNum1];
+		EdgeOfGraph<T> edge2 = edgesList[edgeNum2];
+		ArrayList<Vertex> intersectPointsEdge1 = intersectionPoints.get(edgeNum1);
+		ArrayList<Vertex> intersectPointsEdge2 = intersectionPoints.get(edgeNum2);
+		if (edge1.includeForX(edge2.begin)) {
+			intersectPointsEdge1.add(edge2.begin);
 		}
-		if (edgesList[edgeNum1].includeForX(edgesList[edgeNum2].end)) {
-			intersectionPoints.get(edgeNum1).add(edgesList[edgeNum2].end);
+		if (edge1.includeForX(edge2.end)) {
+			intersectPointsEdge1.add(edge2.end);
 		}
-		if (edgesList[edgeNum2].includeForX(edgesList[edgeNum1].begin)) {
-			intersectionPoints.get(edgeNum2).add(edgesList[edgeNum1].begin);
+		if (edge2.includeForX(edge1.begin)) {
+			intersectPointsEdge2.add(edge1.begin);
 		}
-		if (edgesList[edgeNum2].includeForX(edgesList[edgeNum1].end)) {
-			intersectionPoints.get(edgeNum2).add(edgesList[edgeNum1].end);
+		if (edge2.includeForX(edge1.end)) {
+			intersectPointsEdge2.add(edge1.end);
 		}
 
 	}
 
+	//добавить пояснения
 	private <T extends Vertex> void checkVerticalEdges(int edgeNum1,
-									int edgeNum2,
-									EdgeOfGraph<T>[] edgesList,
-									ArrayList<ArrayList<Vertex>> intersectionPoints) {
-		if (edgesList[edgeNum1].includeForY(edgesList[edgeNum2].begin)) {
-			intersectionPoints.get(edgeNum1).add(edgesList[edgeNum2].begin);
+													   int edgeNum2,
+													   EdgeOfGraph<T>[] edgesList,
+													   ArrayList<ArrayList<Vertex>> intersectionPoints) {
+		EdgeOfGraph<T> edge1 = edgesList[edgeNum1];
+		EdgeOfGraph<T> edge2 = edgesList[edgeNum2];
+		ArrayList<Vertex> intersectPointsEdge1 = intersectionPoints.get(edgeNum1);
+		ArrayList<Vertex> intersectPointsEdge2 = intersectionPoints.get(edgeNum2);
+		if (edge1.includeForY(edge2.begin)) {
+			intersectPointsEdge1.add(edge2.begin);
 		}
-		if (edgesList[edgeNum1].includeForY(edgesList[edgeNum2].end)) {
-			intersectionPoints.get(edgeNum1).add(edgesList[edgeNum2].end);
+		if (edge1.includeForY(edge2.end)) {
+			intersectPointsEdge1.add(edge2.end);
 		}
-		if (edgesList[edgeNum2].includeForY(edgesList[edgeNum1].begin)) {
-			intersectionPoints.get(edgeNum2).add(edgesList[edgeNum1].begin);
+		if (edge2.includeForY(edge1.begin)) {
+			intersectPointsEdge2.add(edge1.begin);
 		}
-		if (edgesList[edgeNum2].includeForY(edgesList[edgeNum1].end)) {
-			intersectionPoints.get(edgeNum2).add(edgesList[edgeNum1].end);
+		if (edge2.includeForY(edge1.end)) {
+			intersectPointsEdge2.add(edge1.end);
 		}
 
 	}
+
 
 	private <T extends Vertex> ArrayList<Action> initActions(EdgeOfGraph<T>[] edgesList) {
 		ArrayList<Action> result = new ArrayList<Action>();
 		for (int i = 0; i < edgesList.length; i++) {
 			result.add(
-					new Action(Math.min(edgesList[i].begin.getX(), edgesList[i].end.getX()), i, null, ActionType.ADD));
-			result.add(new Action(Math.max(edgesList[i].begin.getX(), edgesList[i].end.getX()), i, null,
-					ActionType.DELETE));
+					new Action(Math.min(edgesList[i].begin.x, edgesList[i].end.x),
+							   i,
+					  	null, 
+							   ActionType.ADD));
+			result.add(new Action(Math.max(edgesList[i].begin.x, edgesList[i].end.x), 
+								i, 
+								null,
+								ActionType.DELETE));
 		}
 		return result;
 	}
@@ -345,18 +365,22 @@ public class SweepLine {
 		Collections.sort(actions, new Comparator<Action>() {
 			@Override
 			public int compare(Action a1, Action a2) {
-				return a1.x() < a2.x() ? -1
-						: a1.x() > a2.x() ? 1 : a1.type() == ActionType.ADD ? 1 : a2.type() == ActionType.ADD ? -1 : 0;
+				return a1.x() < a2.x() ? -1 : 
+						a1.x() > a2.x() ? 1 :
+						a1.type() == ActionType.ADD ? 1 : 
+						a2.type() == ActionType.ADD ? -1 :
+						0;
 			}
 		});
 		TreeMap<Double, HashSet<EdgeOfGraph<Vertex>>> actualEdges = new TreeMap<Double, HashSet<EdgeOfGraph<Vertex>>>(
-				new Comparator<Double>() {
-					@Override
-					public int compare(Double o1, Double o2) {
-						return o1 < o2 ? -1 : o1 > o2 ? 1 : 0;
-					}
-
-				});
+			new Comparator<Double>() {
+				@Override
+				public int compare(Double o1, Double o2) {
+					return o1 < o2 ? -1 :
+						   o1 > o2 ? 1 :
+						   0;
+				}
+			});
 		//HashMap<Integer, EdgeOfGraph> actualEdge = new HashMap<Integer, EdgeOfGraph>();
 		for (int i = 0; i < actions.size(); i++) {
 			if (actions.get(i).type() == ActionType.DELETE) {
@@ -364,7 +388,8 @@ public class SweepLine {
 				//actualEdge.remove(actions.get(i).edgeNum());
 
 				EdgeOfGraph<Vertex> actionEdge = diagList[actions.get(i).edgeNum()];
-				SortedMap<Double, HashSet<EdgeOfGraph<Vertex>>> tmp = actualEdges.subMap(actionEdge.begin.getY(), actionEdge.end.getY());
+				SortedMap<Double, HashSet<EdgeOfGraph<Vertex>>> tmp = actualEdges.subMap(actionEdge.begin.getY(), 
+																						 actionEdge.end.getY());
 				for (Double d : tmp.keySet()) {
 					if (actualEdges.get(d) != null) {
 						actualEdges.get(d).remove(diagList[actions.get(i).edgeNum()]);
