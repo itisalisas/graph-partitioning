@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Assertions;
 
+import graph.Edge;
 import graph.Graph;
 import graph.PartitionGraphVertex;
 import graph.Vertex;
@@ -238,10 +239,11 @@ public class Balancer {
             double countInnerEdges = 0;
             double countOuterEdges = 0;
             for (VertexOfDualGraph neighborVertex : dualGraph.getEdges().get(vertex).keySet()) {
+                Edge edge = dualGraph.getEdges().get(vertex).get(neighborVertex);
                 if (neighbor.vertices.stream().collect(Collectors.toSet()).contains(neighborVertex)) {
-                    countOuterEdges++;
+                    countOuterEdges += edge.getLength();
                 } else if (part.vertices.stream().collect(Collectors.toSet()).contains(neighborVertex)) {
-                    countInnerEdges++;
+                    countInnerEdges += edge.getLength();
                 }
             }
            this.ratio = countOuterEdges == 0 ? 0 : (0.5 * (countOuterEdges / countInnerEdges) + 0.5 * (part.getWeight() / maxWeight));

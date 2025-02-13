@@ -1,11 +1,10 @@
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Assertions;
 
@@ -56,12 +55,12 @@ public class Main {
 
 		long time1 = System.currentTimeMillis();
 
-		Graph<Vertex> graph = new Graph<Vertex>();
+		Graph<Vertex> graph = new Graph<>();
 
 		try {
 			GraphReader gr = new GraphReader();
 			gr.readGraphFromFile(graph, resourcesDirectory + pathToFile);
-		} catch (Exception e) {
+		} catch (FileNotFoundException e) {
 			throw new RuntimeException("Can't read graph from file: " + e.getMessage());
 		}
 
@@ -129,33 +128,22 @@ public class Main {
 
 		System.out.println("Partition size: " + partitionResultForFaces.size());
 
-		ArrayList<HashSet<Vertex>> partitionResult = new ArrayList<HashSet<Vertex>>();
+		ArrayList<HashSet<Vertex>> partitionResult = new ArrayList<>();
 		HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph = preparation.getComparisonForDualGraph();
 		List<List<Vertex>> bounds = new ArrayList<>();
 
-		long startBoundTime = System.currentTimeMillis();
-
 		for (int i = 0; i < partitionResultForFaces.size(); i++) {
-			partitionResult.add(new HashSet<Vertex>());
+			partitionResult.add(new HashSet<>());
 			for (VertexOfDualGraph face : partitionResultForFaces.get(i)) {
 				partitionResult.get(i).addAll(comparisonForDualGraph.get(face).getVerticesOfFace());
 			}
 			bounds.add(BoundSearcher.findBound(graph, partitionResultForFaces.get(i), comparisonForDualGraph));
-			// System.out.println("Added " + (i + 1) + " bound");
 		}
 
-		long endBoundTime = System.currentTimeMillis();
 		long time7 = System.currentTimeMillis();
 		System.out.println("time7 - time6 = " + (double) (time7 - time6) / 1000);
 
-		List<Vertex> graphBoundEnd = BoundSearcher.findConvexHull(
-				partitionResult.stream()
-						.flatMap(Set::stream)
-						.collect(Collectors.toList())
-		);
-
 		gw.printDualGraphToFile(preparedGraph, newDualVertexToPartNumber, partitionResultForFaces.size(), outputDirectory + pathToResultDirectory, "dual.txt");
-		// partitioning.savePartitionToDirectory(outputDirectory + pathToResultDirectory, partitionResult);
 		PartitionWriter pw = new PartitionWriter();
 		pw.savePartitionToDirectory(partitioning, partitioning.bp ,outputDirectory + pathToResultDirectory, partitionResultForFaces);
 		pw.printBound(bounds, outputDirectory + pathToResultDirectory);
