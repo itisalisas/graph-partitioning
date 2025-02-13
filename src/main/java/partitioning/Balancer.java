@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.PriorityQueue;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Assertions;
 
@@ -34,10 +34,12 @@ public class Balancer {
 
     private boolean rebalanceSmallestRegion() {
         PartitionGraphVertex smallestVertex = partitionGraph.smallestVertex().copy();
-        PartitionGraphVertex biggestNeighbor = findBiggestUnmergedNeighbor(partitionGraph.smallestVertex()).copy();
+        double smallestVertexWeight = smallestVertex.getWeight();
+        PartitionGraphVertex biggestNeighbor = findBiggestUnmergedNeighbor(partitionGraph.smallestVertex());
         if (biggestNeighbor == null) {
             return false;
         }
+        biggestNeighbor = biggestNeighbor.copy();
         
         HashSet<VertexOfDualGraph> balancingVerticesSet = new HashSet<>();
         balancingVerticesSet.addAll(smallestVertex.vertices);
@@ -53,6 +55,10 @@ public class Balancer {
         smallestVertex.changeVertices(new ArrayList<>(newPartition.get(0)));
 
         biggestNeighbor.changeVertices(new ArrayList<>(newPartition.get(1)));
+
+        if (smallestVertex.getWeight() < smallestVertexWeight || biggestNeighbor.getWeight() < smallestVertexWeight) {
+            return false;
+        }
 
         ArrayList<HashSet<VertexOfDualGraph>> newParts = new ArrayList<>();
         for (PartitionGraphVertex v : partitionGraph.verticesArray()) {
@@ -74,9 +80,6 @@ public class Balancer {
 
         Assertions.assertEquals(dualGraph.verticesNumber(), dualVertexToPartNumber.size());
         Graph<PartitionGraphVertex> newPartitionGraph = PartitionGraphVertex.buildPartitionGraph(dualGraph, newParts, dualVertexToPartNumber);
-        if (newPartitionGraph.smallestVertex().getWeight() < this.partitionGraph.smallestVertex().getWeight()) {
-            return false;
-        }
         wasMerged.add(balancingVerticesSet);
         this.partitionGraph = newPartitionGraph;
         return true;
@@ -88,18 +91,12 @@ public class Balancer {
         System.out.println("removing time = " + (System.currentTimeMillis() - bal) / 1000 + " sec");
         System.out.println("End of removing");
         double threshold = partitionGraph.verticesWeight() * 0.1;
-        double previousSmallestWeight = partitionGraph.smallestVertex().getWeight();
         double variance = calculateVariance();
 
         while (variance > threshold) {
             if (!rebalanceSmallestRegion()) {
                 break;
             }
-            double currentSmallestWeight = partitionGraph.smallestVertex().getWeight();
-            if (Math.abs(currentSmallestWeight - previousSmallestWeight) < 1e-8) {
-                break;
-            }
-            previousSmallestWeight = currentSmallestWeight;
             variance = calculateVariance();
         }
         for (PartitionGraphVertex vertex : partitionGraph.verticesArray()) {
@@ -147,7 +144,7 @@ public class Balancer {
             neighbors.add(neighbor.copy());
         }
         
-        double availableWeight = neighbors.stream().mapToDouble(PartitionGraphVertex::getWeight).sum();
+        double availableWeight = neighbors.stream().mapToDouble(vertex -> maxWeight - vertex.getWeight()).sum();
         if (availableWeight < smallestVertex.getWeight()) {
             return false;
         }
@@ -164,7 +161,7 @@ public class Balancer {
 
         for (VertexOfDualGraph vertex : verticesToRedistribute) {
             for (PartitionGraphVertex neighbor : neighbors) {
-                priorityQueue.add(new Comp(vertex, neighbor));
+                priorityQueue.add(new Comp(vertex, smallestVertex, neighbor));
             }
         }
 
@@ -172,7 +169,7 @@ public class Balancer {
         while (!priorityQueue.isEmpty()) {
             Comp comp = priorityQueue.poll();
             VertexOfDualGraph vertex = comp.vertex;
-            PartitionGraphVertex neighbor = comp.part;
+            PartitionGraphVertex neighbor = comp.neighbor;
             
             if (wasRedistributed.contains(vertex) || comp.ratio == 0.0) {
                 continue;
@@ -186,13 +183,10 @@ public class Balancer {
                 wasRedistributed.add(vertex);
                 for (VertexOfDualGraph dualVertex : verticesToRedistribute) {
                     if (verticesToRedistribute.contains(dualVertex) && !wasRedistributed.contains(dualVertex) && dualGraph.getEdges().get(vertex).containsKey(dualVertex)) {
-                        for (PartitionGraphVertex part : neighbors) {
-                            priorityQueue.add(new Comp(dualVertex, part));
-                        }
+                        priorityQueue.add(new Comp(dualVertex, smallestVertex, neighbor));
                     }
                 }
             }
-            // System.out.println("queue size = " + priorityQueue.size() + ", need to move = " + (verticesToRedistribute.size() - wasRedistributed.size()));
             
         }
 
@@ -233,30 +227,24 @@ public class Balancer {
 
     class Comp {
         VertexOfDualGraph vertex;
-        PartitionGraphVertex part;
+        PartitionGraphVertex neighbor;
         double ratio;
 
-        public Comp() {
-        }
+        public Comp() {}
 
-        public Comp(VertexOfDualGraph vertex, PartitionGraphVertex part) { 
+        public Comp(VertexOfDualGraph vertex, PartitionGraphVertex part, PartitionGraphVertex neighbor) { 
             this.vertex = vertex;
-            this.part = part;
-            List<Vertex> face = vertex.getVerticesOfFace();
-            PartitionGraphVertex neighbor = part;
-            Set<Vertex> neighborVertices = Set.copyOf(neighbor.vertices.stream().flatMap(v -> v.getVerticesOfFace().stream()).toList());
+            this.neighbor = neighbor;
             double countInnerEdges = 0;
             double countOuterEdges = 0;
-            for (int i = 0; i < face.size(); i++) {
-                if (neighborVertices.contains(face.get(i)) &&
-                    neighborVertices.contains(face.get((i + 1) % face.size())) &&
-                    startGraph.getEdges().get(face.get(i)).containsKey(face.get((i + 1) % face.size()))) {
-                    countInnerEdges += 1;
-                } else {
-                    countOuterEdges += 1;
+            for (VertexOfDualGraph neighborVertex : dualGraph.getEdges().get(vertex).keySet()) {
+                if (neighbor.vertices.stream().collect(Collectors.toSet()).contains(neighborVertex)) {
+                    countOuterEdges++;
+                } else if (part.vertices.stream().collect(Collectors.toSet()).contains(neighborVertex)) {
+                    countInnerEdges++;
                 }
             }
-            this.ratio = countInnerEdges / countOuterEdges;
+           this.ratio = countOuterEdges == 0 ? 0 : (0.5 * (countOuterEdges / countInnerEdges) + 0.5 * (part.getWeight() / maxWeight));
         }
     }
 }
