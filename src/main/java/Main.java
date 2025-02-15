@@ -107,12 +107,13 @@ public class Main {
 				Assertions.assertNotNull(v.getVerticesOfFace());
 			}
 		}
+		HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph = preparation.getComparisonForDualGraph();
 		long time5 = System.currentTimeMillis();
 		System.out.println("time5 - time4 = " + (double) (time5 - time4) / 1000);
 		Graph<PartitionGraphVertex> partitionGraph = PartitionGraphVertex.buildPartitionGraph(preparedGraph, partitionResultForFaces, dualVertexToPartNumber);
 		System.err.println("smallest vertex before = " + partitionGraph.smallestVertex().getWeight());
 		System.err.println("Partition size: " + partitionResultForFaces.size());
-		Balancer balancer = new Balancer(partitionGraph, preparedGraph, graph, maxSumVerticesWeight);
+		Balancer balancer = new Balancer(partitionGraph, preparedGraph, graph, maxSumVerticesWeight, comparisonForDualGraph, outputDirectory + pathToResultDirectory);
 		partitionResultForFaces = balancer.rebalancing();
 		HashMap<VertexOfDualGraph, Integer> newDualVertexToPartNumber = new HashMap<>();
 		for (int i = 0; i < partitionResultForFaces.size(); i++) {
@@ -129,7 +130,6 @@ public class Main {
 		System.out.println("Partition size: " + partitionResultForFaces.size());
 
 		ArrayList<HashSet<Vertex>> partitionResult = new ArrayList<>();
-		HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph = preparation.getComparisonForDualGraph();
 		List<List<Vertex>> bounds = new ArrayList<>();
 
 		for (int i = 0; i < partitionResultForFaces.size(); i++) {

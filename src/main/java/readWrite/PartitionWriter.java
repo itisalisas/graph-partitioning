@@ -7,6 +7,7 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 import graph.Vertex;
 import graph.VertexOfDualGraph;
@@ -164,6 +165,25 @@ public class PartitionWriter {
 			throw new RuntimeException("Can't write ratio to file");
 		}
 		// System.out.println("Empty parts number: " + countEmptyParts(partitionResult));
+	}
+
+	public void printRedistributedVerticesDirections(Map<VertexOfDualGraph, VertexOfDualGraph> vertexToBestNeighbor, String outputDirectory) {
+		createOutputDirectory(outputDirectory);
+		File edgesFile = new File(outputDirectory + File.separator + "edges.txt");
+		try {
+			edgesFile.createNewFile();
+		} catch (IOException e) {
+			throw new RuntimeException("Can't create edges file");
+		}
+		try (FileWriter writer = new FileWriter(edgesFile, false)) {
+			for (Map.Entry<VertexOfDualGraph, VertexOfDualGraph> edge: vertexToBestNeighbor.entrySet()) {
+				VertexOfDualGraph start = edge.getKey();
+				VertexOfDualGraph end = edge.getValue();
+				writer.write(start.getX() + " " + start.getY() + " " + end.getX() + " " + end.getY() + "\n");
+			}
+		} catch (Exception e) {
+			throw new RuntimeException("Can't write edges to file");
+		}
 	}
 
 
