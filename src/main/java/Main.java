@@ -59,7 +59,7 @@ public class Main {
 
 		try {
 			GraphReader gr = new GraphReader();
-			gr.readGraphFromFile(graph, resourcesDirectory + pathToFile);
+			gr.readGraphFromFile(graph, resourcesDirectory + pathToFile, true);
 		} catch (FileNotFoundException e) {
 			throw new RuntimeException("Can't read graph from file: " + e.getMessage());
 		}
@@ -80,7 +80,7 @@ public class Main {
 		long time3 = System.currentTimeMillis();
 		System.out.println("time3 - time2 = " + (double) (time3 - time2) / 1000);
 
-		GraphPreparation preparation = new GraphPreparation();
+		GraphPreparation preparation = new GraphPreparation(true, false);
 
 		Graph<VertexOfDualGraph> preparedGraph = preparation.prepareGraph(graph, 0.0000001);
 
@@ -145,8 +145,8 @@ public class Main {
 
 		gw.printDualGraphToFile(preparedGraph, newDualVertexToPartNumber, partitionResultForFaces.size(), outputDirectory + pathToResultDirectory, "dual.txt");
 		PartitionWriter pw = new PartitionWriter();
-		pw.savePartitionToDirectory(partitioning, partitioning.bp ,outputDirectory + pathToResultDirectory, partitionResultForFaces);
-		pw.printBound(bounds, outputDirectory + pathToResultDirectory);
+		pw.savePartitionToDirectory(partitioning, partitioning.bp ,outputDirectory + pathToResultDirectory, partitionResultForFaces, true);
+		pw.printBound(bounds, outputDirectory + pathToResultDirectory, true);
 
 		long time8 = System.currentTimeMillis();
 		System.out.println("time8 - time7 = " + (double) (time8 - time7) / 1000);

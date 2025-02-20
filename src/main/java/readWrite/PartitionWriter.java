@@ -16,11 +16,20 @@ import partitioning.BalancedPartitioningOfPlanarGraphs;
 
 public class PartitionWriter {
 	
-	public static <T extends Vertex> void writePartitionToFile(HashSet<T> part, Double cutWeight, File outFile) throws IOException {
+	public static <T extends Vertex> void writePartitionToFile(HashSet<T> part, Double cutWeight, File outFile, boolean geodetic) throws IOException {
 		FileWriter out = new FileWriter(outFile, false);
 		out.write(String.format("%f\n", cutWeight));
 		out.write(String.format("%d\n", part.size()));
+		CoordinateConversion cc = null;
+		if (geodetic) {
+			cc = new CoordinateConversion();
+		}
 		for (T v : part) {
+			if (geodetic) {
+				T nV = cc.fromEuclidean(v, null);
+				out.write(String.format("%d %f %f %f\n", v.getName(), nV.getX(), nV.getY(), v.getWeight()));
+				continue;
+			}
 			out.write(String.format("%d %f %f %f\n", v.getName(), v.getX(), v.getY(), v.getWeight()));
 		}
 		out.close();
@@ -36,7 +45,7 @@ public class PartitionWriter {
 	}
 	
 
-	public void printHull(List<Vertex> hull, String outputDirectory, String fileName) {
+	public void printHull(List<Vertex> hull, String outputDirectory, String fileName, boolean geodetic) {
 		createOutputDirectory(outputDirectory);
 		File boundFile = new File(outputDirectory + File.separator + fileName);
 		try {
@@ -45,11 +54,11 @@ public class PartitionWriter {
 			throw new RuntimeException("Can't create bound file");
 		}
 		GraphWriter gw = new GraphWriter();
-		gw.printVerticesToFile(hull, boundFile);
+		gw.printVerticesToFile(hull, boundFile, geodetic);
 	}
 	
 	
-	public void printBound(List<List<Vertex>> bounds, String outputDirectory) {
+	public void printBound(List<List<Vertex>> bounds, String outputDirectory, boolean geodetic) {
 		createOutputDirectory(outputDirectory);
 		for (int i = 0; i < bounds.size(); i++) {
 			File boundFile = new File(outputDirectory + File.separator + "bound_" + i + ".txt");
@@ -59,12 +68,13 @@ public class PartitionWriter {
 				throw new RuntimeException("Can't create bound file");
 			}
 			GraphWriter gw = new GraphWriter();
-			gw.printVerticesToFile(bounds.get(i), boundFile);
+			gw.printVerticesToFile(bounds.get(i), boundFile, geodetic);
+			//System.out.println(bounds.get(i).get(0).getX() + " " + bounds.get(i).get(0).getY());
 		}
 	}
 
 
-	public void savePartitionToDirectory(BalancedPartitioning balancedPartitioning, BalancedPartitioningOfPlanarGraphs bp, String outputDirectory, List<HashSet<VertexOfDualGraph>> partitionResult) {
+	public void savePartitionToDirectory(BalancedPartitioning balancedPartitioning, BalancedPartitioningOfPlanarGraphs bp, String outputDirectory, List<HashSet<VertexOfDualGraph>> partitionResult, boolean geodetic) {
 		createOutputDirectory(outputDirectory);
 		File outputDirectoryFile = new File(outputDirectory);
 		if (!outputDirectoryFile.exists()) {
@@ -82,7 +92,7 @@ public class PartitionWriter {
 				throw new RuntimeException("Can't create output file");
 			}
 			try {
-				PartitionWriter.writePartitionToFile(part, balancedPartitioning.cutEdgesMap.get(part), outputFile);
+				PartitionWriter.writePartitionToFile(part, balancedPartitioning.cutEdgesMap.get(part), outputFile, geodetic);
 			} catch (Exception e) {
 				throw new RuntimeException("Can't write partition to file: " + e.getMessage());
 			}
@@ -167,7 +177,7 @@ public class PartitionWriter {
 		// System.out.println("Empty parts number: " + countEmptyParts(partitionResult));
 	}
 
-	public void printRedistributedVerticesDirections(Map<VertexOfDualGraph, VertexOfDualGraph> vertexToBestNeighbor, String outputDirectory) {
+	public void printRedistributedVerticesDirections(Map<VertexOfDualGraph, VertexOfDualGraph> vertexToBestNeighbor, String outputDirectory, boolean geodetic) {
 		createOutputDirectory(outputDirectory);
 		File edgesFile = new File(outputDirectory + File.separator + "edges.txt");
 		try {
@@ -176,9 +186,17 @@ public class PartitionWriter {
 			throw new RuntimeException("Can't create edges file");
 		}
 		try (FileWriter writer = new FileWriter(edgesFile, false)) {
+			CoordinateConversion cc = null;
+			if (geodetic) {
+				cc = new CoordinateConversion();
+			}
 			for (Map.Entry<VertexOfDualGraph, VertexOfDualGraph> edge: vertexToBestNeighbor.entrySet()) {
 				VertexOfDualGraph start = edge.getKey();
 				VertexOfDualGraph end = edge.getValue();
+				if (geodetic) {
+					start = cc.fromEuclidean(start, null);
+					end = cc.fromEuclidean(end, null);
+				}
 				writer.write(start.getX() + " " + start.getY() + " " + end.getX() + " " + end.getY() + "\n");
 			}
 		} catch (Exception e) {

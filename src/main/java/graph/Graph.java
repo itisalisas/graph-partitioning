@@ -66,13 +66,17 @@ public class Graph<T extends Vertex> {
 	public void addEdge(T begin, T end, double length, double bandwidth) {
 		addVertex(begin);
 		addVertex(end);
-		edges.get(begin).put(end, new Edge(length, bandwidth));
+		if (begin.getName() != end.getName()) {
+			edges.get(begin).put(end, new Edge(length, bandwidth));
+		}
 	}
 
 	public void addEdge(T begin, T end, double length) {
 		addVertex(begin);
 		addVertex(end);
-		edges.get(begin).put(end, new Edge(length));
+		if (begin.getName() != end.getName()) {
+			edges.get(begin).put(end, new Edge(length));
+		}
 
 	}
 

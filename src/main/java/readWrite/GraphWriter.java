@@ -65,9 +65,18 @@ public class GraphWriter {
 		out.close();
 	}
 	
-	public void printVerticesToFile(List<Vertex> vertices, File file) {
+	public void printVerticesToFile(List<Vertex> vertices, File file, boolean geodetic) {
+		CoordinateConversion cc = null;
+		if (geodetic) {
+			cc = new CoordinateConversion();
+		}
 		for (Vertex vertex : vertices) {
 			try {
+				if (geodetic) {
+					Vertex nVertex = cc.fromEuclidean(vertex, null);
+					nVertex.printVertexToFile(file);
+					continue;
+				}
 				vertex.printVertexToFile(file);
 			} catch (Exception e) {
 				throw new RuntimeException("Can't print vertex to file " + file.getName());
