@@ -32,7 +32,7 @@ public class EdgeOfGraph<T extends Vertex> extends Edge {
 	public boolean equals(Object obj) {
 		if (obj == this) return true;
 		if ((obj == null) || (obj.getClass() != this.getClass())) return false;
-		EdgeOfGraph v = (EdgeOfGraph) obj;
+		EdgeOfGraph<T> v = (EdgeOfGraph<T>) obj;
 		return v.begin.equals(this.begin) && v.end.equals(this.end);
 	}
 	

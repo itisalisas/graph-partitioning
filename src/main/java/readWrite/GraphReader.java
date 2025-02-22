@@ -7,7 +7,17 @@ import java.util.Scanner;
 import graph.*;
 
 public class GraphReader {
+
+	CoordinateConversion coordConver;
+
+	public GraphReader() {
+
+	}
 	
+	public GraphReader(CoordinateConversion coordConver) {
+		this.coordConver = coordConver;
+	}
+
 	public Vertex readVertex(Graph<Vertex> graph, Scanner sc, boolean geodetic) {
 		long name = sc.nextLong();
 		String xStr = sc.next().replace(',', '.');
@@ -16,8 +26,7 @@ public class GraphReader {
 		double y = Double.parseDouble(yStr);
 		Vertex ans = new Vertex(name, x, y);
 		if (geodetic) {
-			CoordinateConversion cc = new CoordinateConversion();
-			cc.toEuclidean(ans, null);
+			coordConver.toEuclidean(ans, null);
 		}
 		return graph.addVertex(ans);
 	}

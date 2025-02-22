@@ -13,7 +13,7 @@ public class Vertex extends Point {
 
 	static private final Random random = new Random(15);
 
-	private long name;
+	public long name;
 	protected double weight;
 	
 	public Vertex() {

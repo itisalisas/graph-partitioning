@@ -30,11 +30,11 @@ public class Balancer {
 
     public boolean rebalanceSmallestRegion() {
         PartitionGraphVertex smallestVertex = partitionGraph.smallestVertex().copy();
-        PartitionGraphVertex biggestNeighbor = findBiggestUnmergedNeighbor(partitionGraph.smallestVertex()).copy();
+        PartitionGraphVertex biggestNeighbor = findBiggestUnmergedNeighbor(partitionGraph.smallestVertex());
         if (biggestNeighbor == null) {
             return false;
         }
-        
+        biggestNeighbor = biggestNeighbor.copy();
         HashSet<VertexOfDualGraph> balancingVerticesSet = new HashSet<>();
         balancingVerticesSet.addAll(smallestVertex.vertices);
         balancingVerticesSet.addAll(biggestNeighbor.vertices);

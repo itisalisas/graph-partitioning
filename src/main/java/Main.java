@@ -15,10 +15,11 @@ import graph.PartitionGraphVertex;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
 import graphPreparation.GraphPreparation;
-
+import graphPreparation.SweepLine;
 import partitioning.BalancedPartitioning;
 import partitioning.Balancer;
 import partitioning.InertialFlowPartitioning;
+import readWrite.CoordinateConversion;
 import readWrite.GraphReader;
 import readWrite.GraphWriter;
 import readWrite.PartitionWriter;
@@ -58,7 +59,7 @@ public class Main {
 		Graph<Vertex> graph = new Graph<Vertex>();
 
 		try {
-			GraphReader gr = new GraphReader();
+			GraphReader gr = new GraphReader(new CoordinateConversion());
 			gr.readGraphFromFile(graph, resourcesDirectory + pathToFile, true);
 		} catch (Exception e) {
 			throw new RuntimeException("Can't read graph from file: " + e.getMessage());
@@ -76,7 +77,7 @@ public class Main {
 
 		GraphPreparation preparation = new GraphPreparation(false, false);
 
-		Graph<VertexOfDualGraph> preparedGraph = preparation.prepareGraph(graph, 0.001);
+		Graph<VertexOfDualGraph> preparedGraph = preparation.prepareGraph(graph, 0.0000000001, outputDirectory);
 
 		for (VertexOfDualGraph v : preparedGraph.verticesArray()) {
 			Assertions.assertNotNull(v.getVerticesOfFace());
@@ -129,9 +130,6 @@ public class Main {
 		pw.savePartitionToDirectory(partitioning, partitioning.bp ,outputDirectory + pathToResultDirectory, partitionResultForFaces, true);
 		pw.printBound(bounds, outputDirectory + pathToResultDirectory, true);
 		// partitioning.printHull(graphBoundEnd, outputDirectory + pathToResultDirectory, "end_bound.txt");
-
-
-		
 
 	}
 

@@ -123,8 +123,12 @@ public class MakingDualGraph {
 		return ans;
 	}
 
-	private void findFace(ArrayList<Vertex> verticesOfFace, HashSet<EdgeOfGraph> inActualFace,
-						  HashMap<Vertex, TreeSet<EdgeOfGraph>> sortedGraph, EdgeOfGraph firstEdge, HashMap<Vertex, Integer> vertexInFaceNumber) {
+	private void findFace(ArrayList<Vertex> verticesOfFace, 
+						  HashSet<EdgeOfGraph> inActualFace,
+						  HashMap<Vertex, TreeSet<EdgeOfGraph>> sortedGraph, 
+						  EdgeOfGraph firstEdge, 
+						  HashMap<Vertex, Integer> vertexInFaceNumber) {
+
 		double faceWeight = 0;
 		Vertex prev = new Vertex(firstEdge.begin);
 		Vertex begin = new Vertex(firstEdge.end);
@@ -139,13 +143,14 @@ public class MakingDualGraph {
 		EdgeOfGraph actualEdge = null;
 		//sortedGraph.get(prev).remove(firstEdge);
 		do {
+			//System.out.println(begin.getName() + " " + begin.x + " " + begin.y + " " + begin.getWeight()) ;
 			// System.out.println("begin = " + begin.getName() + ", prev = " + prev.getName());
 			if (sortedGraph.get(begin).isEmpty()) {
 				//System.out.println("end");
 				//System.out.println("empty vertex");
 				return;
 			}
-			EdgeOfGraph back = new EdgeOfGraph(begin, prev, begin.getLength(prev));
+			EdgeOfGraph<Vertex> back = new EdgeOfGraph<Vertex>(begin, prev, begin.getLength(prev));
 			actualEdge = sortedGraph.get(begin).higher(back);
 			/*
 			for (EdgeOfGraph u : sortedGraph.get(begin)) {

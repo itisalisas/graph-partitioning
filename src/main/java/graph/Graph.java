@@ -76,14 +76,17 @@ public class Graph<T extends Vertex> {
 	}
 
 	public void addEdge(T begin, T end, double length, double bandwidth) {
+		if (begin.equals(end)) return;
 		addVertex(begin);
 		addVertex(end);
 		edges.get(begin).put(end, new Edge(length, bandwidth));
+		edges.get(end).put(end, new Edge(length, bandwidth));
 	}
 
 	public void addEdge(T begin, T end, double length) {
-		addVertex(begin);
-		addVertex(end);
+		if (begin.equals(end)) return;
+		// addVertex(begin);
+		// addVertex(end);
 		edges.get(begin).put(end, new Edge(length));
 		edges.get(end).put(begin, new Edge(length));
 
@@ -130,6 +133,29 @@ public class Graph<T extends Vertex> {
 		return ans;
 	}
 
+
+	public ArrayList<EdgeOfGraph<T>> undirEdgesArray() {
+		HashSet<EdgeOfGraph<T>> back = new HashSet<EdgeOfGraph<T>>();
+		int iter = 0;
+		ArrayList<EdgeOfGraph<T>> ans = new ArrayList<EdgeOfGraph<T>>();
+		for (T begin : edges.keySet()) {
+			for (T end : edges.get(begin).keySet()) {
+				EdgeOfGraph<T> tmp = new EdgeOfGraph<T>((T)begin, 
+														(T)end, 
+														edges.get(begin).get(end).getLength(),
+														edges.get(begin).get(end).flow, 
+														edges.get(begin).get(end).getBandwidth());
+				if (back.contains(tmp)) continue;
+				back.add(new EdgeOfGraph<T>((T)begin, 
+											(T)end, 
+											edges.get(begin).get(end).getLength(),
+											edges.get(begin).get(end).flow, 
+											edges.get(begin).get(end).getBandwidth()));
+				ans.add(tmp);
+			}
+		}
+		return ans;
+	}
 	public int edgesNumberInComponentUndirGraph(HashSet<T> vertexInComponent) {
 		int edgesNumber = 0;
 		for (T begin : vertexInComponent) {
@@ -446,5 +472,7 @@ public class Graph<T extends Vertex> {
 	public List<T> sortNeighbors(T vertex) {
 		return edges.get(vertex).keySet().stream().sorted(Comparator.comparingDouble(v -> -v.weight)).toList();
 	}
+
+  
 
 }
