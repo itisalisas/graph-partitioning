@@ -13,8 +13,8 @@ file_name_2 = sys.argv[2]
 output_file = sys.argv[3]
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
-file_path_1 = os.path.join(script_dir, '..', 'main', 'resources', file_name_1)
-file_path_2 = os.path.join(script_dir, '..', 'main', 'resources', file_name_2)
+file_path_1 = os.path.join(script_dir, '..', 'main', 'output', file_name_1)
+file_path_2 = os.path.join(script_dir, '..', 'main', 'output', file_name_2)
 
 
 #graph
@@ -99,5 +99,12 @@ for node, data in vertices.nodes(data=True):
         fill_color="red",
         tooltip=f"Index: {node}"
     ).add_to(map_osm)
+    
+
+
+#4179710958 42.856717745441614 2.076792112767825 35.0
+#1589052148 32.28397456620416 -41.861755696329034 23.0
+#1589052150 27.387946870432913 -40.681749091539324 15.0
+#4179710957 37.49785371845775 1.5981101882654032 31.0
 
 map_osm.save(output_file)

@@ -129,13 +129,24 @@ public class MakingDualGraph {
 						  EdgeOfGraph firstEdge, 
 						  HashMap<Vertex, Integer> vertexInFaceNumber) {
 
+							
+		// ArrayList<Vertex> cicle = new ArrayList<>();
+		// cicle.add(new Vertex(4179710958l, 42.856717745441614, 2.076792112767825, 35.0));
+		// cicle.add(new Vertex(1589052148l, 32.28397456620416, -41.861755696329034, 23.0));
+		// cicle.add(new Vertex(1589052150l, 27.387946870432913, -40.681749091539324, 15.0));
+		// cicle.add(new Vertex(4179710957l, 37.49785371845775, 1.5981101882654032, 31.0));
+
 		double faceWeight = 0;
 		Vertex prev = new Vertex(firstEdge.begin);
 		Vertex begin = new Vertex(firstEdge.end);
-
+		System.out.println("firstEdge.begin: " + firstEdge.begin.name + " firstEdge.end: " + firstEdge.end.name);
+		// if (prev.equals(cicle.get(0)) || prev.equals(cicle.get(1)) || prev.equals(cicle.get(2)) || prev.equals(cicle.get(3))) {
+		// 	System.out.println();
+		// }
 		//verticesOfFace.add(prev);
 		vertexInFaceNumber.put(prev, vertexInFaceNumber.get(prev) + 1);
 		//verticesOfFace.add(begin);
+		//System.out.println(begin.name);
 		vertexInFaceNumber.put(begin, vertexInFaceNumber.get(begin) + 1);
 		faceWeight += prev.getWeight();
 		faceWeight += begin.getWeight();
@@ -144,7 +155,7 @@ public class MakingDualGraph {
 		//sortedGraph.get(prev).remove(firstEdge);
 		do {
 			//System.out.println(begin.getName() + " " + begin.x + " " + begin.y + " " + begin.getWeight()) ;
-			// System.out.println("begin = " + begin.getName() + ", prev = " + prev.getName());
+			//System.out.println("begin = " + begin.getName() + ", prev = " + prev.getName());
 			if (sortedGraph.get(begin).isEmpty()) {
 				//System.out.println("end");
 				//System.out.println("empty vertex");

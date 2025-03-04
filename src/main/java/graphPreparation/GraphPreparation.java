@@ -41,7 +41,7 @@ public class GraphPreparation {
 		gph.correctVerticesWeight();
 		System.out.println("Number of 0 weight vertex, before sweepLine: " + gph.countZeroWeightVertices());
 		System.out.println("Start graph weight: " + gph.verticesSumWeight());
-		/** 
+		
 		// draw swepline
 		GraphWriter gw = new GraphWriter();
 		Path dirPath = Paths.get("./SweepLine");
@@ -51,7 +51,7 @@ public class GraphPreparation {
             e.printStackTrace(); 
         }
 		gw.printGraphToFile(gph, outputDirectory + "//SweepLine", "beforeSweepLine.txt", true);
-		*/
+		
 		Graph<Vertex> graph = null;
 		if (!isPlanar) {
 			SweepLine sl = new SweepLine(inaccuracy);
@@ -59,18 +59,18 @@ public class GraphPreparation {
 		} else {
 			graph = gph;
 		}
-		/** 
+		
 		// draw swepline
 		gw.printGraphToFile(graph, outputDirectory + "//SweepLine", "afterSweepLine.txt", true);
-		*/
-		// ArrayList<Vertex> zeroWeight = new ArrayList<Vertex>();
-		// for (Vertex v : graph.getEdges().keySet()) {
-		// 	if (v.getWeight() == 0) {
-		// 		zeroWeight.add(v);
-		// 		System.out.println(v.name);	 
-		// 	}
-		// }
-		/** 
+	
+		ArrayList<Vertex> zeroWeight = new ArrayList<Vertex>();
+		for (Vertex v : graph.getEdges().keySet()) {
+			if (v.getWeight() == 0) {
+				zeroWeight.add(v);
+				//System.out.println(v.name);	 
+			}
+		}
+		
 		// draw swepline
 		File file = new File(outputDirectory + "SweepLine\\0vertex.txt");
 		file.delete();
@@ -79,9 +79,26 @@ public class GraphPreparation {
 		out.write(zeroWeight.size() + "\n");
 		out.close();
 		gw.printVerticesToFile(zeroWeight, file, true);
-		*/
+		
 		System.out.println("Number of 0 weight vertex, after sweepLine: " + gph.countZeroWeightVertices());
 		System.out.println("After sweepline graph weight: " + gph.verticesSumWeight());
+
+		
+		ArrayList<Vertex> cicle = new ArrayList<>();
+		cicle.add(new Vertex(22, 250.919893, -402.661115, 0));
+		cicle.add(new Vertex(1570463146l, 435.882832, -448.207049, 21.0));
+		// cicle.add(new Vertex(1589052150l, 27.387946870432913, -40.681749091539324, 15.0));
+		// cicle.add(new Vertex(4179710957l, 37.49785371845775, 1.5981101882654032, 31.0));
+		GraphWriter gw2 = new GraphWriter();
+		File file2 = new File(outputDirectory + "MakingDual\\cicleVertex.txt");
+		file2.delete();
+		file2 = new File(outputDirectory + "MakingDual\\cicleVertex.txt");
+		FileWriter out2 = new FileWriter(file2, true);
+		out2.write(cicle.size() + "\n");
+		out2.close();
+		gw2.printVerticesToFile(cicle, file2, true);
+		
+
 
 		MakingDualGraph dg = new MakingDualGraph();
 		Graph<VertexOfDualGraph> dualGraph = dg.buildDualGraph(graph);

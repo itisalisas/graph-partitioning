@@ -77,7 +77,7 @@ public class Main {
 
 		GraphPreparation preparation = new GraphPreparation(false, false);
 
-		Graph<VertexOfDualGraph> preparedGraph = preparation.prepareGraph(graph, 0.0000000001, outputDirectory);
+		Graph<VertexOfDualGraph> preparedGraph = preparation.prepareGraph(graph, 1, outputDirectory);
 
 		for (VertexOfDualGraph v : preparedGraph.verticesArray()) {
 			Assertions.assertNotNull(v.getVerticesOfFace());

@@ -81,6 +81,7 @@ public class SweepLine {
 		//drawGraph(im, minPoint, gph, "before");
 		ArrayList<EdgeOfGraph<Vertex>> edgesList = gph.undirEdgesArray();
 		ArrayList<ArrayList<Vertex>> intersectionPoints = findPointsOfIntersection(edgesList);
+		HashMap<Vertex, Vertex> copyPointsGraphPoints = checkCopyPoints(gph, intersectionPoints);
 		// for (int i = 0; i < intersectionPoints.size(); i++) {
 		// 	if (intersectionPoints.get(i).size() == 0) {
 		// 		continue;
@@ -94,7 +95,7 @@ public class SweepLine {
 		// 	System.out.println("end: " + "name:" + edgesList.get(i).end.getName() +" x:" + edgesList.get(i).end.x + " y:" + edgesList.get(i).end.y + " ");
 		// 	System.out.println();
 		// }
-		addIntersectionPoints(gph, edgesList, intersectionPoints);
+		addIntersectionPoints(gph, edgesList, intersectionPoints, copyPointsGraphPoints);
 		// for (Vertex v : gph.getEdges().keySet()) {
 		// 	if (v.getWeight() == 0) {
 		// 		System.out.println("0 weight vertex: " + v.x + " " + v.y);
@@ -148,7 +149,63 @@ public class SweepLine {
 				}
 			}
 		}
-
+		HashSet<Vertex> toDelete = new HashSet<>();
+		for (Vertex v1 : graph.getEdges().keySet()) {
+			if (v1.getWeight() != 0) continue;
+			for (Vertex v2 : graph.getEdges().keySet()) {
+				if (v2.getWeight() != 0) continue;
+				if (v2.equals(v1)) continue;
+				if (toDelete.contains(v1) || toDelete.contains(v2)) continue;
+				if (v1.getLength(v2) <= inaccuracy) {
+					HashMap<Vertex, Edge> tmp = graph.getEdges().get(v2);
+					for (Vertex v : tmp.keySet()) {
+						graph.addEdge(v1, v, tmp.get(v).getLength());
+					}
+					toDelete.add(v2);
+				}
+			}
+		}
+		for (Vertex v : toDelete) {
+			graph.deleteVertex(v);
+		}
+		/**
+		Vertex tmpVertex1 = null;
+		Vertex tmpVertex2 = null;
+		for (Vertex v1 : graph.getEdges().keySet()) {
+			if (v1.getWeight() != 0) continue;
+			for (Vertex v2 : graph.getEdges().keySet()) {
+				if (v2.getWeight() != 0) continue;
+				if (v2.equals(v1)) continue;
+				if (v1.name == 31 && v2.name == 33) {
+					graph.addEdge(v2, v1, v2.getLength(v1));
+					for (Vertex v :graph.getEdges().get(v2).keySet()) {
+						if (v.name == 808071516) {
+							tmpVertex1 = v;
+							tmpVertex2 = v2;
+						}
+					}
+					break;
+				}
+			}
+		}
+		graph.deleteEdge(tmpVertex1, tmpVertex2);
+		*/
+		// Vertex tmp = null;
+		// for (Vertex ver : graph.getEdges().keySet()) {
+		// 	if (ver.name == 2423332599L) {
+		// 		for (Vertex vr : graph.getEdges().keySet()) {
+		// 			if (vr.name == 20) {
+		// 				for (Vertex v : graph.getEdges().get(vr).keySet()) {
+		// 					graph.addEdge(ver, v, ver.getLength(v));
+		// 				}
+		// 				tmp = vr;
+		// 				break;
+		// 			}
+		// 		}
+		// 	}
+			
+		// }
+		//graph.deleteVertex(tmp);
 		// for (Vertex v : graph.getEdges().keySet()) {
 		// 	if (v.name == 0) {
 		// 		System.out.println(v.name);	 
@@ -156,6 +213,29 @@ public class SweepLine {
 		// }
 		System.out.println("small edges num after sweepline: " + smallEdgesNum);
 		return graph;
+	}
+
+	private HashMap<Vertex, Vertex> checkCopyPoints(Graph<Vertex> gph, ArrayList<ArrayList<Vertex>> intersectionPoints) {
+		HashMap<Vertex, Vertex> ans = new HashMap<Vertex, Vertex>();
+		for (ArrayList<Vertex> currArrayList : intersectionPoints) {
+			for (Vertex curVertex : currArrayList) {
+				for (Vertex verOfGraph : gph.getEdges().keySet()) {
+					if (curVertex.getLength(verOfGraph) <= inaccuracy) {
+						ans.put(curVertex, verOfGraph);
+					}
+				}
+			}
+		}
+		// for (int i = 0; i < intersectionPoints.size(); i++) {
+		// 	for (int j = 0; j < intersectionPoints.get(i).size(); j ++) {
+		// 		for (Vertex verOfGraph : gph.getEdges().keySet()) {
+		// 			if (intersectionPoints.get(i).get(j).getLength(verOfGraph) <= 1) {
+		// 				intersectionPoints.get(i).get(j) = verOfGraph;
+		// 			}
+		// 		}
+		// 	}
+		// }
+		return ans;
 	}
 	
 		
@@ -248,7 +328,8 @@ public class SweepLine {
 
 	private void addIntersectionPoints(Graph<Vertex> gph,
 									   ArrayList<EdgeOfGraph<Vertex>> edgesList,
-									   ArrayList<ArrayList<Vertex>> intersectionPoints) {
+									   ArrayList<ArrayList<Vertex>> intersectionPoints, 
+									   HashMap<Vertex, Vertex> copyPoints) {
 		for (int i = 0; i < edgesList.size(); i++) {
 			//List of intersection points in edge i
 			ArrayList<Vertex> currList = intersectionPoints.get(i);
@@ -277,12 +358,20 @@ public class SweepLine {
 			}
 			//Assert что первая точка begin
 	
-			currList.add(currList.size() - 1, currEdge.end);
+			currList.add(currList.size(), currEdge.end);
 			Vertex prevVert = currEdge.begin;
 			for (Vertex currVertex: currList) {
-				if (prevVert.getLength(currVertex) <= inaccuracy && (currVertex != currEdge.end)) {
+				if ((prevVert.getLength(currVertex) <= inaccuracy || currEdge.end.getLength(currVertex) <= inaccuracy) && 
+					(currVertex != currEdge.end)) {
         			continue;
        		 	}
+				if (copyPoints.containsKey(currVertex)) {
+					gph.addVertex(prevVert);
+        			gph.addEdge(prevVert, copyPoints.get(currVertex), prevVert.getLength(currVertex));
+        			prevVert = copyPoints.get(currVertex);
+					//System.out.println(copyPoints.get(currVertex).name);
+					continue;
+				}
 				gph.addVertex(prevVert);
 				gph.addVertex(currVertex);
         		gph.addEdge(prevVert, currVertex, prevVert.getLength(currVertex));
