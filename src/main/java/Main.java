@@ -1,5 +1,4 @@
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,10 +12,7 @@ import graph.Graph;
 import graph.PartitionGraphVertex;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
-
 import graphPreparation.GraphPreparation;
-import graphPreparation.SweepLine;
-
 import partitioning.BalancedPartitioning;
 import partitioning.Balancer;
 import partitioning.InertialFlowPartitioning;
@@ -96,7 +92,7 @@ public class Main {
 		System.out.println("time4 - time3 = " + (double) (time4 - time3) / 1000);
 
 		GraphWriter gw = new GraphWriter();
-		gw.printGraphToFile(preparedGraph, outputDirectory, "for_kahip.graph");
+		// gw.printGraphToFile(preparedGraph, outputDirectory, "for_kahip.graph", true);
 		String pathToResultDirectory = args[3];
 
 		ArrayList<HashSet<VertexOfDualGraph>> partitionResultForFaces = partitioning.partition(preparedGraph, maxSumVerticesWeight);
