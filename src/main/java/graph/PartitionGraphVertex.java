@@ -14,7 +14,7 @@ public class PartitionGraphVertex extends Vertex {
 
     public PartitionGraphVertex(long partitionId, ArrayList<VertexOfDualGraph> vertices) {
         super(partitionId);
-        this.vertices = new ArrayList<>(vertices);
+        this.vertices = vertices;
         this.weight = calculateTotalWeight(vertices);
         calculateCenter();
     }
@@ -86,7 +86,7 @@ public class PartitionGraphVertex extends Vertex {
     
     @Override
     public PartitionGraphVertex copy() {
-    	return new PartitionGraphVertex(this.getName(), this.vertices);
+    	return new PartitionGraphVertex(this.getName(), new ArrayList<>(this.vertices));
     }
 
 }

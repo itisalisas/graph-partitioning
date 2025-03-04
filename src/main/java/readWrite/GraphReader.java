@@ -4,7 +4,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Scanner;
 
-import graph.*;
+import graph.Edge;
+import graph.Graph;
+import graph.Point;
+import graph.Vertex;
 
 public class GraphReader {
 

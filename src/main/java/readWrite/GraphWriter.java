@@ -21,6 +21,33 @@ public class GraphWriter {
 			cc = new CoordinateConversion();
 		}
 		for (Vertex begin : graph.getEdges().keySet()) {
+      for (Vertex end : graph.getEdges().get(begin).keySet()) {
+				if (geodetic) {
+					Vertex nEnd = cc.fromEuclidean(end, null);
+					out.write(String.format("%d %f %f %f ", end.getName(), nEnd.getX(), nEnd.getY(),
+							graph.getEdges().get(begin).get(end).getLength()));
+							continue;
+				}
+				out.write(String.format("%d %f %f %f ", end.getName(), end.getX(), end.getY(),
+						graph.getEdges().get(begin).get(end).getLength()));
+			}
+			out.append('\n');
+		}
+		out.close();
+	}
+
+		public <T extends Vertex> void printDualGraphWithWeightsToFile(Graph<VertexOfDualGraph> graph, 
+														HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber,
+														int partsNumber,
+														String outputDirectory, 
+														String outFileName,
+														boolean geodetic) throws IOException {
+		PartitionWriter.createOutputDirectory(outputDirectory);
+		FileWriter out = new FileWriter(outputDirectory + File.separator + outFileName, false);
+		out.write(String.format("%d\n", graph.getEdges().size()));
+		CoordinateConversion cc = null;
+		for (Vertex begin : graph.getEdges().keySet()) {
+			out.write(String.format("%d %f %f %d %d ", begin.getName(), begin.getX(), begin.getY(), begin.getWeight(), graph.getEdges().get(begin).size()));
 			if (geodetic) {
 				Vertex nBegin = cc.fromEuclidean(begin, null);
 				out.write(String.format("%d %f %f %d ", begin.getName(), nBegin.getX(), nBegin.getY(),
