@@ -32,7 +32,7 @@ public class EdgeOfGraph<T extends Vertex> extends Edge {
 	public boolean equals(Object obj) {
 		if (obj == this) return true;
 		if ((obj == null) || (obj.getClass() != this.getClass())) return false;
-		EdgeOfGraph v = (EdgeOfGraph) obj;
+		EdgeOfGraph<T> v = (EdgeOfGraph<T>) obj;
 		return v.begin.equals(this.begin) && v.end.equals(this.end);
 	}
 	
@@ -43,7 +43,7 @@ public class EdgeOfGraph<T extends Vertex> extends Edge {
 	}
 	
 	
-	public boolean intersect(EdgeOfGraph edge) {
+	public boolean intersect(EdgeOfGraph<T> edge) {
 		return intersectForOneCoordinate(this.begin.x, this.end.x, edge.begin.x, edge.end.x) 
 				&& intersectForOneCoordinate(this.begin.y, this.end.y, edge.begin.y, edge.end.y)
 				&& this.area(edge.begin) * this.area(edge.end) <= 0
@@ -69,11 +69,11 @@ public class EdgeOfGraph<T extends Vertex> extends Edge {
 			begin2x = end2x;
 			end2x = tmp;
 		}
-		return Math.max(begin1x, begin2x) <= Math.min(end1x, end2x);
+		return Math.max(begin1x, begin2x) < Math.min(end1x, end2x);
 	}
 	
 	
-	public Vertex intersectionPoint(EdgeOfGraph edge) {
+	public Vertex intersectionPoint(EdgeOfGraph<T> edge) {
 		if (!intersect(edge)) return null;
 		
 		if (this.begin.x == this.end.x && edge.begin.x == edge.end.x) {
@@ -146,7 +146,10 @@ public class EdgeOfGraph<T extends Vertex> extends Edge {
 		return this.begin.x == this.end.x;
 	}
 	
-	
+	/**
+	 * @param vert
+	 * @return	(vert.y between begin.y and end.y)
+	 */
 	public boolean includeForY(Vertex vert) {
 		return (vert.y - this.begin.y) * (vert.y - this.end.y) < 0;
 	}
@@ -156,7 +159,10 @@ public class EdgeOfGraph<T extends Vertex> extends Edge {
 		return this.begin.y == this.end.y;
 	}
 	
-	
+	/**
+	 * @param vert
+	 * @return	(vert.x between begin.x and end.x)
+	 */
 	public boolean includeForX(Vertex vert) {
 		return (vert.x - this.begin.x) * (vert.x - this.end.x) < 0;
 	}

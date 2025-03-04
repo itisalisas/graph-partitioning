@@ -24,23 +24,35 @@ public class Graph<T extends Vertex> {
 	@Override
 	public Graph<T> clone() {
 		Graph<T> result = new Graph<T>();
+		HashMap<T, T> oldNewVertices = new HashMap<T, T>();
+		//copy vertices
 		for (T begin : this.edges.keySet()) {
-			T copyedVertex;
-			if (begin instanceof VertexOfDualGraph vertexOfDualGraph) {
-				copyedVertex = (T) new VertexOfDualGraph(vertexOfDualGraph);
-			} else {
-				copyedVertex = (T) new Vertex(begin.clone());
-			}
-			result.edges.put(copyedVertex, new HashMap<T, Edge>());
+			T newVertex = (T) begin.copy();
+			result.edges.put(newVertex , new HashMap<T, Edge>());
+			oldNewVertices.put(begin, newVertex);
+		}
+		//copy edges
+		for (T begin : this.edges.keySet()) {
 			for (T end : this.edges.get(begin).keySet()) {
 				Edge originalEdge = this.edges.get(begin).get(end);
-				if (end instanceof VertexOfDualGraph vertexOfDualGraph) {
-					result.edges.get(begin).put((T) new VertexOfDualGraph(vertexOfDualGraph), originalEdge.clone());
-				} else {
-					result.edges.get(begin).put((T) new Vertex(end.clone()), originalEdge.clone());
-				}
+				result.edges.get(oldNewVertices.get(begin)).put(oldNewVertices.get(end), originalEdge.clone());
 			}
 		}
+		// for (T begin : this.edges.keySet()) {
+		// 	if (begin instanceof VertexOfDualGraph) {
+		// 		result.edges.put((T) new VertexOfDualGraph(begin.clone()), new HashMap<T, Edge>());
+		// 	} else {
+		// 		result.edges.put((T) new Vertex(begin.clone()), new HashMap<T, Edge>());
+		// 	}
+		// 	for (T end : this.edges.get(begin).keySet()) {
+		// 		Edge originalEdge = this.edges.get(begin).get(end);
+		// 		if (begin instanceof VertexOfDualGraph) {
+		// 			result.edges.get(begin).put((T) new VertexOfDualGraph(end.clone()), originalEdge.clone());
+		// 		} else {
+		// 			result.edges.get(begin).put((T) new Vertex(end.clone()), originalEdge.clone());
+		// 		}
+		// 	}
+		// }
 		return result;
 	}
 
@@ -64,25 +76,27 @@ public class Graph<T extends Vertex> {
 	}
 
 	public void addEdge(T begin, T end, double length, double bandwidth) {
+		if (begin.equals(end)) return;
 		addVertex(begin);
 		addVertex(end);
-		if (begin.getName() != end.getName()) {
-			edges.get(begin).put(end, new Edge(length, bandwidth));
-		}
+		edges.get(begin).put(end, new Edge(length, bandwidth));
+		edges.get(end).put(end, new Edge(length, bandwidth));
 	}
 
 	public void addEdge(T begin, T end, double length) {
-		addVertex(begin);
-		addVertex(end);
-		if (begin.getName() != end.getName()) {
-			edges.get(begin).put(end, new Edge(length));
-		}
-
+		if (begin.equals(end)) return;
+		// addVertex(begin);
+		// addVertex(end);
+		edges.get(begin).put(end, new Edge(length));
+		edges.get(end).put(begin, new Edge(length));
 	}
 
 	public void deleteEdge(T begin, T end) {
 		if (edges.get(begin) != null) {
 			edges.get(begin).remove(end);
+		}
+		if (edges.get(end) != null) {
+			edges.get(end).remove(begin);
 		}
 	}
 
@@ -111,13 +125,36 @@ public class Graph<T extends Vertex> {
 		EdgeOfGraph<T>[] ans = new EdgeOfGraph[edgesNumber()];
 		for (T begin : edges.keySet()) {
 			for (T end : edges.get(begin).keySet()) {
-				ans[iter++] = new EdgeOfGraph((T)begin, (T)end, edges.get(begin).get(end).getLength(),
+				ans[iter++] = new EdgeOfGraph<T>((T)begin, (T)end, edges.get(begin).get(end).getLength(),
 						edges.get(begin).get(end).flow, edges.get(begin).get(end).getBandwidth());
 			}
 		}
 		return ans;
 	}
 
+
+	public ArrayList<EdgeOfGraph<T>> undirEdgesArray() {
+		HashSet<EdgeOfGraph<T>> back = new HashSet<EdgeOfGraph<T>>();
+		int iter = 0;
+		ArrayList<EdgeOfGraph<T>> ans = new ArrayList<EdgeOfGraph<T>>();
+		for (T begin : edges.keySet()) {
+			for (T end : edges.get(begin).keySet()) {
+				EdgeOfGraph<T> tmp = new EdgeOfGraph<T>((T)begin, 
+														(T)end, 
+														edges.get(begin).get(end).getLength(),
+														edges.get(begin).get(end).flow, 
+														edges.get(begin).get(end).getBandwidth());
+				if (back.contains(tmp)) continue;
+				back.add(new EdgeOfGraph<T>((T)begin, 
+											(T)end, 
+											edges.get(begin).get(end).getLength(),
+											edges.get(begin).get(end).flow, 
+											edges.get(begin).get(end).getBandwidth()));
+				ans.add(tmp);
+			}
+		}
+		return ans;
+	}
 	public int edgesNumberInComponentUndirGraph(HashSet<T> vertexInComponent) {
 		int edgesNumber = 0;
 		for (T begin : vertexInComponent) {

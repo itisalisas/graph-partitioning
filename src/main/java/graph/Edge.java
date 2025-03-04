@@ -1,7 +1,7 @@
 package graph;
 
 public class Edge {
-	private double length;
+	public double length;
 	private double bandwidth;
 	public double flow;
 	private boolean road;
