@@ -94,11 +94,19 @@ for u, v, data in edges_data:
 
             # Заменяем ребро на часть внутри границы
             if boundary_box.contains(u_point):
+                # Расстояние между u_point и intersection_point
+                u_lat, u_lon = u_point.y, u_point.x
+                i_lat, i_lon = intersection_point.y, intersection_point.x
+                distance = geodesic((u_lat, u_lon), (i_lat, i_lon)).meters
                 nodes_to_remove.add(v)
-                edges_to_add.append((u, new_node_id, {"length": u_point.distance(intersection_point)}))
+                edges_to_add.append((u, new_node_id, {"length": distance}))
             elif boundary_box.contains(v_point):
+                # Расстояние между v_point и intersection_point
+                v_lat, v_lon = v_point.y, v_point.x
+                i_lat, i_lon = intersection_point.y, intersection_point.x
+                distance = geodesic((v_lat, v_lon), (i_lat, i_lon)).meters
                 nodes_to_remove.add(u)
-                edges_to_add.append((new_node_id, v, {"length": v_point.distance(intersection_point)}))
+                edges_to_add.append((new_node_id, v, {"length": distance}))
 
 for node_id, x_coord, y_coord in nodes_to_add:
     if node_id not in G.nodes:

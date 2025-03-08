@@ -108,14 +108,14 @@ public class BoundSearcher {
         Graph<Vertex> partSubgraph = graph.createSubgraphFromFaces(verticesByFaces).makeUndirectedGraph();
         Assertions.assertTrue(partSubgraph.isConnected());
 
-        HashMap<Vertex, TreeSet<EdgeOfGraph>> arrangedEdges = partSubgraph.arrangeByAngle();
+        HashMap<Vertex, TreeSet<EdgeOfGraph<Vertex>>> arrangedEdges = partSubgraph.arrangeByAngle();
 
         Vertex start = findLeftmostVertex(allVertices);
         //  System.out.println("start vertex = " + start.getName());
         bound.add(start);
 
         // start is the highest among the leftmost ones, all incident edges must lie in [0;pi/2) U [3pi/2; 2pi)
-        EdgeOfGraph startEdge = findMaxEdgeLessThanPiOver2(arrangedEdges.get(start));
+        EdgeOfGraph<Vertex> startEdge = findMaxEdgeLessThanPiOver2(arrangedEdges.get(start));
 
         Assertions.assertTrue((0 <= startEdge.getCorner() && startEdge.getCorner() < Math.PI / 2.0) ||
                 (3.0 * Math.PI) / 2.0 <= startEdge.getCorner() && startEdge.getCorner() < 2 * Math.PI);
@@ -150,11 +150,11 @@ public class BoundSearcher {
     }
 
 
-    private static EdgeOfGraph findNextEdge(EdgeOfGraph prevEdge, TreeSet<EdgeOfGraph> orderedEdges) {
+    private static EdgeOfGraph<Vertex> findNextEdge(EdgeOfGraph<Vertex> prevEdge, TreeSet<EdgeOfGraph<Vertex>> orderedEdges) {
         if (orderedEdges.isEmpty()) {
             return null;
         }
-        EdgeOfGraph result = orderedEdges.lower(prevEdge);
+        EdgeOfGraph<Vertex> result = orderedEdges.lower(prevEdge);
         return result == null ? orderedEdges.last() : result;
     }
 
@@ -192,11 +192,11 @@ public class BoundSearcher {
         return leftmost;
     }
 
-    private static EdgeOfGraph findMaxEdgeLessThanPiOver2(TreeSet<EdgeOfGraph> sortedEdges) {
-        EdgeOfGraph bestEdge = null;
+    private static EdgeOfGraph<Vertex> findMaxEdgeLessThanPiOver2(TreeSet<EdgeOfGraph<Vertex>> sortedEdges) {
+        EdgeOfGraph<Vertex> bestEdge = null;
         double bestAngle = -1;
 
-        for (EdgeOfGraph edge : sortedEdges) {
+        for (EdgeOfGraph<Vertex> edge : sortedEdges) {
             double angle = edge.getCorner();
 
             if (angle < Math.PI / 2 && angle > bestAngle) {

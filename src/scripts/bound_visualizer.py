@@ -18,61 +18,70 @@ def generate_colors(n):
     cmap = plt.get_cmap('RdYlGn')
     return [mcolors.rgb2hex(cmap(i / (n))) for i in range(n)]
 
-if len(sys.argv) != 3:
-    print("Usage: python bound_visualizer.py <directory_path> <output_file.html>")
-    sys.exit(1)
+def visualize_bounds(directory_name, map_osm):
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    directory_path = os.path.join(script_dir, '..', 'main', 'output', directory_name)
+    file_paths = [os.path.join(directory_path, f) for f in os.listdir(directory_path)
+                  if f.startswith("bound_") and f.endswith(".txt")]
 
-directory_name = sys.argv[1]
-output_file = sys.argv[2]
+    file_paths = natsorted(file_paths)
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
-directory_path = os.path.join(script_dir, '..', 'main', 'output', directory_name)
+    colors = generate_colors(len(file_paths))
 
-if not os.path.exists(directory_path):
-    print(f"Directory {directory_path} does not exist.")
-    sys.exit(1)
+    all_points = []
 
-file_paths = [os.path.join(directory_path, f) for f in os.listdir(directory_path)
-              if f.startswith("bound_") and f.endswith(".txt")]
+    # Считываем все точки, чтобы установить диапазон карты
+    for file_path in file_paths:
+        vertices = load_vertex_data(file_path)
+        for _, row in vertices.iterrows():
+            all_points.append((row["latitude"], row["longitude"]))
 
-file_paths = natsorted(file_paths)
+    end_color = 'blue'
 
-colors = generate_colors(len(file_paths))
+    # Наложение границ на карту
+    for i, file_path in enumerate(file_paths):
+        vertices = load_vertex_data(file_path)
+        points = []
+        color = colors[i % len(colors)]
 
-all_points = []
+        for _, row in vertices.iterrows():
+            points.append((row["latitude"], row["longitude"]))
 
-for file_path in file_paths:
-    vertices = load_vertex_data(file_path)
-    for _, row in vertices.iterrows():
-        all_points.append((row["latitude"], row["longitude"]))
+        folium.Polygon(
+            locations=points,
+            color=color,
+            fill=True,
+            fill_color=color,
+            fill_opacity=0.5,
+            tooltip=f"Part {i}"
+        ).add_to(map_osm)
 
-m = folium.Map()
+    min_lat = min(p[0] for p in all_points)
+    max_lat = max(p[0] for p in all_points)
+    min_lon = min(p[1] for p in all_points)
+    max_lon = max(p[1] for p in all_points)
 
-end_color = 'blue'
+    map_osm.fit_bounds([[min_lat, min_lon], [max_lat, max_lon]])
 
-for i, file_path in enumerate(file_paths):
-    vertices = load_vertex_data(file_path)
-    points = []
-    color = colors[i % len(colors)]
+def main(bounds_directory, output_file):
+    # Сначала визуализируем граф
+    map_osm = folium.Map(location=(0, 0), zoom_start=15)
 
-    for _, row in vertices.iterrows():
-        points.append((row["latitude"], row["longitude"]))
+    # Накладываем границы
+    visualize_bounds(bounds_directory, map_osm)
 
-    folium.Polygon(
-        locations=points,
-        color=color,
-        fill=True,
-        fill_color=color,
-        fill_opacity=0.5,
-        tooltip=f"Part {i}"
-    ).add_to(m)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    directory_path = os.path.join(script_dir, '..', 'main', 'output', bounds_directory)
+    # Сохраняем финальную карту
+    map_osm.save(os.path.join(directory_path, output_file))
+    print(f"Map with boundaries saved to {output_file}")
 
-min_lat = min(p[0] for p in all_points)
-max_lat = max(p[0] for p in all_points)
-min_lon = min(p[1] for p in all_points)
-max_lon = max(p[1] for p in all_points)
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("Usage: python bound_visualizer.py <directory_path> <output_file.html>")
+        sys.exit(1)
 
-m.fit_bounds([[min_lat, min_lon], [max_lat, max_lon]])
+    directory_name = sys.argv[1]
+    output_file = sys.argv[2]
 
-m.save(os.path.join(directory_path, output_file))
-print(f"Map saved to {output_file}")
+    main(directory_name, output_file)

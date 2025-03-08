@@ -55,9 +55,9 @@ public class VertexOfDualGraph extends Vertex{
 		this.verticesOfFace = new ArrayList<Vertex>();
 	}
 	
-	public <T extends Vertex> VertexOfDualGraph(T v) {
+	public VertexOfDualGraph(VertexOfDualGraph v) {
 		super(v.getName(), v.x, v.y, v.getWeight());
-		this.verticesOfFace = new ArrayList<Vertex>();
+		this.verticesOfFace = v.getVerticesOfFace();
 	}
 
 
