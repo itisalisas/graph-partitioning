@@ -1,8 +1,11 @@
 package graph;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class PartitionGraphVertex extends Vertex {
     public ArrayList<VertexOfDualGraph> vertices;
@@ -82,6 +85,17 @@ public class PartitionGraphVertex extends Vertex {
         }
 
         return partitionGraph;
+    }
+
+    public static List<PartitionGraphVertex> bestVertex(Graph<PartitionGraphVertex> graph, double maxWeight) {
+        return graph.verticesArray().stream()
+                .sorted(Comparator.comparingDouble(
+                    v -> -graph.sortNeighbors(v).stream()
+                        .mapToDouble(neighbor -> maxWeight - neighbor.getWeight())
+                        .sum()
+                ))
+                .limit(graph.verticesNumber() / 10)
+                .collect(Collectors.toList());
     }
     
     @Override
