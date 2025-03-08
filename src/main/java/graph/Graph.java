@@ -379,18 +379,19 @@ public class Graph<T extends Vertex> {
 				T v1 = face.get(i);
 				T v2 = face.get((i + 1) % face.size());
 
-				EdgeOfGraph edge = findEdge(v1, v2);
-				if (edge != null) {
-					subgraph.addEdge(v1, v2, edge.getLength());
-				}
+				subgraph.addEdge(v1, v2, v1.getLength(v2));
+				// EdgeOfGraph<T> edge = findEdge(v1, v2);
+				// if (edge != null) {
+				// 	subgraph.addEdge(v1, v2, edge.getLength());
+				// }
 			}
 		}
 
 		return subgraph;
 	}
 
-	private EdgeOfGraph findEdge(Vertex v1, Vertex v2) {
-		for (EdgeOfGraph edge : edgesArray()) {
+	private EdgeOfGraph<T> findEdge(T v1, T v2) {
+		for (EdgeOfGraph<T> edge : edgesArray()) {
 			if ((edge.begin.equals(v1) && edge.end.equals(v2)) ||
 					(edge.begin.equals(v2) && edge.end.equals(v1))) {
 				return edge;

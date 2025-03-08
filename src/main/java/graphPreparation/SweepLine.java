@@ -168,6 +168,7 @@ public class SweepLine {
 		for (Vertex v : toDelete) {
 			graph.deleteVertex(v);
 		}
+	
 		/**
 		Vertex tmpVertex1 = null;
 		Vertex tmpVertex2 = null;

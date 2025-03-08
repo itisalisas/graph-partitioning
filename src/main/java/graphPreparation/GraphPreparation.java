@@ -52,6 +52,7 @@ public class GraphPreparation {
         }
 		gw.printGraphToFile(gph, outputDirectory + "//SweepLine", "beforeSweepLine.txt", true);
 		
+        Assertions.assertTrue(gph.isConnected());
 		Graph<Vertex> graph = null;
 		if (!isPlanar) {
 			SweepLine sl = new SweepLine(inaccuracy);
@@ -60,6 +61,7 @@ public class GraphPreparation {
 			graph = gph;
 		}
 		
+        Assertions.assertTrue(graph.isConnected());
 		// draw swepline
 		gw.printGraphToFile(graph, outputDirectory + "//SweepLine", "afterSweepLine.txt", true);
 	
@@ -102,6 +104,7 @@ public class GraphPreparation {
 
 		MakingDualGraph dg = new MakingDualGraph();
 		Graph<VertexOfDualGraph> dualGraph = dg.buildDualGraph(graph);
+        Assertions.assertTrue(graph.isConnected());
 		for (VertexOfDualGraph v : dualGraph.verticesArray()) {
 			Assertions.assertNotNull(v.getVerticesOfFace());
 		}

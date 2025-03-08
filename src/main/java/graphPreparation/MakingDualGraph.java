@@ -139,7 +139,7 @@ public class MakingDualGraph {
 		double faceWeight = 0;
 		Vertex prev = new Vertex(firstEdge.begin);
 		Vertex begin = new Vertex(firstEdge.end);
-		System.out.println("firstEdge.begin: " + firstEdge.begin.name + " firstEdge.end: " + firstEdge.end.name);
+		//System.out.println("firstEdge.begin: " + firstEdge.begin.name + " firstEdge.end: " + firstEdge.end.name);
 		// if (prev.equals(cicle.get(0)) || prev.equals(cicle.get(1)) || prev.equals(cicle.get(2)) || prev.equals(cicle.get(3))) {
 		// 	System.out.println();
 		// }

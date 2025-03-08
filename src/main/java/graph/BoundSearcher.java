@@ -103,6 +103,8 @@ public class BoundSearcher {
                 .flatMap(Collection::stream)
                 .collect(Collectors.toSet());
 
+        
+        Assertions.assertTrue(graph.isConnected());
         Graph<Vertex> partSubgraph = graph.createSubgraphFromFaces(verticesByFaces).makeUndirectedGraph();
         Assertions.assertTrue(partSubgraph.isConnected());
 
