@@ -19,7 +19,6 @@ import org.junit.jupiter.api.Assertions;
 import graph.Edge;
 import graph.Graph;
 import graph.Point;
-import graph.Vertex;
 import graph.VertexOfDualGraph;
 
 public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs {
@@ -143,17 +142,17 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             VertexOfDualGraph source = new VertexOfDualGraph(maxIndex + 1);
             VertexOfDualGraph sink = new VertexOfDualGraph(maxIndex + 2);
 
-            Set<VertexOfDualGraph> sourceSet = new HashSet<>();
+            /*Set<VertexOfDualGraph> sourceSet = new HashSet<>();
             int index = 0;
             while (index < vertices.size() && sourceSet.stream().mapToDouble(VertexOfDualGraph::getWeight).sum() < targetWeightSource) {
                 sourceSet = selectVerticesForSet(vertices, index, targetWeightSource, new HashSet<>(), currentGraph);
                 index++;
-            }
+            }*/
 
             /* может возникнуть проблема, что набрав sourceSet
             связное множество нужного веса не наберется,
             тогда берем максимальное по весу
-             */
+             
             Set<VertexOfDualGraph> sinkSet = new HashSet<>();
             Set<VertexOfDualGraph> maxSinkSet = new HashSet<>();
             index = 1;
@@ -164,11 +163,17 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                     maxSinkSet = sinkSet;
                 }
                 index++;
-            }
+            }*/
 
-
-            sinkSet = maxSinkSet;
-
+            //sinkSet = maxSinkSet;
+            Pair<Set<VertexOfDualGraph>, Set<VertexOfDualGraph>> partitionSets = 
+            bidirectionalBFS(vertices.get(0), vertices.get(vertices.size() - 1), targetWeightSource, targetWeightSink, currentGraph);
+    
+            Set<VertexOfDualGraph> sourceSet = partitionSets.first;
+            Set<VertexOfDualGraph> sinkSet = partitionSets.second;
+            
+            System.out.println("Source set weight ratio: " + sourceSet.stream().mapToDouble(VertexOfDualGraph::getWeight).sum() / totalWeight);
+            System.out.println("Sink set weight ratio: " + sinkSet.stream().mapToDouble(VertexOfDualGraph::getWeight).sum() / totalWeight);
             Graph<VertexOfDualGraph> copyGraph = createGraphWithSourceSink(currentGraph, sourceSet, source, sinkSet, sink);
 
             Assertions.assertEquals(currentGraph.verticesNumber() + 2, copyGraph.verticesNumber());
@@ -183,6 +188,194 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             }
         }
 
+    }
+
+    private Pair<Set<VertexOfDualGraph>, Set<VertexOfDualGraph>> bidirectionalBFS(
+        VertexOfDualGraph sourceStart,
+        VertexOfDualGraph sinkStart,
+        double targetWeightSource,
+        double targetWeightSink,
+        Graph<VertexOfDualGraph> currentGraph) {
+
+        Set<VertexOfDualGraph> sourceSet = new HashSet<>();
+        Set<VertexOfDualGraph> sinkSet = new HashSet<>();
+        Queue<VertexOfDualGraph> sourceQueue = new LinkedList<>();
+        Queue<VertexOfDualGraph> sinkQueue = new LinkedList<>();
+
+        sourceSet.add(sourceStart);
+        sourceQueue.add(sourceStart);
+        double currentSourceWeight = sourceStart.getWeight();
+
+        sinkSet.add(sinkStart);
+        sinkQueue.add(sinkStart);
+        double currentSinkWeight = sinkStart.getWeight();
+
+        boolean sourceExpanded;
+        boolean sinkExpanded;
+        int attempts = 0;
+        final int MAX_ATTEMPTS = 100;
+
+        do {
+            sourceExpanded = false;
+            sinkExpanded = false;
+            attempts++;
+
+            if (currentSourceWeight < targetWeightSource) {
+                sourceExpanded = expandSet(
+                        sourceSet, 
+                        sinkSet, 
+                        sourceQueue, 
+                        currentSourceWeight, 
+                        targetWeightSource, 
+                        currentGraph,
+                        true
+                );
+                currentSourceWeight = sourceSet.stream().mapToDouble(VertexOfDualGraph::getWeight).sum();
+            }
+
+            if (currentSinkWeight < targetWeightSink) {
+                sinkExpanded = expandSet(
+                        sinkSet, 
+                        sourceSet, 
+                        sinkQueue, 
+                        currentSinkWeight, 
+                        targetWeightSink, 
+                        currentGraph,
+                        false
+                );
+                currentSinkWeight = sinkSet.stream().mapToDouble(VertexOfDualGraph::getWeight).sum();
+            }
+
+            if (!sourceExpanded && currentSourceWeight < targetWeightSource) {
+                tryStealVertices(sourceSet, sinkSet, currentGraph, targetWeightSource - currentSourceWeight);
+                currentSourceWeight = sourceSet.stream().mapToDouble(VertexOfDualGraph::getWeight).sum();
+            }
+
+            if (!sinkExpanded && currentSinkWeight < targetWeightSink) {
+                tryStealVertices(sinkSet, sourceSet, currentGraph, targetWeightSink - currentSinkWeight);
+                currentSinkWeight = sinkSet.stream().mapToDouble(VertexOfDualGraph::getWeight).sum();
+            }
+
+        } while ((sourceExpanded || sinkExpanded) && 
+            (currentSourceWeight < targetWeightSource || currentSinkWeight < targetWeightSink) && 
+            attempts < MAX_ATTEMPTS);
+
+        return new Pair<>(sourceSet, sinkSet);
+    }
+
+    private boolean expandSet(Set<VertexOfDualGraph> expandingSet, 
+                            Set<VertexOfDualGraph> oppositeSet,
+                            Queue<VertexOfDualGraph> queue,
+                            double currentWeight,
+                            double targetWeight,
+                            Graph<VertexOfDualGraph> graph,
+                            boolean isSource) {
+        
+        if (currentWeight >= targetWeight) return false;
+        
+        boolean expanded = false;
+        int levelSize = queue.size();
+        
+        for (int i = 0; i < levelSize; i++) {
+            VertexOfDualGraph current = queue.poll();
+            for (VertexOfDualGraph neighbor : graph.getEdges().get(current).keySet()) {
+                if (!expandingSet.contains(neighbor)) {
+
+                    if (!oppositeSet.contains(neighbor)) {
+                        expandingSet.add(neighbor);
+                        queue.add(neighbor);
+                        expanded = true;
+                    }
+
+                    else if (canStealVertex(neighbor, oppositeSet, graph)) {
+                        transferVertex(neighbor, oppositeSet, expandingSet);
+                        queue.add(neighbor);
+                        expanded = true;
+                    }
+                    
+                    if (expandingSet.stream().mapToDouble(VertexOfDualGraph::getWeight).sum() >= targetWeight) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return expanded;
+    }
+
+    private boolean canStealVertex(VertexOfDualGraph vertex, 
+                                Set<VertexOfDualGraph> fromSet,
+                                Graph<VertexOfDualGraph> graph) {
+        return isLeafInSet(vertex, fromSet, graph) && 
+        keepsConnectivity(vertex, fromSet, graph);
+    }
+
+    private boolean isLeafInSet(VertexOfDualGraph vertex, 
+                            Set<VertexOfDualGraph> set,
+                            Graph<VertexOfDualGraph> graph) {
+        int connectionsInSet = 0;
+        for (VertexOfDualGraph neighbor : graph.getEdges().get(vertex).keySet()) {
+            if (set.contains(neighbor)) connectionsInSet++;
+        }
+        return connectionsInSet == 1;
+    }
+
+    private boolean keepsConnectivity(VertexOfDualGraph vertex,
+                                        Set<VertexOfDualGraph> originalSet,
+                                        Graph<VertexOfDualGraph> graph) {
+        Set<VertexOfDualGraph> testSet = new HashSet<>(originalSet);
+        testSet.remove(vertex);
+        return isConnected(testSet, graph);
+    }
+
+    private void transferVertex(VertexOfDualGraph vertex,
+                            Set<VertexOfDualGraph> fromSet,
+                            Set<VertexOfDualGraph> toSet) {
+        fromSet.remove(vertex);
+        toSet.add(vertex);
+    }
+
+    private void tryStealVertices(Set<VertexOfDualGraph> stealingSet,
+                                Set<VertexOfDualGraph> victimSet,
+                                Graph<VertexOfDualGraph> graph,
+                                double requiredWeight) {
+        
+        List<VertexOfDualGraph> candidates = new ArrayList<>();
+        double stolenWeight = 0;
+        
+        for (VertexOfDualGraph v : stealingSet) {
+            for (VertexOfDualGraph neighbor : graph.getEdges().get(v).keySet()) {
+                if (victimSet.contains(neighbor) && 
+                    canStealVertex(neighbor, victimSet, graph)) {
+                    candidates.add(neighbor);
+                }
+            }
+        }
+        
+        candidates.sort((a, b) -> Double.compare(b.getWeight(), a.getWeight()));
+        
+        for (VertexOfDualGraph candidate : candidates) {
+            if (stolenWeight >= requiredWeight) break;
+            transferVertex(candidate, victimSet, stealingSet);
+            stolenWeight += candidate.getWeight();
+        }
+    }
+
+    private boolean isConnected(Set<VertexOfDualGraph> set, Graph<VertexOfDualGraph> graph) {
+        if (set.isEmpty()) return true;
+        Set<VertexOfDualGraph> visited = new HashSet<>();
+        Queue<VertexOfDualGraph> queue = new LinkedList<>();
+        queue.add(set.iterator().next());
+        
+        while (!queue.isEmpty()) {
+            VertexOfDualGraph current = queue.poll();
+            visited.add(current);
+            for (VertexOfDualGraph neighbor : graph.getEdges().get(current).keySet()) {
+                if (set.contains(neighbor) && !visited.contains(neighbor)) {
+                    queue.add(neighbor);
+                }
+            }
+        }
+        return visited.size() == set.size();
     }
 
     public Set<VertexOfDualGraph> selectVerticesForSet(List<VertexOfDualGraph> vertices, int startIndex, double targetWeight, Set<VertexOfDualGraph> sourceSet, Graph<VertexOfDualGraph> currentGraph) {
@@ -262,6 +455,16 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
         }
 
         return newGraph;
+    }
+
+    public class Pair<A, B> {
+        public final A first;
+        public final B second;
+    
+        public Pair(A first, B second) {
+            this.first = first;
+            this.second = second;
+        }
     }
 
 }
