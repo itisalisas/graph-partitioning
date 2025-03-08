@@ -200,7 +200,8 @@ public class PartitionWriter {
 				writer.write(start.getX() + " " + start.getY() + " " + end.getX() + " " + end.getY() + "\n");
 			}
 		} catch (Exception e) {
-			throw new RuntimeException("Can't write edges to file");
+			e.printStackTrace();
+			throw new RuntimeException("Can't write edges to file: ");
 		}
 	}
 
