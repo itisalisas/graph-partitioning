@@ -80,7 +80,7 @@ public class Main {
 		long time3 = System.currentTimeMillis();
 		System.out.println("time3 - time2 = " + (double) (time3 - time2) / 1000);
 
-		GraphPreparation preparation = new GraphPreparation(true, false);
+		GraphPreparation preparation = new GraphPreparation(false, false);
 
 		Graph<VertexOfDualGraph> preparedGraph = preparation.prepareGraph(graph, 1, outputDirectory);
 

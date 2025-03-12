@@ -27,10 +27,10 @@ public class PartitionWriter {
 		for (T v : part) {
 			if (geodetic) {
 				T nV = cc.fromEuclidean(v, null);
-				out.write(String.format("%d %f %f %f\n", v.getName(), nV.getX(), nV.getY(), v.getWeight()));
+				out.write(String.format("%d %f %f %f\n", v.getName(), nV.x, nV.y, v.getWeight()));
 				continue;
 			}
-			out.write(String.format("%d %f %f %f\n", v.getName(), v.getX(), v.getY(), v.getWeight()));
+			out.write(String.format("%d %f %f %f\n", v.getName(), v.x, v.y, v.getWeight()));
 		}
 		out.close();
 	}
@@ -69,7 +69,7 @@ public class PartitionWriter {
 			}
 			GraphWriter gw = new GraphWriter();
 			gw.printVerticesToFile(bounds.get(i), boundFile, geodetic);
-			//System.out.println(bounds.get(i).get(0).getX() + " " + bounds.get(i).get(0).getY());
+			//System.out.println(bounds.get(i).get(0).x + " " + bounds.get(i).get(0).y);
 		}
 	}
 
@@ -197,7 +197,7 @@ public class PartitionWriter {
 					start = cc.fromEuclidean(start, null);
 					end = cc.fromEuclidean(end, null);
 				}
-				writer.write(start.getX() + " " + start.getY() + " " + end.getX() + " " + end.getY() + "\n");
+				writer.write(start.x + " " + start.y + " " + end.x + " " + end.y + "\n");
 			}
 		} catch (Exception e) {
 			throw new RuntimeException("Can't write edges to file");

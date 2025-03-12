@@ -24,12 +24,12 @@ public class GraphWriter {
       for (Vertex end : graph.getEdges().get(begin).keySet()) {
 				if (geodetic) {
 					Vertex nEnd = cc.fromEuclidean(end, null);
-					out.write(String.format("%d %f %f %f ", end.getName(), nEnd.getX(), nEnd.getY(),
-							graph.getEdges().get(begin).get(end).getLength()));
+					out.write(String.format("%d %f %f %f ", end.getName(), nEnd.x, nEnd.y,
+							graph.getEdges().get(begin).get(end).length));
 							continue;
 				}
-				out.write(String.format("%d %f %f %f ", end.getName(), end.getX(), end.getY(),
-						graph.getEdges().get(begin).get(end).getLength()));
+				out.write(String.format("%d %f %f %f ", end.getName(), end.x, end.y,
+						graph.getEdges().get(begin).get(end).length));
 			}
 			out.append('\n');
 		}
@@ -47,24 +47,24 @@ public class GraphWriter {
 		out.write(String.format("%d\n", graph.getEdges().size()));
 		CoordinateConversion cc = null;
 		for (Vertex begin : graph.getEdges().keySet()) {
-			out.write(String.format("%d %f %f %d %d ", begin.getName(), begin.getX(), begin.getY(), begin.getWeight(), graph.getEdges().get(begin).size()));
+			out.write(String.format("%d %f %f %d %d ", begin.getName(), begin.x, begin.y, begin.getWeight(), graph.getEdges().get(begin).size()));
 			if (geodetic) {
 				Vertex nBegin = cc.fromEuclidean(begin, null);
-				out.write(String.format("%d %f %f %d ", begin.getName(), nBegin.getX(), nBegin.getY(),
+				out.write(String.format("%d %f %f %d ", begin.getName(), nBegin.x, nBegin.y,
 						 graph.getEdges().get(begin).size()));
 			} else {
-				out.write(String.format("%d %f %f %d ", begin.getName(), begin.getX(), begin.getY(), 
+				out.write(String.format("%d %f %f %d ", begin.getName(), begin.x, begin.y, 
 					graph.getEdges().get(begin).size()));
 			}
 			for (Vertex end : graph.getEdges().get(begin).keySet()) {
 				if (geodetic) {
 					Vertex nEnd = cc.fromEuclidean(end, null);
-					out.write(String.format("%d %f %f %f ", end.getName(), nEnd.getX(), nEnd.getY(),
-							graph.getEdges().get(begin).get(end).getLength()));
+					out.write(String.format("%d %f %f %f ", end.getName(), nEnd.x, nEnd.y,
+							graph.getEdges().get(begin).get(end).length));
 							continue;
 				}
-				out.write(String.format("%d %f %f %f ", end.getName(), end.getX(), end.getY(),
-						graph.getEdges().get(begin).get(end).getLength()));
+				out.write(String.format("%d %f %f %f ", end.getName(), end.x, end.y,
+						graph.getEdges().get(begin).get(end).length));
 			}
 			out.append('\n');
 		}
@@ -88,20 +88,20 @@ public class GraphWriter {
 			if (geodetic) {
 				Vertex nBegin = cc.fromEuclidean(begin, null);
 				out.write(String.format("%d %d %f %f %d ", begin.getName(), dualVertexToPartNumber.get(begin), 
-						nBegin.getX(), nBegin.getY(), graph.getEdges().get(begin).size()));
+						nBegin.x, nBegin.y, graph.getEdges().get(begin).size()));
 			}else{
 				out.write(String.format("%d %d %f %f %d ", begin.getName(), dualVertexToPartNumber.get(begin), 
-						begin.getX(), begin.getY(), graph.getEdges().get(begin).size()));
+						begin.x, begin.y, graph.getEdges().get(begin).size()));
 			}
 			for (Vertex end : graph.getEdges().get(begin).keySet()) {
 				if (geodetic) {
 					Vertex nEnd = cc.fromEuclidean(end, null);
-					out.write(String.format("%d %f %f %f ", end.getName(), nEnd.getX(), nEnd.getY(),
-							graph.getEdges().get(begin).get(end).getLength()));
+					out.write(String.format("%d %f %f %f ", end.getName(), nEnd.x, nEnd.y,
+							graph.getEdges().get(begin).get(end).length));
 							continue;
 				}
-				out.write(String.format("%d %f %f %f ", end.getName(), end.getX(), end.getY(),
-						graph.getEdges().get(begin).get(end).getLength()));
+				out.write(String.format("%d %f %f %f ", end.getName(), end.x, end.y,
+						graph.getEdges().get(begin).get(end).length));
 			}
 			out.append('\n');
 		}

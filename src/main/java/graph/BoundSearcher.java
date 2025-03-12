@@ -121,7 +121,7 @@ public class BoundSearcher {
                 (3.0 * Math.PI) / 2.0 <= startEdge.getCorner() && startEdge.getCorner() < 2 * Math.PI);
 
         // System.out.println(startEdge.getBegin().getName() + " -> " + startEdge.getEnd().getName());
-        EdgeOfGraph prevEdge = new EdgeOfGraph(startEdge.end, startEdge.begin, 0);
+        EdgeOfGraph<Vertex> prevEdge = new EdgeOfGraph<Vertex>(startEdge.end, startEdge.begin, 0);
         Vertex current = startEdge.end;
         Assertions.assertTrue(Arrays.stream(partSubgraph.edgesArray()).toList().contains(startEdge));
         int faceIndex = findCommonFace(startEdge.begin, startEdge.end, verticesByFaces);
@@ -130,7 +130,7 @@ public class BoundSearcher {
             Vertex next;
             if (numberOfFaces.get(current) > 1) {
                 // System.out.println("change face");
-                EdgeOfGraph edge = findNextEdge(prevEdge, arrangedEdges.get(current));
+                EdgeOfGraph<Vertex> edge = findNextEdge(prevEdge, arrangedEdges.get(current));
                 assert edge != null;
                 faceIndex = findCommonFace(edge.begin, edge.end, verticesByFaces);
                 next = edge.end;
@@ -138,7 +138,7 @@ public class BoundSearcher {
                 next = verticesByFaces.get(faceIndex).get((verticesByFaces.get(faceIndex).indexOf(current) + 1) % verticesByFaces.get(faceIndex).size());
             }
             // System.out.println(current.getName() + " -> " + next.getName());
-            prevEdge = new EdgeOfGraph(next, current, 0);
+            prevEdge = new EdgeOfGraph<Vertex>(next, current, 0);
             current = next;
         }
 

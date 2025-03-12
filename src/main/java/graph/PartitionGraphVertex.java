@@ -69,7 +69,7 @@ public class PartitionGraphVertex extends Vertex {
             for (VertexOfDualGraph v2 : dualGraph.getEdges().get(v1).keySet()) {
                 int partition2 = dualVertexToPartNumber.get(v2);
                 if (partition1 != partition2) {
-                    double edgeLength = dualGraph.getEdges().get(v1).get(v2).getLength();
+                    double edgeLength = dualGraph.getEdges().get(v1).get(v2).length;
                     PartitionGraphVertex pv1 = vertices.get(partition1);
                     PartitionGraphVertex pv2 = vertices.get(partition2);
 

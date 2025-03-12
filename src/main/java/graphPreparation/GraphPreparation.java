@@ -1,6 +1,6 @@
 package graphPreparation;
 
-import java.util.List;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -84,23 +84,7 @@ public class GraphPreparation {
 		
 		System.out.println("Number of 0 weight vertex, after sweepLine: " + gph.countZeroWeightVertices());
 		System.out.println("After sweepline graph weight: " + gph.verticesSumWeight());
-
 		
-		ArrayList<Vertex> cicle = new ArrayList<>();
-		cicle.add(new Vertex(22, 250.919893, -402.661115, 0));
-		cicle.add(new Vertex(1570463146l, 435.882832, -448.207049, 21.0));
-		// cicle.add(new Vertex(1589052150l, 27.387946870432913, -40.681749091539324, 15.0));
-		// cicle.add(new Vertex(4179710957l, 37.49785371845775, 1.5981101882654032, 31.0));
-		GraphWriter gw2 = new GraphWriter();
-		File file2 = new File(outputDirectory + "MakingDual\\cicleVertex.txt");
-		file2.delete();
-		file2 = new File(outputDirectory + "MakingDual\\cicleVertex.txt");
-		FileWriter out2 = new FileWriter(file2, true);
-		out2.write(cicle.size() + "\n");
-		out2.close();
-		gw2.printVerticesToFile(cicle, file2, true);
-		
-
 
 		MakingDualGraph dg = new MakingDualGraph();
 		Graph<VertexOfDualGraph> dualGraph = dg.buildDualGraph(graph);

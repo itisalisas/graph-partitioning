@@ -24,16 +24,6 @@ public class Point {
 	}
 	
 	
-	public double getX() {
-		return x;
-	}
-	
-	
-	public double getY() {
-		return y;
-	}
-	
-	
 	@Override
 	public boolean equals(Object obj) {
 		if (obj == this) return true;

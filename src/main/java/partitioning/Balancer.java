@@ -270,15 +270,15 @@ public class Balancer {
             for (VertexOfDualGraph neighborVertex : dualGraph.getEdges().get(vertex).keySet()) {
                 Edge edge = dualGraph.getEdges().get(vertex).get(neighborVertex);
                 if (neighbor.vertices.stream().collect(Collectors.toSet()).contains(neighborVertex)) {
-                    countOuterEdges += edge.getLength();
-                    if (edge.getLength() > bestEdgeLength) {
-                        bestEdgeLength = edge.getLength();
+                    countOuterEdges += edge.length;
+                    if (edge.length > bestEdgeLength) {
+                        bestEdgeLength = edge.length;
                         bestNeighborVertex = neighborVertex;
                     }
                 } else if (part.vertices.stream().collect(Collectors.toSet()).contains(neighborVertex)) {
-                    countInnerEdges += edge.getLength();
+                    countInnerEdges += edge.length;
                 }
-                commonLength += edge.getLength();
+                commonLength += edge.length;
             }
             this.ratio = countOuterEdges / commonLength * maxWeight / neighbor.getWeight();
         }
