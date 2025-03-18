@@ -12,18 +12,25 @@ import graph.VertexOfDualGraph;
 
 public class GraphWriter {
 
+	public CoordinateConversion coordConver;
+
+	public GraphWriter() {
+
+	}
+
+	public GraphWriter(CoordinateConversion coordConver) {
+		this.coordConver = coordConver;
+	}
+
 	public <T extends Vertex> void printGraphToFile(Graph<T> graph, String outputDirectory, String outFileName, boolean geodetic) throws IOException {
 		PartitionWriter.createOutputDirectory(outputDirectory);
 		FileWriter out = new FileWriter(outputDirectory + File.separator + outFileName, false);
 		out.write(String.format("%d %n", graph.getEdges().size()));
-		CoordinateConversion cc = null;
-		if (geodetic) {
-			cc = new CoordinateConversion();
-		}
+		
 		for (Vertex begin : graph.getEdges().keySet()) {
-      for (Vertex end : graph.getEdges().get(begin).keySet()) {
+      		for (Vertex end : graph.getEdges().get(begin).keySet()) {
 				if (geodetic) {
-					Vertex nEnd = cc.fromEuclidean(end, null);
+					Vertex nEnd = coordConver.fromEuclidean(end);
 					out.write(String.format("%d %f %f %f ", end.getName(), nEnd.x, nEnd.y,
 							graph.getEdges().get(begin).get(end).length));
 							continue;
@@ -45,11 +52,11 @@ public class GraphWriter {
 		PartitionWriter.createOutputDirectory(outputDirectory);
 		FileWriter out = new FileWriter(outputDirectory + File.separator + outFileName, false);
 		out.write(String.format("%d\n", graph.getEdges().size()));
-		CoordinateConversion cc = null;
+		
 		for (Vertex begin : graph.getEdges().keySet()) {
 			out.write(String.format("%d %f %f %d %d ", begin.getName(), begin.x, begin.y, begin.getWeight(), graph.getEdges().get(begin).size()));
 			if (geodetic) {
-				Vertex nBegin = cc.fromEuclidean(begin, null);
+				Vertex nBegin = coordConver.fromEuclidean(begin);
 				out.write(String.format("%d %f %f %d ", begin.getName(), nBegin.x, nBegin.y,
 						 graph.getEdges().get(begin).size()));
 			} else {
@@ -58,7 +65,7 @@ public class GraphWriter {
 			}
 			for (Vertex end : graph.getEdges().get(begin).keySet()) {
 				if (geodetic) {
-					Vertex nEnd = cc.fromEuclidean(end, null);
+					Vertex nEnd = coordConver.fromEuclidean(end);
 					out.write(String.format("%d %f %f %f ", end.getName(), nEnd.x, nEnd.y,
 							graph.getEdges().get(begin).get(end).length));
 							continue;
@@ -86,7 +93,7 @@ public class GraphWriter {
 		}
 		for (Vertex begin : graph.getEdges().keySet()) {
 			if (geodetic) {
-				Vertex nBegin = cc.fromEuclidean(begin, null);
+				Vertex nBegin = cc.fromEuclidean(begin);
 				out.write(String.format("%d %d %f %f %d ", begin.getName(), dualVertexToPartNumber.get(begin), 
 						nBegin.x, nBegin.y, graph.getEdges().get(begin).size()));
 			}else{
@@ -95,7 +102,7 @@ public class GraphWriter {
 			}
 			for (Vertex end : graph.getEdges().get(begin).keySet()) {
 				if (geodetic) {
-					Vertex nEnd = cc.fromEuclidean(end, null);
+					Vertex nEnd = cc.fromEuclidean(end);
 					out.write(String.format("%d %f %f %f ", end.getName(), nEnd.x, nEnd.y,
 							graph.getEdges().get(begin).get(end).length));
 							continue;
@@ -116,7 +123,7 @@ public class GraphWriter {
 		for (Vertex vertex : vertices) {
 			try {
 				if (geodetic) {
-					Vertex nVertex = cc.fromEuclidean(vertex, null);
+					Vertex nVertex = cc.fromEuclidean(vertex);
 					nVertex.printVertexToFile(file);
 					continue;
 				}

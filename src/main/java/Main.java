@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Assertions;
 import graph.BoundSearcher;
 import graph.Graph;
 import graph.PartitionGraphVertex;
+import graph.Point;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
 import graphPreparation.GraphPreparation;
@@ -56,9 +57,18 @@ public class Main {
 		long time1 = System.currentTimeMillis();
 
 		Graph<Vertex> graph = new Graph<>();
+		Graph<Vertex> geodeticGraph = new Graph<>();
 
 		try {
-			GraphReader gr = new GraphReader(new CoordinateConversion());
+			GraphReader geodeticgr = new GraphReader();
+			geodeticgr.readGraphFromFile(geodeticGraph, resourcesDirectory + pathToFile, false);
+		} catch (Exception e) {
+			throw new RuntimeException("Can't read graph from file: " + e.getMessage());
+		}
+
+		CoordinateConversion cc = new CoordinateConversion(geodeticGraph.getEdges().keySet());
+		try {
+			GraphReader gr = new GraphReader(cc);
 			gr.readGraphFromFile(graph, resourcesDirectory + pathToFile, true);
 		} catch (Exception e) {
 			throw new RuntimeException("Can't read graph from file: " + e.getMessage());
@@ -82,7 +92,7 @@ public class Main {
 
 		GraphPreparation preparation = new GraphPreparation(false, false);
 
-		Graph<VertexOfDualGraph> preparedGraph = preparation.prepareGraph(graph, 1, outputDirectory);
+		Graph<VertexOfDualGraph> preparedGraph = preparation.prepareGraph(graph, 1, outputDirectory, cc);
 
 		for (VertexOfDualGraph v : preparedGraph.verticesArray()) {
 			Assertions.assertNotNull(v.getVerticesOfFace());
@@ -91,7 +101,7 @@ public class Main {
 		long time4 = System.currentTimeMillis();
 		System.out.println("time4 - time3 = " + (double) (time4 - time3) / 1000);
 
-		GraphWriter gw = new GraphWriter();
+		GraphWriter gw = new GraphWriter(cc);
 		// gw.printGraphToFile(preparedGraph, outputDirectory, "for_kahip.graph", true);
 		String pathToResultDirectory = args[3];
 

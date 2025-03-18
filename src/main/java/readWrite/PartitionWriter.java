@@ -26,7 +26,7 @@ public class PartitionWriter {
 		}
 		for (T v : part) {
 			if (geodetic) {
-				T nV = cc.fromEuclidean(v, null);
+				T nV = cc.fromEuclidean(v);
 				out.write(String.format("%d %f %f %f\n", v.getName(), nV.x, nV.y, v.getWeight()));
 				continue;
 			}
@@ -194,8 +194,8 @@ public class PartitionWriter {
 				VertexOfDualGraph start = edge.getKey();
 				VertexOfDualGraph end = edge.getValue();
 				if (geodetic) {
-					start = cc.fromEuclidean(start, null);
-					end = cc.fromEuclidean(end, null);
+					start = cc.fromEuclidean(start);
+					end = cc.fromEuclidean(end);
 				}
 				writer.write(start.x + " " + start.y + " " + end.x + " " + end.y + "\n");
 			}

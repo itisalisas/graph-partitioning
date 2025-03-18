@@ -13,6 +13,7 @@ import java.util.HashMap;
 import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
+import readWrite.CoordinateConversion;
 import readWrite.GraphWriter;
 
 import org.junit.jupiter.api.Assertions;
@@ -36,14 +37,14 @@ public class GraphPreparation {
 		return this.comparisonForDualGraph;
 	}
 	
-	public Graph<VertexOfDualGraph> prepareGraph(Graph<Vertex> gph, double inaccuracy, String outputDirectory) throws IOException {
+	public Graph<VertexOfDualGraph> prepareGraph(Graph<Vertex> gph, double inaccuracy, String outputDirectory, CoordinateConversion cc) throws IOException {
 		System.out.println("Number of 0 weight vertex, before correction: " + gph.countZeroWeightVertices());
 		gph.correctVerticesWeight();
 		System.out.println("Number of 0 weight vertex, before sweepLine: " + gph.countZeroWeightVertices());
 		System.out.println("Start graph weight: " + gph.verticesSumWeight());
 		
 		// draw swepline
-		GraphWriter gw = new GraphWriter();
+		GraphWriter gw = new GraphWriter(cc);
 		Path dirPath = Paths.get("./SweepLine");
 		try {
             Files.createDirectories(dirPath); 
