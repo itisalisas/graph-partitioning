@@ -9,7 +9,6 @@ import java.util.Queue;
 
 import graph.Edge;
 import graph.Graph;
-import graph.Vertex;
 import graph.VertexOfDualGraph;
 
 class FlowResult {
@@ -54,17 +53,15 @@ public class MaxFlow {
     }
 
 
-    public FlowResult dinic() {
-        int countIterations = 0;
+    FlowResult dinic() {
         while (bfs()) {
-            countIterations++;
             lastNeighbourIndex.replaceAll((vertex, integer) -> 0);
             double pushed;
             while ((pushed = dfs(source, Integer.MAX_VALUE)) != 0) {
                 flow += pushed;
             }
         }
-        System.out.println("Number of bfs iterations in dinic: " + countIterations + ", vertices: " + graph.verticesNumber() + ", edges: " + graph.edgesNumber());
+
         return new FlowResult(flow, graph, source, sink);
     }
 
@@ -75,7 +72,7 @@ public class MaxFlow {
         level.put(source, 0);
         queue.add(source);
         while (!queue.isEmpty()) {
-            Vertex u = queue.peek();
+            VertexOfDualGraph u = queue.peek();
             queue.remove();
             for (Map.Entry<VertexOfDualGraph, Edge> edge : graph.getEdges().get(u).entrySet()) {
                 if (edge.getValue().flow < edge.getValue().getBandwidth() && level.get(edge.getKey()) == Integer.MAX_VALUE) {

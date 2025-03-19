@@ -18,7 +18,6 @@ import graph.Graph;
 import graph.PartitionGraphVertex;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
-import partitioning.Balancer.Comp;
 import readWrite.PartitionWriter;
 
 public class Balancer {
@@ -60,10 +59,7 @@ public class Balancer {
         Graph<VertexOfDualGraph> regionsSubgraph = dualGraph.createSubgraph(balancingVerticesSet);
         Assertions.assertEquals(balancingVerticesSet.size(), regionsSubgraph.verticesNumber());
         Assertions.assertTrue(regionsSubgraph.isConnected());
-        System.out.println("rebalance: " + smallestVertex.getName() + " and " + biggestNeighbor.getName());
-        System.out.println("smallset w: " + smallestVertex.getWeight() + ", biggest w: " + biggestNeighbor.getWeight() + ", sum: " + (biggestNeighbor.getWeight() + smallestVertex.getWeight()));
         double coefficient = 1 - (double) maxWeight / (balancingVerticesSet.stream().mapToDouble(v -> v.getWeight()).sum());
-        System.out.println("coefficient = " + coefficient);
         BalancedPartitioning bp = new BalancedPartitioning(new InertialFlowPartitioning(coefficient));
         ArrayList<HashSet<VertexOfDualGraph>> newPartition = bp.partition(regionsSubgraph, maxWeight);
         Assertions.assertEquals(2, newPartition.size());
@@ -102,12 +98,7 @@ public class Balancer {
     }
 
     public ArrayList<HashSet<VertexOfDualGraph>> rebalancing() {
-        long bal = System.currentTimeMillis();
-        while (removeSmallestRegion()) { 
-            System.out.println("New iteration of removing, size = " + partitionGraph.verticesNumber());
-        }
-        System.out.println("removing time = " + (System.currentTimeMillis() - bal) / 1000 + " sec");
-        System.out.println("End of removing");
+        while (removeSmallestRegion()) { }
         double threshold = partitionGraph.verticesWeight() * 0.1;
         double variance = calculateVariance();
 
@@ -190,7 +181,7 @@ public class Balancer {
 
             while (!priorityQueue.isEmpty()) {
                 Comp comp = priorityQueue.poll();
-                // System.out.println("ratio = " + comp.ratio);
+                
                 VertexOfDualGraph vertex = comp.vertex;
                 PartitionGraphVertex neighbor = comp.neighbor;
                 VertexOfDualGraph bestNeighborVertex = comp.bestNeighborVertex;
@@ -202,7 +193,6 @@ public class Balancer {
                 double newWeight = neighbor.getWeight() + vertex.getWeight();
                 
                 if (newWeight <= maxWeight) {
-                    System.out.println(neighbor.getName() + ": " + neighbor.getWeight() + " -> " + newWeight + " ratio = " + comp.ratio);
                     neighbor.addVertex(vertex);
                     smallestVertex.removeVertex(vertex);
                     wasRedistributed.add(vertex);

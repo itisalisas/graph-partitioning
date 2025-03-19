@@ -111,7 +111,6 @@ public class BoundSearcher {
         HashMap<Vertex, TreeSet<EdgeOfGraph<Vertex>>> arrangedEdges = partSubgraph.arrangeByAngle();
 
         Vertex start = findLeftmostVertex(allVertices);
-        //  System.out.println("start vertex = " + start.getName());
         bound.add(start);
 
         // start is the highest among the leftmost ones, all incident edges must lie in [0;pi/2) U [3pi/2; 2pi)
@@ -120,8 +119,7 @@ public class BoundSearcher {
         Assertions.assertTrue((0 <= startEdge.getCorner() && startEdge.getCorner() < Math.PI / 2.0) ||
                 (3.0 * Math.PI) / 2.0 <= startEdge.getCorner() && startEdge.getCorner() < 2 * Math.PI);
 
-        // System.out.println(startEdge.getBegin().getName() + " -> " + startEdge.getEnd().getName());
-        EdgeOfGraph prevEdge = new EdgeOfGraph(startEdge.end, startEdge.begin, 0);
+        EdgeOfGraph<Vertex> prevEdge = new EdgeOfGraph<>(startEdge.end, startEdge.begin, 0);
         Vertex current = startEdge.end;
         Assertions.assertTrue(Arrays.stream(partSubgraph.edgesArray()).toList().contains(startEdge));
         int faceIndex = findCommonFace(startEdge.begin, startEdge.end, verticesByFaces);
@@ -129,22 +127,19 @@ public class BoundSearcher {
             bound.add(current);
             Vertex next;
             if (numberOfFaces.get(current) > 1) {
-                // System.out.println("change face");
-                EdgeOfGraph edge = findNextEdge(prevEdge, arrangedEdges.get(current));
+                EdgeOfGraph<Vertex> edge = findNextEdge(prevEdge, arrangedEdges.get(current));
                 assert edge != null;
                 faceIndex = findCommonFace(edge.begin, edge.end, verticesByFaces);
                 next = edge.end;
             } else {
                 next = verticesByFaces.get(faceIndex).get((verticesByFaces.get(faceIndex).indexOf(current) + 1) % verticesByFaces.get(faceIndex).size());
             }
-            // System.out.println(current.getName() + " -> " + next.getName());
-            prevEdge = new EdgeOfGraph(next, current, 0);
+            
+            prevEdge = new EdgeOfGraph<>(next, current, 0);
             current = next;
         }
 
         Assertions.assertTrue(bound.size() >= 3);
-
-        // System.out.println("Bound size: " + bound.size());
 
         return bound;
     }
@@ -161,7 +156,7 @@ public class BoundSearcher {
 
     private static int findCommonFace(Vertex v1, Vertex v2, List<List<Vertex>> verticesByFaces) {
         int faceNumber = -1;
-        //System.out.println("Search common face for " + v1.getName() + " and " + v2.getName());
+
         for (List<Vertex> face : verticesByFaces) {
             for (int ptr = 0; ptr < face.size(); ptr++) {
                 if ((face.get(ptr).equals(v1) && face.get((ptr + 1) % face.size()).equals(v2)) ||

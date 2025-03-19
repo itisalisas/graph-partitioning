@@ -1,4 +1,5 @@
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -53,19 +54,14 @@ public class Main {
 			throw new RuntimeException("No such partition algorithm");
 		}
 
-		long time1 = System.currentTimeMillis();
-
 		Graph<Vertex> graph = new Graph<>();
 
 		try {
 			GraphReader gr = new GraphReader(new CoordinateConversion());
 			gr.readGraphFromFile(graph, resourcesDirectory + pathToFile, true);
-		} catch (Exception e) {
+		} catch (FileNotFoundException e) {
 			throw new RuntimeException("Can't read graph from file: " + e.getMessage());
 		}
-
-		long time2 = System.currentTimeMillis();
-		System.out.println("time2 - time1 = " + (double) (time2 - time1) / 1000);
 
 		int maxSumVerticesWeight;
 		try {
@@ -74,13 +70,7 @@ public class Main {
 			throw new RuntimeException("Can't parse max sum vertices weight");
 		}
 
-
-		System.out.println("Graph weight before: " + graph.verticesSumWeight());
-
-		long time3 = System.currentTimeMillis();
-		System.out.println("time3 - time2 = " + (double) (time3 - time2) / 1000);
-
-		GraphPreparation preparation = new GraphPreparation(true, false);
+		GraphPreparation preparation = new GraphPreparation(false, false);
 
 		Graph<VertexOfDualGraph> preparedGraph = preparation.prepareGraph(graph, 1, outputDirectory);
 
@@ -88,13 +78,11 @@ public class Main {
 			Assertions.assertNotNull(v.getVerticesOfFace());
 		}
 
-		long time4 = System.currentTimeMillis();
-		System.out.println("time4 - time3 = " + (double) (time4 - time3) / 1000);
-
 		GraphWriter gw = new GraphWriter();
-		// gw.printGraphToFile(preparedGraph, outputDirectory, "for_kahip.graph", true);
+
 		String pathToResultDirectory = args[3];
 
+		long startTime = System.currentTimeMillis();
 		ArrayList<HashSet<VertexOfDualGraph>> partitionResultForFaces = partitioning.partition(preparedGraph, maxSumVerticesWeight);
 		for (HashSet<VertexOfDualGraph> hs : partitionResultForFaces) {
 			for (VertexOfDualGraph v : hs) {
@@ -108,11 +96,7 @@ public class Main {
 			}
 		}
 		HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph = preparation.getComparisonForDualGraph();
-		long time5 = System.currentTimeMillis();
-		System.out.println("time5 - time4 = " + (double) (time5 - time4) / 1000);
 		Graph<PartitionGraphVertex> partitionGraph = PartitionGraphVertex.buildPartitionGraph(preparedGraph, partitionResultForFaces, dualVertexToPartNumber);
-		System.err.println("smallest vertex before = " + partitionGraph.smallestVertex().getWeight());
-		System.err.println("Partition size: " + partitionResultForFaces.size());
 		Balancer balancer = new Balancer(partitionGraph, preparedGraph, graph, maxSumVerticesWeight, comparisonForDualGraph, outputDirectory + pathToResultDirectory);
 		partitionResultForFaces = balancer.rebalancing();
 		HashMap<VertexOfDualGraph, Integer> newDualVertexToPartNumber = new HashMap<>();
@@ -122,11 +106,8 @@ public class Main {
 			}
 		}
 		partitionGraph = PartitionGraphVertex.buildPartitionGraph(preparedGraph, partitionResultForFaces, newDualVertexToPartNumber);
-		System.err.println("smallest vertex after = " + partitionGraph.smallestVertex().getWeight());
-
 		gw.printGraphToFile(partitionGraph,  outputDirectory + pathToResultDirectory, "part_graph.txt", true);
-		long time6 = System.currentTimeMillis();
-		System.out.println("time6 - time5 = " + (double) (time6 - time5) / 1000);
+		double partitioningTime = ((double)(System.currentTimeMillis() - startTime)) / 100.0;
 
 		System.out.println("Partition size: " + partitionResultForFaces.size());
 
@@ -141,20 +122,11 @@ public class Main {
 			bounds.add(BoundSearcher.findBound(graph, partitionResultForFaces.get(i), comparisonForDualGraph));
 		}
 
-		long time7 = System.currentTimeMillis();
-		System.out.println("time7 - time6 = " + (double) (time7 - time6) / 1000);
-
 		gw.printDualGraphToFile(preparedGraph, dualVertexToPartNumber, partitionResultForFaces.size(), outputDirectory + pathToResultDirectory, "dual.txt", true);
-		// partitioning.savePartitionToDirectory(outputDirectory + pathToResultDirectory, partitionResult);
 		PartitionWriter pw = new PartitionWriter();
-		pw.savePartitionToDirectory(partitioning, partitioning.bp ,outputDirectory + pathToResultDirectory, partitionResultForFaces, true);
+		pw.savePartitionToDirectory(partitioning, partitioning.bp ,outputDirectory + pathToResultDirectory, partitionResultForFaces, true, partitioningTime);
 		pw.printBound(bounds, outputDirectory + pathToResultDirectory, true);
-		// partitioning.printHull(graphBoundEnd, outputDirectory + pathToResultDirectory, "end_bound.txt");
     
-    
-		long time8 = System.currentTimeMillis();
-		System.out.println("time8 - time7 = " + (double) (time8 - time7) / 1000);
-
 	}
 
 }

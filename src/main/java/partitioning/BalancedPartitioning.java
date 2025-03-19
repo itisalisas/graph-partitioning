@@ -19,8 +19,6 @@ public class BalancedPartitioning {
 
 	public Map<Set<VertexOfDualGraph>, Double> cutEdgesMap;
 
-	public double partitioningTime;
-
 	public BalancedPartitioning(BalancedPartitioningOfPlanarGraphs bp) {
 		this.bp = bp;
 	}
@@ -29,23 +27,21 @@ public class BalancedPartitioning {
 												int maxSumVerticesWeight) {
 		bp.partition = new ArrayList<>();
 		this.maxSumVerticesWeight = maxSumVerticesWeight;
-		long startTime = System.currentTimeMillis();
 		bp.balancedPartitionAlgorithm(graph, maxSumVerticesWeight);
-		partitioningTime = ((double) (System.currentTimeMillis() - startTime)) / 1000;
 		ArrayList<HashSet<VertexOfDualGraph>> partitionResult = bp.getPartition();
 		calculateCutWeights(bp.graph, partitionResult);
 		return partitionResult;
 	}
 
-	private void calculateCutWeights(Graph graph, List<HashSet<VertexOfDualGraph>> partitions) {
+	private void calculateCutWeights(Graph<VertexOfDualGraph> graph, List<HashSet<VertexOfDualGraph>> partitions) {
 		cutEdgesMap = new HashMap<>();
 
 		for (Set<VertexOfDualGraph> partition : partitions) {
 			double cutEdgesWeightSum = 0;
 
-			for (EdgeOfGraph edge : graph.edgesArray()) {
-				Vertex u = edge.begin;
-				Vertex v = edge.end;
+			for (EdgeOfGraph<VertexOfDualGraph> edge : graph.edgesArray()) {
+				VertexOfDualGraph u = edge.begin;
+				VertexOfDualGraph v = edge.end;
 				double weight = edge.getBandwidth();
 
 				if (partition.contains(u) && !partition.contains(v)) {
