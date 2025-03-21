@@ -30,20 +30,20 @@ public class GraphWriter {
 		for (Vertex begin : graph.getEdges().keySet()) {
 			Vertex nBegin;
 			if (geodetic) {
-				nBegin = cc.fromEuclidean(begin, null);
+				nBegin = coordConver.fromEuclidean(begin);
 				out.write(String.format("%d %f %f %d ", begin.getName(), nBegin.x, nBegin.y, graph.getEdges().get(begin).size()));
 			} else {
 				out.write(String.format("%d %f %f %d ", begin.getName(), begin.x, begin.y, graph.getEdges().get(begin).size()));
 			}
 			for (Vertex end : graph.getEdges().get(begin).keySet()) {
 				if (geodetic) {
-					Vertex nEnd = cc.fromEuclidean(end, null);
+					Vertex nEnd = coordConver.fromEuclidean(end);
 					out.write(String.format("%d %f %f %f ", end.getName(), nEnd.x, nEnd.y,
-					graph.getEdges().get(begin).get(end).getLength()));
+					graph.getEdges().get(begin).get(end).length));
 					continue;
 				} else {
 				out.write(String.format("%d %f %f %f ", end.getName(), end.x, end.y,
-						graph.getEdges().get(begin).get(end).getLength()));
+						graph.getEdges().get(begin).get(end).length));
 				}
 			}
 			out.append('\n');
