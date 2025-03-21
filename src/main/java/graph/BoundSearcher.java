@@ -134,8 +134,7 @@ public class BoundSearcher {
             } else {
                 next = verticesByFaces.get(faceIndex).get((verticesByFaces.get(faceIndex).indexOf(current) + 1) % verticesByFaces.get(faceIndex).size());
             }
-            
-            prevEdge = new EdgeOfGraph<>(next, current, 0);
+            prevEdge = new EdgeOfGraph<Vertex>(next, current, 0);
             current = next;
         }
 

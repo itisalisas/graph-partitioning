@@ -11,7 +11,7 @@ import graph.Vertex;
 
 public class GraphReader {
 
-	CoordinateConversion coordConver;
+	public CoordinateConversion coordConver;
 
 	public GraphReader() {
 
@@ -29,7 +29,7 @@ public class GraphReader {
 		double y = Double.parseDouble(yStr);
 		Vertex ans = new Vertex(name, x, y);
 		if (geodetic) {
-			coordConver.toEuclidean(ans, null);
+			coordConver.toEuclidean(ans);
 		}
 		return graph.addVertex(ans);
 	}

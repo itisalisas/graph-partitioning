@@ -258,9 +258,9 @@ public class GammaAlgorithm {
 		for (int i = 0; i < chain.size() - 1; i++) {
 			verticesOnPlane.add(chain.get(i));
 			face.addEdge(chain.get(i), chain.get(i + 1),
-					actualSegment.getEdges().get(chain.get(i)).get(chain.get(i + 1)).getLength());
+					actualSegment.getEdges().get(chain.get(i)).get(chain.get(i + 1)).length);
 			face.addEdge(chain.get(i + 1), chain.get(i),
-					actualSegment.getEdges().get(chain.get(i)).get(chain.get(i + 1)).getLength());
+					actualSegment.getEdges().get(chain.get(i)).get(chain.get(i + 1)).length);
 		}
 
 	}
@@ -275,8 +275,8 @@ public class GammaAlgorithm {
 				if (prev.contains(end)) {
 					continue;
 				} else {
-					newFace2.addEdge(tmp, end, oldFace.getEdges().get(tmp).get(end).getLength());
-					newFace2.addEdge(end, tmp, oldFace.getEdges().get(tmp).get(end).getLength());
+					newFace2.addEdge(tmp, end, oldFace.getEdges().get(tmp).get(end).length);
+					newFace2.addEdge(end, tmp, oldFace.getEdges().get(tmp).get(end).length);
 					newFace1.deleteEdge(tmp, end);
 					newFace1.deleteEdge(end, tmp);
 					tmp = end;
@@ -354,7 +354,7 @@ public class GammaAlgorithm {
 						continue;
 					}
 					if (undirGraph.getEdges().get(begin).containsKey(end)) {
-						remains.addEdge(begin, end, undirGraph.getEdges().get(begin).get(end).getLength());
+						remains.addEdge(begin, end, undirGraph.getEdges().get(begin).get(end).length);
 					}
 				}
 			}
@@ -411,8 +411,8 @@ public class GammaAlgorithm {
 		if (undirGraph.getEdges().get(begin) == null)
 			return;
 		for (Vertex end : undirGraph.getEdges().get(begin).keySet()) {
-			segment.get(segmentNumber).addEdge(begin, end, undirGraph.getEdges().get(begin).get(end).getLength());
-			segment.get(segmentNumber).addEdge(end, begin, undirGraph.getEdges().get(begin).get(end).getLength());
+			segment.get(segmentNumber).addEdge(begin, end, undirGraph.getEdges().get(begin).get(end).length);
+			segment.get(segmentNumber).addEdge(end, begin, undirGraph.getEdges().get(begin).get(end).length);
 			if (visited.contains(end) || end.equals(prev)) {
 				continue;
 			} else {
@@ -454,9 +454,9 @@ public class GammaAlgorithm {
 		gph.addVertex(to);
 		for (; cycleIter <= path.size() - 2; cycleIter++) {
 			gph.addEdge(path.get(cycleIter), path.get(cycleIter + 1),
-					undirGraph.getEdges().get(path.get(cycleIter)).get(path.get(cycleIter + 1)).getLength());
+					undirGraph.getEdges().get(path.get(cycleIter)).get(path.get(cycleIter + 1)).length);
 			gph.addEdge(path.get(cycleIter + 1), path.get(cycleIter),
-					undirGraph.getEdges().get(path.get(cycleIter)).get(path.get(cycleIter + 1)).getLength());
+					undirGraph.getEdges().get(path.get(cycleIter)).get(path.get(cycleIter + 1)).length);
 		}
 		faces.add(gph);
 		faces.add(gph);
