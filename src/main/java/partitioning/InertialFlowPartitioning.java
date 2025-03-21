@@ -48,21 +48,21 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
         public Vector2D(Point secondPoint) {
             this.secondPoint = secondPoint;
-            isVertical = secondPoint.getX() == 0;
+            isVertical = secondPoint.x == 0;
             if (!isVertical) {
-                k = (secondPoint.getY()) /
-                        (secondPoint.getX());
+                k = (secondPoint.y) /
+                        (secondPoint.x);
             }
         }
 
         public Point projectPoint(Point point) {
             double xProjection, yProjection;
             if (!isVertical) {
-                xProjection = (point.getX() + k * point.getY()) / (1 + k * k);
+                xProjection = (point.x + k * point.y) / (1 + k * k);
                 yProjection = k * xProjection;
             } else {
-                xProjection = secondPoint.getX();
-                yProjection = point.getY();
+                xProjection = secondPoint.x;
+                yProjection = point.y;
             }
             return new Point(xProjection, yProjection);
         }
@@ -107,16 +107,16 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                 vertices.sort(Comparator.comparing(v -> {
                     Point p = v;
                     Point projected = line.projectPoint(p);
-                    return line.isVertical ? projected.getY() : projected.getX();
+                    return line.isVertical ? projected.y : projected.x;
                 }));
 
                 double minProjection = line.isVertical
-                        ? line.projectPoint(vertices.get(0)).getY()
-                        : line.projectPoint(vertices.get(0)).getX();
+                        ? line.projectPoint(vertices.get(0)).y
+                        : line.projectPoint(vertices.get(0)).x;
 
                 double maxProjection = line.isVertical
-                        ? line.projectPoint(vertices.get(vertices.size() - 1)).getY()
-                        : line.projectPoint(vertices.get(vertices.size() - 1)).getX();
+                        ? line.projectPoint(vertices.get(vertices.size() - 1)).y
+                        : line.projectPoint(vertices.get(vertices.size() - 1)).x;
 
                 double stretch = maxProjection - minProjection;
                 if (stretch > maxStretch) {
@@ -129,7 +129,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             vertices.sort(Comparator.comparing(v -> {
                 Point p = v;
                 Point projected = finalBestLine.projectPoint(p);
-                return finalBestLine.isVertical ? projected.getY() : projected.getX();
+                return finalBestLine.isVertical ? projected.y : projected.x;
             }));
 
 

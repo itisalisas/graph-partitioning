@@ -12,16 +12,16 @@ public class CoordinateConstraintsForFace {
 	public CoordinateConstraintsForFace(ArrayList<Vertex> verticesOfFace) {
 		for (int i = 0 ; i < verticesOfFace.size(); i++) {
 			if (i == 0) {
-				maxX = verticesOfFace.get(i).getX();
-				minX = verticesOfFace.get(i).getX();
-				maxY = verticesOfFace.get(i).getY();
-				minY = verticesOfFace.get(i).getY();
+				maxX = verticesOfFace.get(i).x;
+				minX = verticesOfFace.get(i).x;
+				maxY = verticesOfFace.get(i).y;
+				minY = verticesOfFace.get(i).y;
 				continue;
 			}
-			if (maxX < verticesOfFace.get(i).getX()) maxX = verticesOfFace.get(i).getX();
-			if (minX > verticesOfFace.get(i).getX()) minX = verticesOfFace.get(i).getX();
-			if (maxY < verticesOfFace.get(i).getY()) maxY = verticesOfFace.get(i).getY();
-			if (minY > verticesOfFace.get(i).getY()) minY = verticesOfFace.get(i).getY();
+			if (maxX < verticesOfFace.get(i).x) maxX = verticesOfFace.get(i).x;
+			if (minX > verticesOfFace.get(i).x) minX = verticesOfFace.get(i).x;
+			if (maxY < verticesOfFace.get(i).y) maxY = verticesOfFace.get(i).y;
+			if (minY > verticesOfFace.get(i).y) minY = verticesOfFace.get(i).y;
 		}
 		
 	}

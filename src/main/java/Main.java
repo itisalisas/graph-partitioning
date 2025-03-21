@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Assertions;
 import graph.BoundSearcher;
 import graph.Graph;
 import graph.PartitionGraphVertex;
+import graph.Point;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
 import graphPreparation.GraphPreparation;
@@ -55,9 +56,18 @@ public class Main {
 		}
 
 		Graph<Vertex> graph = new Graph<>();
+		Graph<Vertex> geodeticGraph = new Graph<>();
 
 		try {
-			GraphReader gr = new GraphReader(new CoordinateConversion());
+			GraphReader geodeticgr = new GraphReader();
+			geodeticgr.readGraphFromFile(geodeticGraph, resourcesDirectory + pathToFile, false);
+		} catch (Exception e) {
+			throw new RuntimeException("Can't read graph from file: " + e.getMessage());
+		}
+
+		CoordinateConversion cc = new CoordinateConversion(geodeticGraph.getEdges().keySet());
+		try {
+			GraphReader gr = new GraphReader(cc);
 			gr.readGraphFromFile(graph, resourcesDirectory + pathToFile, true);
 		} catch (FileNotFoundException e) {
 			throw new RuntimeException("Can't read graph from file: " + e.getMessage());
@@ -72,13 +82,13 @@ public class Main {
 
 		GraphPreparation preparation = new GraphPreparation(false, false);
 
-		Graph<VertexOfDualGraph> preparedGraph = preparation.prepareGraph(graph, 1, outputDirectory);
+		Graph<VertexOfDualGraph> preparedGraph = preparation.prepareGraph(graph, 1, outputDirectory, cc);
 
 		for (VertexOfDualGraph v : preparedGraph.verticesArray()) {
 			Assertions.assertNotNull(v.getVerticesOfFace());
 		}
 
-		GraphWriter gw = new GraphWriter();
+		GraphWriter gw = new GraphWriter(cc);
 
 		String pathToResultDirectory = args[3];
 

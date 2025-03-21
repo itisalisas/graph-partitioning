@@ -6,27 +6,21 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import partitioning.BalancedPartitioning;
-import partitioning.InertialFlowPartitioning;
 import readWrite.GraphReader;
 import readWrite.GraphWriter;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import readWrite.GraphReader;
-import readWrite.GraphWriter;
 
 class GraphTest {
 
     private Graph<Vertex> graph;
     private List<Vertex> vs;
-    private List<EdgeOfGraph> edges;
+    private List<EdgeOfGraph<Vertex>> edges;
     private GraphReader graphReader = new GraphReader();
     private GraphWriter graphWriter = new GraphWriter();
 
@@ -42,26 +36,26 @@ class GraphTest {
                 new Vertex(6, new Point(10, 10)),
                 new Vertex(7, new Point(10, -10)),
                 new Vertex(8, new Point(-10, -10)));
-        edges = List.of(new EdgeOfGraph(vs.get(0), vs.get(1), 1),
-                new EdgeOfGraph(vs.get(1), vs.get(0), 1),
-                new EdgeOfGraph(vs.get(1), vs.get(2), 1),
-                new EdgeOfGraph(vs.get(1), vs.get(4), 1),
-                new EdgeOfGraph(vs.get(1), vs.get(3), 1),
-                new EdgeOfGraph(vs.get(2), vs.get(7), 1),
-                new EdgeOfGraph(vs.get(2), vs.get(1), 1),
-                new EdgeOfGraph(vs.get(3), vs.get(6), 1),
-                new EdgeOfGraph(vs.get(3), vs.get(1), 1),
-                new EdgeOfGraph(vs.get(4), vs.get(3), 1),
-                new EdgeOfGraph(vs.get(4), vs.get(1), 1),
-                new EdgeOfGraph(vs.get(5), vs.get(8), 1),
-                new EdgeOfGraph(vs.get(6), vs.get(5), 1),
-                new EdgeOfGraph(vs.get(7), vs.get(4), 1),
-                new EdgeOfGraph(vs.get(8), vs.get(2), 1));
+        edges = List.of(new EdgeOfGraph<Vertex>(vs.get(0), vs.get(1), 1),
+                new EdgeOfGraph<Vertex>(vs.get(1), vs.get(0), 1),
+                new EdgeOfGraph<Vertex>(vs.get(1), vs.get(2), 1),
+                new EdgeOfGraph<Vertex>(vs.get(1), vs.get(4), 1),
+                new EdgeOfGraph<Vertex>(vs.get(1), vs.get(3), 1),
+                new EdgeOfGraph<Vertex>(vs.get(2), vs.get(7), 1),
+                new EdgeOfGraph<Vertex>(vs.get(2), vs.get(1), 1),
+                new EdgeOfGraph<Vertex>(vs.get(3), vs.get(6), 1),
+                new EdgeOfGraph<Vertex>(vs.get(3), vs.get(1), 1),
+                new EdgeOfGraph<Vertex>(vs.get(4), vs.get(3), 1),
+                new EdgeOfGraph<Vertex>(vs.get(4), vs.get(1), 1),
+                new EdgeOfGraph<Vertex>(vs.get(5), vs.get(8), 1),
+                new EdgeOfGraph<Vertex>(vs.get(6), vs.get(5), 1),
+                new EdgeOfGraph<Vertex>(vs.get(7), vs.get(4), 1),
+                new EdgeOfGraph<Vertex>(vs.get(8), vs.get(2), 1));
         for (Vertex v : vs) {
             graph.addVertex(v);
         }
-        for (EdgeOfGraph e : edges) {
-            graph.addEdge(e.begin, e.end, e.getLength());
+        for (EdgeOfGraph<Vertex> e : edges) {
+            graph.addEdge(e.begin, e.end, e.length);
         }
     }
 
@@ -139,9 +133,9 @@ class GraphTest {
     void testAngles() {
         HashMap<Vertex, TreeSet<EdgeOfGraph<Vertex>>> orderedEdges = graph.arrangeByAngle();
         TreeSet<EdgeOfGraph<Vertex>> orderedEdgesForV1 = orderedEdges.get(vs.get(1));
-        List<EdgeOfGraph> expectedOrderedEdgesForV1 = List.of(edges.get(3), edges.get(4), edges.get(1), edges.get(2));
+        List<EdgeOfGraph<Vertex>> expectedOrderedEdgesForV1 = List.of(edges.get(3), edges.get(4), edges.get(1), edges.get(2));
         int ptr = 0;
-        for (EdgeOfGraph e : orderedEdgesForV1) {
+        for (EdgeOfGraph<Vertex> e : orderedEdgesForV1) {
             assertEquals(expectedOrderedEdgesForV1.get(ptr++), e);
         }
         TreeSet<EdgeOfGraph<Vertex>> orderedEdgesForV8 = orderedEdges.get(vs.get(8));
@@ -155,7 +149,7 @@ class GraphTest {
         Graph<Vertex> g = new Graph<>();
         graphReader.readGraphFromFile(g, "src/main/resources/testGraphs/test_graph_0.txt".replace('/', File.separatorChar), false);
         GraphPreparation preparation = new GraphPreparation();
-        Graph<VertexOfDualGraph> dualGraph = preparation.prepareGraph(g, 1e-9, "");
+        Graph<VertexOfDualGraph> dualGraph = preparation.prepareGraph(g, 1e-9, "", null);
         Assertions.assertEquals(1, dualGraph.verticesNumber());
     }
 
@@ -165,7 +159,7 @@ class GraphTest {
         Graph<Vertex> g = new Graph<>();
         graphReader.readGraphFromFile(g, "src/main/resources/testGraphs/test_graph_1.txt".replace('/', File.separatorChar), false);
         GraphPreparation preparation = new GraphPreparation();
-        Graph<VertexOfDualGraph> dualGraph = preparation.prepareGraph(g, 1e-9, "");
+        Graph<VertexOfDualGraph> dualGraph = preparation.prepareGraph(g, 1e-9, "", null);
         graphWriter.printGraphToFile(dualGraph, "src/main/resources/testGraphs", "test_graph_1_dual.txt", false);
         Assertions.assertEquals(6, dualGraph.verticesNumber());
     }
@@ -176,7 +170,7 @@ class GraphTest {
         Graph<Vertex> g = new Graph<>();
         graphReader.readGraphFromFile(g, "src/main/resources/testGraphs/test_graph_2.txt".replace('/', File.separatorChar), false);
         GraphPreparation preparation = new GraphPreparation();
-        Graph<VertexOfDualGraph> dualGraph = preparation.prepareGraph(g, 1e-9, "");
+        Graph<VertexOfDualGraph> dualGraph = preparation.prepareGraph(g, 1e-9, "", null);
         graphWriter.printGraphToFile(dualGraph, "src/main/resources/testGraphs", "test_graph_2_dual.txt", false);
         Assertions.assertEquals(3, dualGraph.verticesNumber());
     }

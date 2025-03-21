@@ -120,6 +120,7 @@ public class BoundSearcher {
                 (3.0 * Math.PI) / 2.0 <= startEdge.getCorner() && startEdge.getCorner() < 2 * Math.PI);
 
         EdgeOfGraph<Vertex> prevEdge = new EdgeOfGraph<>(startEdge.end, startEdge.begin, 0);
+
         Vertex current = startEdge.end;
         Assertions.assertTrue(Arrays.stream(partSubgraph.edgesArray()).toList().contains(startEdge));
         int faceIndex = findCommonFace(startEdge.begin, startEdge.end, verticesByFaces);
@@ -134,7 +135,7 @@ public class BoundSearcher {
             } else {
                 next = verticesByFaces.get(faceIndex).get((verticesByFaces.get(faceIndex).indexOf(current) + 1) % verticesByFaces.get(faceIndex).size());
             }
-            
+       
             prevEdge = new EdgeOfGraph<>(next, current, 0);
             current = next;
         }
