@@ -59,7 +59,8 @@ public class Balancer {
         Graph<VertexOfDualGraph> regionsSubgraph = dualGraph.createSubgraph(balancingVerticesSet);
         Assertions.assertEquals(balancingVerticesSet.size(), regionsSubgraph.verticesNumber());
         Assertions.assertTrue(regionsSubgraph.isConnected());
-        BalancedPartitioning bp = new BalancedPartitioning(new InertialFlowPartitioning(0.45));
+        double coefficient = 1 - (double) maxWeight / (balancingVerticesSet.stream().mapToDouble(v -> v.getWeight()).sum());
+        BalancedPartitioning bp = new BalancedPartitioning(new InertialFlowPartitioning(coefficient));
         ArrayList<HashSet<VertexOfDualGraph>> newPartition = bp.partition(regionsSubgraph, maxWeight);
         Assertions.assertEquals(2, newPartition.size());
 
@@ -97,10 +98,7 @@ public class Balancer {
     }
 
     public ArrayList<HashSet<VertexOfDualGraph>> rebalancing() {
-        long bal = System.currentTimeMillis();
-        while (removeSmallestRegion()) { System.out.println("New iteration of removing, size = " + partitionGraph.verticesNumber());}
-        System.out.println("removing time = " + (System.currentTimeMillis() - bal) / 1000 + " sec");
-        System.out.println("End of removing");
+        while (removeSmallestRegion()) { }
         double threshold = partitionGraph.verticesWeight() * 0.1;
         double variance = calculateVariance();
 
@@ -149,107 +147,110 @@ public class Balancer {
     } 
     
     private boolean removeSmallestRegion() {
-        PartitionGraphVertex smallestVertex = partitionGraph.smallestVertex().copy();
-        List<PartitionGraphVertex> neighbors = new ArrayList<>();
-        for (PartitionGraphVertex neighbor : partitionGraph.sortNeighbors(smallestVertex)) {
-            neighbors.add(neighbor.copy());
-        }
-        
-        // TODO - копировать после проверки
-        double availableWeight = neighbors.stream().mapToDouble(vertex -> maxWeight - vertex.getWeight()).sum();
-        if (availableWeight < smallestVertex.getWeight()) {
-            return false;
-        }
-
-        List<VertexOfDualGraph> verticesToRedistribute = new ArrayList<>(smallestVertex.vertices);
-        HashSet<VertexOfDualGraph> wasRedistributed = new HashSet<>();
-        Map<VertexOfDualGraph, VertexOfDualGraph> vertexToBestNeighbor = new HashMap<>();
-
-        PriorityQueue<Comp> priorityQueue = new PriorityQueue<>(
-            Comparator.comparingDouble((Comp comp) -> {
-                return - comp.ratio;
-            })
-        );
-
-        // TODO - не добавлять пары, которые не смежны
-        for (VertexOfDualGraph vertex : verticesToRedistribute) {
-            for (PartitionGraphVertex neighbor : neighbors) {
-                priorityQueue.add(new Comp(vertex, smallestVertex, neighbor));
+        List<PartitionGraphVertex> ver = PartitionGraphVertex.bestVertex(partitionGraph, maxWeight);
+        for (PartitionGraphVertex sm : ver) {
+            PartitionGraphVertex smallestVertex = sm.copy();
+            List<PartitionGraphVertex> neighbors = new ArrayList<>();
+            for (PartitionGraphVertex neighbor : partitionGraph.sortNeighbors(smallestVertex)) {
+                neighbors.add(neighbor.copy());
             }
-        }
-
-
-        while (!priorityQueue.isEmpty()) {
-            Comp comp = priorityQueue.poll();
-            // System.out.println("ratio = " + comp.ratio);
-            VertexOfDualGraph vertex = comp.vertex;
-            PartitionGraphVertex neighbor = comp.neighbor;
-            VertexOfDualGraph bestNeighborVertex = comp.bestNeighborVertex;
             
-            if (wasRedistributed.contains(vertex) || comp.ratio == 0.0) {
-                continue;
+            // TODO - копировать после проверки
+            double availableWeight = neighbors.stream().mapToDouble(vertex -> maxWeight - vertex.getWeight()).sum();
+            if (availableWeight < smallestVertex.getWeight()) {
+                return false;
             }
 
-            double newWeight = neighbor.getWeight() + vertex.getWeight();
-            
-            if (newWeight <= maxWeight) {
-                System.out.println(neighbor.getName() + ": " + neighbor.getWeight() + " -> " + newWeight + " ratio = " + comp.ratio);
-                neighbor.addVertex(vertex);
-                smallestVertex.removeVertex(vertex);
-                wasRedistributed.add(vertex);
-                vertexToBestNeighbor.put(vertex, bestNeighborVertex);
-                for (VertexOfDualGraph dualVertex : verticesToRedistribute) {
-                    if (!wasRedistributed.contains(dualVertex) && dualGraph.getEdges().get(vertex).containsKey(dualVertex)) {
-                        priorityQueue.add(new Comp(dualVertex, smallestVertex, neighbor));
+            List<VertexOfDualGraph> verticesToRedistribute = new ArrayList<>(smallestVertex.vertices);
+            HashSet<VertexOfDualGraph> wasRedistributed = new HashSet<>();
+            Map<VertexOfDualGraph, VertexOfDualGraph> vertexToBestNeighbor = new HashMap<>();
+
+            PriorityQueue<Comp> priorityQueue = new PriorityQueue<>(
+                Comparator.comparingDouble((Comp comp) -> {
+                    return - comp.ratio;
+                })
+            );
+
+            // TODO - не добавлять пары, которые не смежны
+            for (VertexOfDualGraph vertex : verticesToRedistribute) {
+                for (PartitionGraphVertex neighbor : neighbors) {
+                    priorityQueue.add(new Comp(vertex, smallestVertex, neighbor));
+                }
+            }
+
+
+            while (!priorityQueue.isEmpty()) {
+                Comp comp = priorityQueue.poll();
+                
+                VertexOfDualGraph vertex = comp.vertex;
+                PartitionGraphVertex neighbor = comp.neighbor;
+                VertexOfDualGraph bestNeighborVertex = comp.bestNeighborVertex;
+                
+                if (wasRedistributed.contains(vertex) || comp.ratio == 0.0) {
+                    continue;
+                }
+
+                double newWeight = neighbor.getWeight() + vertex.getWeight();
+                
+                if (newWeight <= maxWeight) {
+                    neighbor.addVertex(vertex);
+                    smallestVertex.removeVertex(vertex);
+                    wasRedistributed.add(vertex);
+                    vertexToBestNeighbor.put(vertex, bestNeighborVertex);
+                    for (VertexOfDualGraph dualVertex : verticesToRedistribute) {
+                        if (!wasRedistributed.contains(dualVertex) && dualGraph.getEdges().get(vertex).containsKey(dualVertex)) {
+                            priorityQueue.add(new Comp(dualVertex, smallestVertex, neighbor));
+                        }
                     }
                 }
             }
-        }
 
 
-        List<List<Vertex>> bounds = new ArrayList<>();
-        List<PartitionGraphVertex> parts = partitionGraph.verticesArray().stream().sorted(Comparator.comparing(c -> c.getName())).toList();
-		for (int i = 0; i < parts.size(); i++) {
-			bounds.add(BoundSearcher.findBound(startGraph, new HashSet<>(parts.get(i).vertices), comparisonForDualGraph));
-		}
+            List<List<Vertex>> bounds = new ArrayList<>();
+            List<PartitionGraphVertex> parts = partitionGraph.verticesArray().stream().sorted(Comparator.comparing(c -> c.getName())).toList();
+            for (int i = 0; i < parts.size(); i++) {
+                bounds.add(BoundSearcher.findBound(startGraph, new HashSet<>(parts.get(i).vertices), comparisonForDualGraph));
+            }
 
-        PartitionWriter pw = new PartitionWriter();
-        String currentRemovingPath = pathToResultDirectory + File.separatorChar + "removing_" +  parts.size();
-        pw.printBound(bounds, currentRemovingPath, true);
-        pw.printRedistributedVerticesDirections(vertexToBestNeighbor, currentRemovingPath, true);
-        
-        // If there are still vertices left that couldn't be moved, return false
-        if (wasRedistributed.size() != verticesToRedistribute.size()) {
-            return false;
-        }
-        
-        ArrayList<HashSet<VertexOfDualGraph>> newParts = new ArrayList<>();
-        for (PartitionGraphVertex v : partitionGraph.verticesArray()) {
-            if (v == partitionGraph.smallestVertex()) continue;
-            if (!partitionGraph.sortNeighbors(partitionGraph.smallestVertex()).contains(v)) {
+            PartitionWriter pw = new PartitionWriter();
+            String currentRemovingPath = pathToResultDirectory + File.separatorChar + "removing_" +  parts.size();
+            pw.printBound(bounds, currentRemovingPath, true);
+            pw.printRedistributedVerticesDirections(vertexToBestNeighbor, currentRemovingPath, true);
+            
+            // If there are still vertices left that couldn't be moved, return false
+            if (wasRedistributed.size() != verticesToRedistribute.size()) {
+                continue;
+            }
+            
+            ArrayList<HashSet<VertexOfDualGraph>> newParts = new ArrayList<>();
+            for (PartitionGraphVertex v : partitionGraph.verticesArray()) {
+                if (v == sm) continue;
+                if (!partitionGraph.sortNeighbors(sm).contains(v)) {
+                    newParts.add(new HashSet<>(v.vertices));
+                }
+            }
+
+
+            for (PartitionGraphVertex v : neighbors) {
                 newParts.add(new HashSet<>(v.vertices));
             }
-        }
 
 
-        for (PartitionGraphVertex v : neighbors) {
-            newParts.add(new HashSet<>(v.vertices));
-        }
-
-
-        HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber = new HashMap<>();
-        for (int i = 0; i < newParts.size(); i++) {
-            for (VertexOfDualGraph vertex : newParts.get(i)) {
-                dualVertexToPartNumber.put(vertex, i);
+            HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber = new HashMap<>();
+            for (int i = 0; i < newParts.size(); i++) {
+                for (VertexOfDualGraph vertex : newParts.get(i)) {
+                    dualVertexToPartNumber.put(vertex, i);
+                }
             }
+
+
+            Graph<PartitionGraphVertex> newPartitionGraph = PartitionGraphVertex.buildPartitionGraph(dualGraph, newParts, dualVertexToPartNumber);
+
+            this.partitionGraph = newPartitionGraph;
+
+            return true;
         }
-
-
-        Graph<PartitionGraphVertex> newPartitionGraph = PartitionGraphVertex.buildPartitionGraph(dualGraph, newParts, dualVertexToPartNumber);
-
-        this.partitionGraph = newPartitionGraph;
-
-        return true;
+        return false;
     }
 
     class Comp {
@@ -266,7 +267,6 @@ public class Balancer {
             double countInnerEdges = 0;
             double countOuterEdges = 0;
             double bestEdgeLength = 0;
-            double commonLength = 0; 
             for (VertexOfDualGraph neighborVertex : dualGraph.getEdges().get(vertex).keySet()) {
                 Edge edge = dualGraph.getEdges().get(vertex).get(neighborVertex);
                 if (neighbor.vertices.stream().collect(Collectors.toSet()).contains(neighborVertex)) {
@@ -278,9 +278,14 @@ public class Balancer {
                 } else if (part.vertices.stream().collect(Collectors.toSet()).contains(neighborVertex)) {
                     countInnerEdges += edge.length;
                 }
-                commonLength += edge.length;
             }
-            this.ratio = countOuterEdges / commonLength * maxWeight / neighbor.getWeight();
+            if (countOuterEdges == 0) {
+                this.ratio = 0;
+            } else if (countInnerEdges == 0) {
+                this.ratio = countOuterEdges * maxWeight / neighbor.getWeight();
+            } else {
+                this.ratio = countOuterEdges / countInnerEdges * maxWeight / neighbor.getWeight();
+            }
         }
     }
 }

@@ -70,7 +70,7 @@ cd graph-partitioning
 Example:
 
 ```bash
-./gradlew run --args="IF dataExample\\graph_59.93893094417527_30.32268115454809_1000.txt 10000 59.93893094417527_30.32268115454809_1000"
+./gradlew run --args="IF dataExample/spb/graph_59.93893094417527_30.32268115454809_1000.txt 10000 59.93893094417527_30.32268115454809_1000"
 
 ```
 
@@ -122,7 +122,7 @@ The `graph_visualizer.py` script visualizes a graph from a specified file.
 Example:
 
 ```bash
-python3 src/scripts/graph_visualizer.py dataExample/graph_59.93893094417527_30.32268115454809_1000.txt graph.html
+python3 src/scripts/graph_visualizer.py dataExample/spb/graph_59.93893094417527_30.32268115454809_1000.txt graph.html
 ```
 
 ## License

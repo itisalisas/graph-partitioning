@@ -28,15 +28,23 @@ public class GraphWriter {
 		out.write(String.format("%d %n", graph.getEdges().size()));
 		
 		for (Vertex begin : graph.getEdges().keySet()) {
-      		for (Vertex end : graph.getEdges().get(begin).keySet()) {
+			Vertex nBegin;
+			if (geodetic) {
+				nBegin = cc.fromEuclidean(begin, null);
+				out.write(String.format("%d %f %f %d ", begin.getName(), nBegin.x, nBegin.y, graph.getEdges().get(begin).size()));
+			} else {
+				out.write(String.format("%d %f %f %d ", begin.getName(), begin.x, begin.y, graph.getEdges().get(begin).size()));
+			}
+			for (Vertex end : graph.getEdges().get(begin).keySet()) {
 				if (geodetic) {
-					Vertex nEnd = coordConver.fromEuclidean(end);
+					Vertex nEnd = cc.fromEuclidean(end, null);
 					out.write(String.format("%d %f %f %f ", end.getName(), nEnd.x, nEnd.y,
-							graph.getEdges().get(begin).get(end).length));
-							continue;
-				}
+					graph.getEdges().get(begin).get(end).getLength()));
+					continue;
+				} else {
 				out.write(String.format("%d %f %f %f ", end.getName(), end.x, end.y,
-						graph.getEdges().get(begin).get(end).length));
+						graph.getEdges().get(begin).get(end).getLength()));
+				}
 			}
 			out.append('\n');
 		}

@@ -3,12 +3,18 @@ package readWrite;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.text.DecimalFormat;
+import static java.lang.Math.sqrt;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import com.google.gson.GsonBuilder;
+
+import graph.BoundSearcher;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
 import partitioning.BalancedPartitioning;
@@ -69,12 +75,11 @@ public class PartitionWriter {
 			}
 			GraphWriter gw = new GraphWriter();
 			gw.printVerticesToFile(bounds.get(i), boundFile, geodetic);
-			//System.out.println(bounds.get(i).get(0).x + " " + bounds.get(i).get(0).y);
 		}
 	}
 
 
-	public void savePartitionToDirectory(BalancedPartitioning balancedPartitioning, BalancedPartitioningOfPlanarGraphs bp, String outputDirectory, List<HashSet<VertexOfDualGraph>> partitionResult, boolean geodetic) {
+	public void savePartitionToDirectory(BalancedPartitioning balancedPartitioning, BalancedPartitioningOfPlanarGraphs bp, String outputDirectory, List<HashSet<VertexOfDualGraph>> partitionResult, boolean geodetic, double partitionTime) {
 		createOutputDirectory(outputDirectory);
 		File outputDirectoryFile = new File(outputDirectory);
 		if (!outputDirectoryFile.exists()) {
@@ -98,21 +103,27 @@ public class PartitionWriter {
 			}
 		}
 
-		File infoFile = new File(outputDirectory + File.separator + "info.txt");
-		try {
-			infoFile.createNewFile();
-		} catch (IOException e) {
-			throw new RuntimeException("Can't create info file");
-		}
-		List<Double> weights = new ArrayList<>(partitionResult.stream()
-				.map(set -> set.stream()
-						.mapToDouble(Vertex::getWeight)
-						.sum())
-				.toList());
-		try (FileWriter writer = new FileWriter(infoFile, false)) {
+		printStat(outputDirectory, partitionResult, balancedPartitioning, bp, partitionTime);
 
-			double minSumWeight = weights.stream().mapToDouble(Double::doubleValue).min().orElse(0);
-			double maxSumWeight = weights.stream().mapToDouble(Double::doubleValue).max().orElse(0);
+		System.out.println("Empty parts number: " + balancedPartitioning.countEmptyParts(partitionResult));
+		System.out.println("Graph weight after: " + balancedPartitioning.countSumPartitioningWeight(partitionResult));
+	}
+
+	private void printStat(String outputDirectory, List<HashSet<VertexOfDualGraph>> partitionResult, BalancedPartitioning balancedPartitioning, BalancedPartitioningOfPlanarGraphs bp, double partitionTime) {
+		List<Double> weights = partitionResult.stream()
+            .map(set -> set.stream().mapToDouble(Vertex::getWeight).sum())
+            .collect(Collectors.toList());
+
+			List<Double> cutLengths = new ArrayList<>(balancedPartitioning.cutEdgesMap.values());
+			double totalGraphWeight = bp.graph.verticesArray().stream()
+					.mapToDouble(VertexOfDualGraph::getWeight)
+					.sum();
+			
+			List<Double> diameters = partitionResult.stream()
+            .map(p -> BoundSearcher.findDiameter(p.stream().flatMap(v -> v.getVerticesOfFace().stream()).collect(Collectors.toList())))
+            .collect(Collectors.toList());
+
+			Map<String, Object> jsonData = new LinkedHashMap<>();
 
 			double wMean = weights.stream()
 					.mapToDouble(Double::doubleValue)
@@ -136,45 +147,39 @@ public class PartitionWriter {
 					.average()
 					.orElse(0.0);
 
-			double wStandardDeviation = Math.sqrt(wVariance);
-			double cutStandardDeviation = Math.sqrt(cutVariance);
+			List<Double> ratios = weights.stream()
+					.sorted()
+					.map(w -> Math.round((w / balancedPartitioning.maxSumVerticesWeight) * 1000.0) / 1000.0)
+					.collect(Collectors.toList());
 
-			writer.write("VERTEX NUMBER = " + bp.graph.verticesArray().size() + "\n");
-			writer.write("NUMBER OF PARTS = " + partitionResult.size() + "\n");
-			writer.write("MIN = " + minSumWeight + "\n");
-			writer.write("MAX = " + maxSumWeight + "\n");
-			writer.write("AVERAGE = " + wMean + "\n");
-			writer.write("VARIANCE = " + wStandardDeviation + "\n");
-			writer.write("CV = " + wStandardDeviation / wMean + "\n");
-			writer.write("TOTAL CUT LENGTH = " + balancedPartitioning.calculateTotalCutEdgesLength() + "\n");
-			writer.write("AVERAGE CUT LENGTH = " + cutMean + "\n");
-			writer.write("VARIANCE CUT LENGTH = " + cutStandardDeviation + "\n");
-			writer.write("CV CUT LENGTH = " + cutStandardDeviation / cutMean + "\n");
-			writer.write("TIME = " + balancedPartitioning.partitioningTime + "\n");
-			writer.flush();
-		} catch (Exception e) {
-			throw new RuntimeException("Can't write info to file");
-		}
 
-		System.out.println("Empty parts number: " + balancedPartitioning.countEmptyParts(partitionResult));
-		System.out.println("Graph weight after: " + balancedPartitioning.countSumPartitioningWeight(partitionResult));
+			jsonData.put("partitionTime", partitionTime);
+    		jsonData.put("dualVertexNumber", bp.graph.verticesNumber());
+   			jsonData.put("totalGraphWeight", totalGraphWeight);
+    		jsonData.put("regionCount", partitionResult.size());
+			jsonData.put("minRegionCountEstimate", (int) Math.ceil(totalGraphWeight / balancedPartitioning.maxSumVerticesWeight));
+			jsonData.put("minRegionWeight", Collections.min(weights));
+    		jsonData.put("maxRegionWeight", Collections.max(weights));
+			jsonData.put("regionBoundaries", cutLengths);
+    		jsonData.put("totalBoundaryLength", balancedPartitioning.calculateTotalCutEdgesLength());
+			jsonData.put("regionDiameters", diameters);
+			jsonData.put("averageWeight", wMean);
+			jsonData.put("weightVariance", sqrt(wVariance));
+			
+			jsonData.put("averageBoundary", cutMean);
+			jsonData.put("boundaryVariance", sqrt(cutVariance));
 
-		File ratioFile = new File(outputDirectory + File.separator + "ratio.txt");
-		try {
-			ratioFile.createNewFile();
-		} catch (IOException e) {
-			throw new RuntimeException("Can't create ratio file");
-		}
-		try (FileWriter writer = new FileWriter(ratioFile, false)) {
-			weights.sort(Double::compareTo);
-			DecimalFormat df = new DecimalFormat("#.###");
-			for (double weight : weights) {
-				writer.write(df.format((double) weight / (double) balancedPartitioning.maxSumVerticesWeight) + "\n");
+			jsonData.put("ratios", ratios);
+
+			try (FileWriter writer = new FileWriter(outputDirectory + "/partition_info.json")) {
+				new GsonBuilder()
+					.setPrettyPrinting()
+					.create()
+					.toJson(jsonData, writer);
+			} catch (IOException e) {
+				throw new RuntimeException("JSON write error", e);
 			}
-		} catch (Exception e) {
-			throw new RuntimeException("Can't write ratio to file");
-		}
-		// System.out.println("Empty parts number: " + countEmptyParts(partitionResult));
+
 	}
 
 	public void printRedistributedVerticesDirections(Map<VertexOfDualGraph, VertexOfDualGraph> vertexToBestNeighbor, String outputDirectory, boolean geodetic) {
@@ -200,7 +205,8 @@ public class PartitionWriter {
 				writer.write(start.x + " " + start.y + " " + end.x + " " + end.y + "\n");
 			}
 		} catch (Exception e) {
-			throw new RuntimeException("Can't write edges to file");
+			e.printStackTrace();
+			throw new RuntimeException("Can't write edges to file: ");
 		}
 	}
 
