@@ -8,6 +8,7 @@ from math import atan2, degrees
 center_lat = 59.93893094417527
 center_lon = 30.32268115454809
 d = 50
+withRivers = False
 
 def get_bounding_box(center, distance):
     lat, lon = center
@@ -32,8 +33,30 @@ inputDist = input()
 if inputDist != '-':
     d = int(inputDist)
 
+print("with rivers [Y/N]")
+inputRivers = input()
+if inputRivers == "Y":
+    withRivers = True
+
 # Получаем граф с ребрами, проходящими через границу
-G = osmnx.graph_from_point((center_lat, center_lon), dist=d, truncate_by_edge=True, simplify=False)
+network_graph = osmnx.graph_from_point((center_lat, center_lon), dist=d, truncate_by_edge=True, simplify=False)
+
+G = network_graph
+
+if withRivers:
+    water_graph = nx.MultiDiGraph()
+    try:
+        # Получаем граф с ребрами водоемов
+        water_graph = osmnx.graph_from_point((center_lat, center_lon), dist=d, truncate_by_edge=True, simplify=False, retain_all=True, custom_filter=['[waterway=river]','[waterway=canal]'])
+
+        for u, v, data in water_graph.edges(data=True):
+            data['length'] = 0
+            data['water'] = True
+    except ValueError:
+        water_graph = nx.MultiDiGraph()
+    
+    # объединяем графы
+    G = nx.compose_all([G, water_graph])
 
 # Получаем границу bounding box
 boundary_box = get_bounding_box((center_lat, center_lon), d)
@@ -49,6 +72,7 @@ max_id = max(G.nodes)
 edges_data = G.edges(data=True)
 
 for u, v, data in edges_data:
+    is_water = data.get('water', False)
     # Получаем координаты начальной и конечной точек ребра
     u_point = Point(G.nodes[u]["x"], G.nodes[u]["y"])
     v_point = Point(G.nodes[v]["x"], G.nodes[v]["y"])
@@ -97,14 +121,14 @@ for u, v, data in edges_data:
                 # Расстояние между u_point и intersection_point
                 u_lat, u_lon = u_point.y, u_point.x
                 i_lat, i_lon = intersection_point.y, intersection_point.x
-                distance = geodesic((u_lat, u_lon), (i_lat, i_lon)).meters
+                distance = 0 if is_water else geodesic((u_lat, u_lon), (i_lat, i_lon)).meters
                 nodes_to_remove.add(v)
                 edges_to_add.append((u, new_node_id, {"length": distance}))
             elif boundary_box.contains(v_point):
                 # Расстояние между v_point и intersection_point
                 v_lat, v_lon = v_point.y, v_point.x
                 i_lat, i_lon = intersection_point.y, intersection_point.x
-                distance = geodesic((v_lat, v_lon), (i_lat, i_lon)).meters
+                distance = 0 if is_water else geodesic((v_lat, v_lon), (i_lat, i_lon)).meters
                 nodes_to_remove.add(u)
                 edges_to_add.append((new_node_id, v, {"length": distance}))
 

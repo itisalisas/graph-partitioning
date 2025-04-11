@@ -23,12 +23,15 @@ public class CoordinateConversion {
 
     private <T extends Vertex> Point findCenter(Set<T> vertexSet) {
         Point ans = new Point(0, 0);
+        double minX = Double.MAX_VALUE, maxX = Double.MIN_VALUE, minY = Double.MAX_VALUE, maxY = Double.MIN_VALUE;
         for (T ver : vertexSet) {
-            ans.x = ans.x + ver.x;
-            ans.y = ans.y + ver.y;
+            minX = Math.min(minX, ver.x);
+            maxX = Math.max(maxX, ver.x);
+            minY = Math.min(minY, ver.y);
+            maxY = Math.max(maxY, ver.y);
         }
-        ans.x = ans.x / vertexSet.size();
-        ans.y = ans.y / vertexSet.size();
+        ans.x = (minX + maxX) / 2.0;
+        ans.y = (minY + maxY) / 2.0;
         return ans;
     }
         

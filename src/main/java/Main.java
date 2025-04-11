@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Assertions;
 import graph.BoundSearcher;
 import graph.Graph;
 import graph.PartitionGraphVertex;
-import graph.Point;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
 import graphPreparation.GraphPreparation;
@@ -125,7 +124,7 @@ public class Main {
 		}
 		partitionGraph = PartitionGraphVertex.buildPartitionGraph(preparedGraph, partitionResultForFaces, newDualVertexToPartNumber);
 		gw.printGraphToFile(partitionGraph,  outputDirectory + pathToResultDirectory, "part_graph.txt", true);
-		double partitioningTime = ((double)(System.currentTimeMillis() - startTime)) / 100.0;
+		double partitioningTime = ((double)(System.currentTimeMillis() - startTime)) / 1000.0;
 
 		System.out.println("Partition size: " + partitionResultForFaces.size());
 

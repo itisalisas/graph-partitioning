@@ -198,14 +198,16 @@ public class SweepLine {
        		 	}
 				if (copyPoints.containsKey(currVertex)) {
 					gph.addVertex(prevVert);
-        			gph.addEdge(prevVert, copyPoints.get(currVertex), prevVert.getLength(currVertex));
+        			double newLength = currEdge.length == 0 ? 0 : prevVert.getLength(currVertex);
+					gph.addEdge(prevVert, copyPoints.get(currVertex), newLength);
         			prevVert = copyPoints.get(currVertex);
 					//System.out.println(copyPoints.get(currVertex).name);
 					continue;
 				}
 				gph.addVertex(prevVert);
 				gph.addVertex(currVertex);
-        		gph.addEdge(prevVert, currVertex, prevVert.getLength(currVertex));
+        		double newLength = currEdge.length == 0 ? 0 : prevVert.getLength(currVertex);
+				gph.addEdge(prevVert, currVertex, newLength);
         		prevVert = currVertex;
     		}
 		}

@@ -61,6 +61,8 @@ public class GraphPreparation {
 		} else {
 			graph = gph;
 		}
+
+		graph = graph.getLargestConnectedComponent();
 		
         Assertions.assertTrue(graph.isConnected());
 		// draw swepline
