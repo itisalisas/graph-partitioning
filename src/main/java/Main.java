@@ -17,6 +17,7 @@ import graph.VertexOfDualGraph;
 import graphPreparation.GraphPreparation;
 import partitioning.BalancedPartitioning;
 import partitioning.Balancer;
+import partitioning.BubblePartitioning;
 import partitioning.InertialFlowPartitioning;
 import readWrite.CoordinateConversion;
 import readWrite.GraphReader;
@@ -50,6 +51,13 @@ public class Main {
 					throw new RuntimeException("Can't parse partition parameter");
 				}
 				partitioning = new BalancedPartitioning(new InertialFlowPartitioning(partitionParameter));
+			}
+		} else if (algorithmName.equals("BU")) {
+			if (args.length < 5) {
+				partitioning = new BalancedPartitioning(new BubblePartitioning());
+			} else {
+				System.out.println("check param");
+				partitioning = new BalancedPartitioning(new BubblePartitioning());
 			}
 		} else {
 			throw new RuntimeException("No such partition algorithm");
@@ -107,8 +115,8 @@ public class Main {
 		}
 		HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph = preparation.getComparisonForDualGraph();
 		Graph<PartitionGraphVertex> partitionGraph = PartitionGraphVertex.buildPartitionGraph(preparedGraph, partitionResultForFaces, dualVertexToPartNumber);
-		Balancer balancer = new Balancer(partitionGraph, preparedGraph, graph, maxSumVerticesWeight, comparisonForDualGraph, outputDirectory + pathToResultDirectory);
-		partitionResultForFaces = balancer.rebalancing();
+		// Balancer balancer = new Balancer(partitionGraph, preparedGraph, graph, maxSumVerticesWeight, comparisonForDualGraph, outputDirectory + pathToResultDirectory);
+		// partitionResultForFaces = balancer.rebalancing();
 		HashMap<VertexOfDualGraph, Integer> newDualVertexToPartNumber = new HashMap<>();
 		for (int i = 0; i < partitionResultForFaces.size(); i++) {
 			for (VertexOfDualGraph vertex : partitionResultForFaces.get(i)) {

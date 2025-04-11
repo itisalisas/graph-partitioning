@@ -67,7 +67,7 @@ public class MakingDualGraph {
           VertexOfDualGraph.sumVertexWeight(verticesOfFace), verticesOfFace);
       res.addVertex(vert);
       comparison.put(vert, vert);
-      for (EdgeOfGraph edge : inActualFace) {
+      for (EdgeOfGraph<Vertex> edge : inActualFace) {
         inFace.put(edge, vert);
       }
       verticesOfFace.clear();

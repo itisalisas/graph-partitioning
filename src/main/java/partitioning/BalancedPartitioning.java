@@ -35,10 +35,14 @@ public class BalancedPartitioning {
 
 	private void calculateCutWeights(Graph<VertexOfDualGraph> graph, List<HashSet<VertexOfDualGraph>> partitions) {
 		cutEdgesMap = new HashMap<>();
-
+		if (graph == null) {
+			System.out.println("graph - null1");
+		}
 		for (Set<VertexOfDualGraph> partition : partitions) {
 			double cutEdgesWeightSum = 0;
-
+			if (graph == null) {
+				System.out.println("graph - null2");
+			}
 			for (EdgeOfGraph<VertexOfDualGraph> edge : graph.edgesArray()) {
 				VertexOfDualGraph u = edge.begin;
 				VertexOfDualGraph v = edge.end;
