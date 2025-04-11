@@ -179,6 +179,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             List<Graph<VertexOfDualGraph>> subpartition = partitionGraph(flowResult);
 
             for (Graph<VertexOfDualGraph> subgraph : subpartition) {
+                Assertions.assertTrue(subgraph.isConnected());
                 stack.push(subgraph);
             }
         }
@@ -198,7 +199,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                 vertexSet.add(current);
                 currentWeight += current.getWeight();
                 for (VertexOfDualGraph neighbor : currentGraph.getEdges().get(current).keySet()) {
-                    if (!vertexSet.contains(neighbor) && !sourceSet.contains(current)) {
+                    if (!vertexSet.contains(neighbor) && !sourceSet.contains(neighbor)) {
                         queue.add(neighbor);
                     }
                 }

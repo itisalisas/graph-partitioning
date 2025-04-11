@@ -160,15 +160,15 @@ public class PartitionWriter {
 			jsonData.put("minRegionCountEstimate", (int) Math.ceil(totalGraphWeight / balancedPartitioning.maxSumVerticesWeight));
 			jsonData.put("minRegionWeight", Collections.min(weights));
     		jsonData.put("maxRegionWeight", Collections.max(weights));
-			jsonData.put("regionBoundaries", cutLengths);
     		jsonData.put("totalBoundaryLength", balancedPartitioning.calculateTotalCutEdgesLength());
-			jsonData.put("regionDiameters", diameters);
 			jsonData.put("averageWeight", wMean);
 			jsonData.put("weightVariance", sqrt(wVariance));
 			
 			jsonData.put("averageBoundary", cutMean);
 			jsonData.put("boundaryVariance", sqrt(cutVariance));
 
+			jsonData.put("regionBoundaries", cutLengths);
+			jsonData.put("regionDiameters", diameters);
 			jsonData.put("ratios", ratios);
 
 			try (FileWriter writer = new FileWriter(outputDirectory + "/partition_info.json")) {
