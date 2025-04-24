@@ -252,7 +252,7 @@ public class BubblePartitioning extends BalancedPartitioningOfPlanarGraphs {
     }
 
     private int findSeedsNumber(Graph<VertexOfDualGraph> graph, int maxSumVerticesWeight) {
-        return (int)(graph.verticesSumWeight() / maxSumVerticesWeight);
+        return (int)(graph.verticesSumWeight() / (maxSumVerticesWeight * 0.9));
     }
     
 }

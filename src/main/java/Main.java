@@ -15,8 +15,7 @@ import graph.Vertex;
 import graph.VertexOfDualGraph;
 import graphPreparation.GraphPreparation;
 import partitioning.BalancedPartitioning;
-import partitioning.Balancer;
-import partitioning.BubblePartitioning;
+import partitioning.BubblePartitioningSequentially;
 import partitioning.InertialFlowPartitioning;
 import readWrite.CoordinateConversion;
 import readWrite.GraphReader;
@@ -53,10 +52,10 @@ public class Main {
 			}
 		} else if (algorithmName.equals("BU")) {
 			if (args.length < 5) {
-				partitioning = new BalancedPartitioning(new BubblePartitioning());
+				partitioning = new BalancedPartitioning(new BubblePartitioningSequentially());
 			} else {
 				System.out.println("check param");
-				partitioning = new BalancedPartitioning(new BubblePartitioning());
+				partitioning = new BalancedPartitioning(new BubblePartitioningSequentially());
 			}
 		} else {
 			throw new RuntimeException("No such partition algorithm");
