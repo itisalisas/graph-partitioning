@@ -32,8 +32,6 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
 
         TreeSet<VertexOfDualGraph> unused = new TreeSet<>(vertexComparator);
         HashMap<VertexOfDualGraph ,HashSet<VertexOfDualGraph>> bubbles = new HashMap<VertexOfDualGraph ,HashSet<VertexOfDualGraph>>();
-        HashSet<VertexOfDualGraph> nextVertices = new HashSet<>();
-        Double borderLength = 0.0;
         HashSet<VertexOfDualGraph> bubble = new HashSet<>();
         VertexOfDualGraph center = null;
         unused.addAll(graph.getEdges().keySet());
@@ -44,12 +42,10 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
                 break;
             }
             //metod prepare
-            nextVertices.clear();
-            borderLength = 0.0;
             bubble.clear();
             center = unused.first();
-            growFullBubble(graph, maxSumVerticesWeight, nextVertices, borderLength, bubble, center, unused);
-            bubbles.put(center, bubble);
+            growFullBubble(graph, maxSumVerticesWeight, bubble, center, unused);
+            bubbles.put(center, new HashSet<VertexOfDualGraph>(bubble));
             iterCounter++;
         }
         System.out.println("    bubbles were grown");
@@ -106,35 +102,16 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
         return ans;
     }
     
-    private void checkNextVerticesForUsed(HashSet<VertexOfDualGraph> nextVertices,
-                                          TreeSet<VertexOfDualGraph> unused,
-                                          boolean bubbleToClose) {
-        if (bubbleToClose) return;
-        HashSet<VertexOfDualGraph> verticiesToDelete = new HashSet<>();
-        for (VertexOfDualGraph ver : nextVertices) {
-            if (!unused.contains(ver)) {
-                verticiesToDelete.add(ver);
-                //nextVertices.get(ver).remove(v);
-            }
-        }
-        for (VertexOfDualGraph v : verticiesToDelete) {
-            nextVertices.remove(v);
-        }
-        if (nextVertices.isEmpty()) {
-            bubbleToClose = true;
-        }
-    }
 
-    private boolean addVertexToBubble(Graph<VertexOfDualGraph> graph,
+
+    private Double addVertexToBubble(Graph<VertexOfDualGraph> graph,
                                    VertexOfDualGraph seed, 
                                    HashSet<VertexOfDualGraph> bubble,
                                    TreeSet<VertexOfDualGraph> unused, 
                                    HashSet<VertexOfDualGraph> nextVertices, 
                                    Double borderLength,
-                                   boolean bubbleToClose,
                                    double sumBubbleWeight,
                                    int maxBubbleWeight) {
-        if (bubbleToClose) return true;
         Double coefWeight = -1.0;
         Double coefPerimeter = 1.0;
         Double coefDistToCenter = 1.0;
@@ -161,16 +138,20 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
             }
         }
         //update position
+        System.out.println("sumBubbleWeight " + sumBubbleWeight);
         if (sumBubbleWeight + vertexToAdd.getWeight() > maxBubbleWeight) {
-            bubbleToClose = true;
-            return true;
+            return sumBubbleWeight + vertexToAdd.getWeight();
         } 
         unused.remove(vertexToAdd);
+        nextVertices.remove(vertexToAdd);
         bubble.add(vertexToAdd);
-        nextVertices.addAll(graph.getEdges().get(vertexToAdd).keySet());
+        for (VertexOfDualGraph v : graph.getEdges().get(vertexToAdd).keySet()) {
+            if (unused.contains(v)) {
+                nextVertices.add(v);
+            }
+        }
         borderLength = countNewPerimeter(borderLength, vertexToAdd, graph, bubble);
-        sumBubbleWeight = sumBubbleWeight + vertexToAdd.getWeight();
-        return false;
+        return sumBubbleWeight + vertexToAdd.getWeight();
     }
 
            
@@ -192,42 +173,47 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
 
     private void growFullBubble(Graph<VertexOfDualGraph> graph,
                                 int maxSumVerticesWeight, 
-                                HashSet<VertexOfDualGraph> nextVertices, 
-                                Double borderLength, 
                                 HashSet<VertexOfDualGraph> bubble, 
                                 VertexOfDualGraph center, 
                                 TreeSet<VertexOfDualGraph> unused) {
+        //prepare
         bubble.add(center);
-        borderLength = outEdgeLengthSum(center, graph);
-        nextVertices.addAll(graph.getEdges().get(center).keySet());
         unused.remove(center);
-        int sumBubbleWeight = 0;
-        boolean bubbleToClose = false;
-        while (!unused.isEmpty()) {
+        Double borderLength = outEdgeLengthSum(center, graph);
+        HashSet<VertexOfDualGraph> nextVertices = new HashSet<VertexOfDualGraph>();
+        for (VertexOfDualGraph v : graph.getEdges().get(center).keySet()) {
+            if (unused.contains(v)) {
+                nextVertices.add(v);
+            }
+        }
+        if (nextVertices.isEmpty()) {
+            System.out.println("check 1 vertex bubble");
+            return;
+        }
+        double sumBubbleWeight = center.getWeight();
+        //main cicle
+        while (!unused.isEmpty() && !nextVertices.isEmpty()) {
             if (sumBubbleWeight > maxSumVerticesWeight) {
+                System.out.println("bubble was grown, type 1");
                 return;
             }
-            if (addVertexToBubble(graph, 
-                              center, 
-                              bubble, 
-                              unused, 
-                              nextVertices, 
-                              borderLength,
-                              bubbleToClose,
-                              sumBubbleWeight,
-                              maxSumVerticesWeight)) return;
-            if (bubbleToClose) {
-                System.out.println("bubble was grown");
+            Double tmp = addVertexToBubble(graph, 
+            center, 
+            bubble, 
+            unused, 
+            nextVertices, 
+            borderLength,
+            sumBubbleWeight,
+            maxSumVerticesWeight);
+            if (tmp > maxSumVerticesWeight) {
+                System.out.println("bubble was grown, type 2");
                 return;
-            }
-            checkNextVerticesForUsed(nextVertices, unused, bubbleToClose);
-            if (bubbleToClose) {
-                System.out.println("bubble was grown");
-                return;
+            } else {
+                sumBubbleWeight = tmp;
             }
             updateSeed(center, bubble, graph, nextVertices, borderLength);
         }
-        System.out.println("bubble was grown");
+        System.out.println("bubble was grown, type 3");
     }
     
 }
