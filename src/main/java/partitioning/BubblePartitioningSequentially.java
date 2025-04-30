@@ -138,7 +138,6 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
             }
         }
         //update position
-        System.out.println("sumBubbleWeight " + sumBubbleWeight);
         if (sumBubbleWeight + vertexToAdd.getWeight() > maxBubbleWeight) {
             return sumBubbleWeight + vertexToAdd.getWeight();
         } 
@@ -194,7 +193,6 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
         //main cicle
         while (!unused.isEmpty() && !nextVertices.isEmpty()) {
             if (sumBubbleWeight > maxSumVerticesWeight) {
-                System.out.println("bubble was grown, type 1");
                 return;
             }
             Double tmp = addVertexToBubble(graph, 
@@ -206,14 +204,12 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
             sumBubbleWeight,
             maxSumVerticesWeight);
             if (tmp > maxSumVerticesWeight) {
-                System.out.println("bubble was grown, type 2");
                 return;
             } else {
                 sumBubbleWeight = tmp;
             }
             updateSeed(center, bubble, graph, nextVertices, borderLength);
         }
-        System.out.println("bubble was grown, type 3");
     }
     
 }

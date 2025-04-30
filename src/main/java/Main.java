@@ -15,6 +15,8 @@ import graph.Vertex;
 import graph.VertexOfDualGraph;
 import graphPreparation.GraphPreparation;
 import partitioning.BalancedPartitioning;
+import partitioning.Balancer;
+import partitioning.BubblePartitioning;
 import partitioning.BubblePartitioningSequentially;
 import partitioning.InertialFlowPartitioning;
 import readWrite.CoordinateConversion;
@@ -50,7 +52,14 @@ public class Main {
 				}
 				partitioning = new BalancedPartitioning(new InertialFlowPartitioning(partitionParameter));
 			}
-		} else if (algorithmName.equals("BU")) {
+		} else if (algorithmName.equals("BUP")) {
+			if (args.length < 5) {
+				partitioning = new BalancedPartitioning(new BubblePartitioning());
+			} else {
+				System.out.println("check param");
+				partitioning = new BalancedPartitioning(new BubblePartitioning());
+			}
+		} else if (algorithmName.equals("BUS")) {
 			if (args.length < 5) {
 				partitioning = new BalancedPartitioning(new BubblePartitioningSequentially());
 			} else {
