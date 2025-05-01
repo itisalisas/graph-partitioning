@@ -30,6 +30,7 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
     public void balancedPartitionAlgorithm(Graph<VertexOfDualGraph> graph, int maxSumVerticesWeight) {
         this.graph = graph;
 
+        //list
         TreeSet<VertexOfDualGraph> unused = new TreeSet<>(vertexComparator);
         HashMap<VertexOfDualGraph ,HashSet<VertexOfDualGraph>> bubbles = new HashMap<VertexOfDualGraph ,HashSet<VertexOfDualGraph>>();
         HashSet<VertexOfDualGraph> bubble = new HashSet<>();
@@ -104,6 +105,7 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
     
 
 
+    //bubble class 
     private Double addVertexToBubble(Graph<VertexOfDualGraph> graph,
                                    VertexOfDualGraph seed, 
                                    HashSet<VertexOfDualGraph> bubble,
@@ -117,8 +119,10 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
         Double coefDistToCenter = 1.0;
         //count vertex rating
         HashMap<VertexOfDualGraph, Double> ratingVertices = new HashMap<>();
+        // mute bad weight
         for (VertexOfDualGraph ver : nextVertices) {
             Double rating = coefWeight * ver.getWeight() + 
+            // delta perimetr
                             coefPerimeter * countNewPerimeter(borderLength, ver, graph, bubble) + 
                             coefDistToCenter * seed.getLength(ver);
             ratingVertices.put(ver, rating);

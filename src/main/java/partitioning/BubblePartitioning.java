@@ -136,7 +136,7 @@ public class BubblePartitioning extends BalancedPartitioningOfPlanarGraphs {
                                     HashSet<VertexOfDualGraph> used, 
                                     HashMap<VertexOfDualGraph, HashSet<VertexOfDualGraph>> nextVertices, 
                                     HashMap<VertexOfDualGraph, Double> borderLength) {
-        
+        // P
         for (VertexOfDualGraph seed : bubbles.keySet()) {
             if (closedBubbles.contains(seed)) {
                 continue;
@@ -189,11 +189,14 @@ public class BubblePartitioning extends BalancedPartitioningOfPlanarGraphs {
                                    HashSet<VertexOfDualGraph> used, 
                                    HashSet<VertexOfDualGraph> nextVertices, 
                                    Double borderLength) {
-        Double coefWeight = -1.0;
-        Double coefPerimeter = 1.0;
+        // norm region
+        Double coefWeight = 0.0;
+        // /P * sqrt(n)
+        Double coefPerimeter = 10.0;
         Double coefDistToCenter = 1.0;
         //count vertex rating
         HashMap<VertexOfDualGraph, Double> ratingVertices = new HashMap<>();
+        // all rating
         for (VertexOfDualGraph ver : nextVertices) {
             Double rating = coefWeight * ver.getWeight() + 
                             coefPerimeter * countNewPerimeter(borderLength, ver, graph, bubble) + 
