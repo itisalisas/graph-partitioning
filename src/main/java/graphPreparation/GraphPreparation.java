@@ -44,14 +44,16 @@ public class GraphPreparation {
 		System.out.println("Start graph weight: " + gph.verticesSumWeight());
 		
 		// draw swepline
-		GraphWriter gw = new GraphWriter(cc);
-		Path dirPath = Paths.get("./SweepLine");
-		try {
-            Files.createDirectories(dirPath); 
-        } catch (IOException e) {
-            e.printStackTrace(); 
-        }
-		gw.printGraphToFile(gph, outputDirectory + "//SweepLine", "beforeSweepLine.txt", true);
+		if (cc != null) {
+			GraphWriter gw = new GraphWriter(cc);
+			Path dirPath = Paths.get("./SweepLine");
+			try {
+				Files.createDirectories(dirPath); 
+			} catch (IOException e) {
+				e.printStackTrace(); 
+			}
+			gw.printGraphToFile(gph, outputDirectory + "//SweepLine", "beforeSweepLine.txt", true);
+		}
 		
         Assertions.assertTrue(gph.isConnected());
 		Graph<Vertex> graph = null;
@@ -61,12 +63,12 @@ public class GraphPreparation {
 		} else {
 			graph = gph;
 		}
-
-		graph = graph.getLargestConnectedComponent();
 		
         Assertions.assertTrue(graph.isConnected());
 		// draw swepline
-		gw.printGraphToFile(graph, outputDirectory + "//SweepLine", "afterSweepLine.txt", true);
+		if (cc != null) {
+			// gw.printGraphToFile(graph, outputDirectory + "//SweepLine", "afterSweepLine.txt", true);
+		}
 	
 		ArrayList<Vertex> zeroWeight = new ArrayList<Vertex>();
 		for (Vertex v : graph.getEdges().keySet()) {
@@ -83,7 +85,9 @@ public class GraphPreparation {
 		FileWriter out = new FileWriter(file, true);
 		out.write(zeroWeight.size() + "\n");
 		out.close();
-		gw.printVerticesToFile(zeroWeight, file, true);
+		if (cc != null) {
+			// gw.printVerticesToFile(zeroWeight, file, true);
+		}
 		
 		System.out.println("Number of 0 weight vertex, after sweepLine: " + gph.countZeroWeightVertices());
 		System.out.println("After sweepline graph weight: " + gph.verticesSumWeight());

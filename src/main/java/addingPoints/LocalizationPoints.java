@@ -15,7 +15,7 @@ public class LocalizationPoints {
 	public LocalizationPoints(HashSet<Vertex> nV) {
 		newVertices = nV;
 	}
-	public HashMap<Vertex, VertexOfDualGraph> findFacesForPoints(Graph<VertexOfDualGraph> dualGraph) {
+	public HashMap<VertexOfDualGraph, ArrayList<Vertex>> findFacesForPoints(Graph<VertexOfDualGraph> dualGraph) {
 		//change to func for find diagList and returnFromSimplification
 		ArrayList<EdgeOfGraph<Vertex>> diagList = new ArrayList<>();
 		HashMap<EdgeOfGraph<Vertex>, VertexOfDualGraph> returnFromSimplification = new HashMap<>();
@@ -34,6 +34,14 @@ public class LocalizationPoints {
 		}
 		SweepLine sp = new SweepLine();
 		HashMap<Vertex, VertexOfDualGraph> ans = sp.findFacesOfVertices(diagList, returnFromSimplification, this.newVertices);
-		return ans;	
+		HashMap<VertexOfDualGraph, ArrayList<Vertex>> ans1 = new HashMap<>();
+		for (Vertex v: ans.keySet()) {
+			VertexOfDualGraph face = ans.get(v);
+			if (!ans1.containsKey(face)) {
+				ans1.put(face, new ArrayList<>());
+			}
+			ans1.get(face).add(v);
+		}
+		return ans1;	
 	}
 }

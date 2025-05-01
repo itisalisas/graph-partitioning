@@ -179,7 +179,6 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             List<Graph<VertexOfDualGraph>> subpartition = partitionGraph(flowResult);
 
             for (Graph<VertexOfDualGraph> subgraph : subpartition) {
-                Assertions.assertTrue(subgraph.isConnected());
                 stack.push(subgraph);
             }
         }
@@ -195,7 +194,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
         while (!queue.isEmpty() && currentWeight < targetWeight) {
         	VertexOfDualGraph current = queue.poll();
-            if (!vertexSet.contains(current) && !sourceSet.contains(current) && Math.abs(vertices.indexOf(current) - startIndex) < vertices.size() / 2) {
+            if (!vertexSet.contains(current) && !sourceSet.contains(current)) {
                 vertexSet.add(current);
                 currentWeight += current.getWeight();
                 for (VertexOfDualGraph neighbor : currentGraph.getEdges().get(current).keySet()) {
@@ -251,6 +250,15 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
     public static Graph<VertexOfDualGraph> createGraphWithSourceSink(Graph<VertexOfDualGraph> currentGraph, Set<VertexOfDualGraph> sourceSet, VertexOfDualGraph source, Set<VertexOfDualGraph> sinkSet, VertexOfDualGraph sink) {
         Graph<VertexOfDualGraph> newGraph = currentGraph.clone();
+
+        for (VertexOfDualGraph u : newGraph.verticesArray()) {
+            for (Entry<VertexOfDualGraph, Edge> entry : newGraph.getEdges().get(u).entrySet()) {
+                Edge edge = entry.getValue();
+                if (edge.getBandwidth() == 0) {
+                    edge.setBandwidth(0.1);
+                }
+            }
+        }
 
         for (VertexOfDualGraph s : sourceSet) {
             newGraph.addEdge(source, s, 0, Integer.MAX_VALUE);

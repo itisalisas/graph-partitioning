@@ -51,6 +51,10 @@ public class Edge {
 		return bandwidth;
 	}
 
+	public void setBandwidth(double bandwidth) {
+		this.bandwidth = bandwidth;
+	}
+
 
 	@Override
 	public Edge clone() {
