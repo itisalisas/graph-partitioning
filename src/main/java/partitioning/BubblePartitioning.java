@@ -1,18 +1,25 @@
 package partitioning;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.Assertions;
 
+import graph.BoundSearcher;
 import graph.Graph;
 import graph.Point;
+import graph.Vertex;
 import graph.VertexOfDualGraph;
+import readWrite.GraphWriter;
+import readWrite.PartitionWriter;
 
 public class BubblePartitioning extends BalancedPartitioningOfPlanarGraphs {
 
@@ -28,8 +35,12 @@ public class BubblePartitioning extends BalancedPartitioningOfPlanarGraphs {
     };
 
     @Override
-    public void balancedPartitionAlgorithm(Graph<VertexOfDualGraph> graph, int maxSumVerticesWeight) {
+    public void balancedPartitionAlgorithm(Graph<Vertex> simpleGraph, 
+										   HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph, 
+										   Graph<VertexOfDualGraph> graph, 
+										   int maxSumVerticesWeight) {
         this.graph = graph;
+        List<List<Vertex>> bounds = new ArrayList<>();
         //find initial seeds
         int seedsNumber = findSeedsNumber(graph, maxSumVerticesWeight);
         Set<VertexOfDualGraph> seeds = findSeeds(graph.getEdges().keySet(), seedsNumber);
@@ -59,6 +70,14 @@ public class BubblePartitioning extends BalancedPartitioningOfPlanarGraphs {
             growingBubblesStep(closedBubbles, bubbles, graph, used, nextVertices, borderLength);
             updateSeeds(closedBubbles, bubbles, graph, nextVertices, borderLength);
             iterCounter++;
+            bounds.clear();
+            for (VertexOfDualGraph v : bubbles.keySet()) {
+                bounds.add(BoundSearcher.findBound(simpleGraph, bubbles.get(v), comparisonForDualGraph));
+            }
+            PartitionWriter pw = new PartitionWriter();
+            String str = "src/main/output/testDumpBubbleParal/".replace('/', File.separatorChar) + iterCounter;
+            pw.printBound(bounds, str , true);
+            pw.printCenter(bubbles.keySet(), str, true);            
         }
         System.out.println("    bubbles were grown");
         //bubbles to partition

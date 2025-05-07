@@ -1,11 +1,13 @@
 package partitioning;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 
 import org.junit.jupiter.api.Assertions;
 
 import graph.Graph;
+import graph.Vertex;
 import graph.VertexOfDualGraph;
 
 public abstract class BalancedPartitioningOfPlanarGraphs {
@@ -14,7 +16,10 @@ public abstract class BalancedPartitioningOfPlanarGraphs {
 
 	public Graph<VertexOfDualGraph> graph;
 
-	public abstract void balancedPartitionAlgorithm(Graph<VertexOfDualGraph> graph, int maxSumVerticesWeight);
+	public abstract void balancedPartitionAlgorithm(Graph<Vertex> simpleGraph, 
+													HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph, 
+													Graph<VertexOfDualGraph> graph, 
+													int maxSumVerticesWeight);
 
 	public ArrayList<HashSet<VertexOfDualGraph>> getPartition() {
 		for (HashSet<VertexOfDualGraph> hs : partition) {

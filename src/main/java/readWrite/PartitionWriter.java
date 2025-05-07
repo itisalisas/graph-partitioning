@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.gson.GsonBuilder;
@@ -76,6 +77,33 @@ public class PartitionWriter {
 			GraphWriter gw = new GraphWriter();
 			gw.printVerticesToFile(bounds.get(i), boundFile, geodetic);
 		}
+	}
+
+	public void printCenter(Set<VertexOfDualGraph> center, String outputDirectory, boolean geodetic) {
+		GraphWriter gw = new GraphWriter();
+		List<Vertex> centerList = new ArrayList<Vertex>(center);
+		File outputDirectoryFile = new File(outputDirectory);
+		if (!outputDirectoryFile.exists()) {
+			if (!outputDirectoryFile.mkdirs()) {
+				throw new RuntimeException("Can't create output directory");
+			}
+		}
+		File centerFile = new File(outputDirectory + File.separatorChar + "center.txt");
+		try {
+			centerFile.createNewFile();
+		} catch (IOException e) {
+			throw new RuntimeException("Can't create bound file");
+		}
+		FileWriter out;
+		try {
+			out = new FileWriter(centerFile, true);
+			out.write(String.valueOf(centerList.size() + "\n"));
+			out.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		gw.printVerticesToFile(centerList, centerFile, true);
 	}
 
 

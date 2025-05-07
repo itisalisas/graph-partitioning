@@ -108,7 +108,9 @@ public class Main {
 		String pathToResultDirectory = args[3];
 
 		long startTime = System.currentTimeMillis();
-		ArrayList<HashSet<VertexOfDualGraph>> partitionResultForFaces = partitioning.partition(preparedGraph, maxSumVerticesWeight);
+		
+		HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph = preparation.getComparisonForDualGraph();
+		ArrayList<HashSet<VertexOfDualGraph>> partitionResultForFaces = partitioning.partition(graph, comparisonForDualGraph, preparedGraph, maxSumVerticesWeight);
 		for (HashSet<VertexOfDualGraph> hs : partitionResultForFaces) {
 			for (VertexOfDualGraph v : hs) {
 				Assertions.assertNotNull(v.getVerticesOfFace());
@@ -120,7 +122,6 @@ public class Main {
 				Assertions.assertNotNull(v.getVerticesOfFace());
 			}
 		}
-		HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph = preparation.getComparisonForDualGraph();
 		Graph<PartitionGraphVertex> partitionGraph = PartitionGraphVertex.buildPartitionGraph(preparedGraph, partitionResultForFaces, dualVertexToPartNumber);
 		// Balancer balancer = new Balancer(partitionGraph, preparedGraph, graph, maxSumVerticesWeight, comparisonForDualGraph, outputDirectory + pathToResultDirectory);
 		// partitionResultForFaces = balancer.rebalancing();

@@ -23,11 +23,13 @@ public class BalancedPartitioning {
 		this.bp = bp;
 	}
 
-	public ArrayList<HashSet<VertexOfDualGraph>> partition(Graph<VertexOfDualGraph> graph,
-												int maxSumVerticesWeight) {
+	public ArrayList<HashSet<VertexOfDualGraph>> partition(Graph<Vertex> simpleGraph, 
+														   HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph, 
+														   Graph<VertexOfDualGraph> graph,
+														   int maxSumVerticesWeight) {
 		bp.partition = new ArrayList<>();
 		this.maxSumVerticesWeight = maxSumVerticesWeight;
-		bp.balancedPartitionAlgorithm(graph, maxSumVerticesWeight);
+		bp.balancedPartitionAlgorithm(simpleGraph, comparisonForDualGraph, graph, maxSumVerticesWeight);
 		ArrayList<HashSet<VertexOfDualGraph>> partitionResult = bp.getPartition();
 		calculateCutWeights(bp.graph, partitionResult);
 		return partitionResult;

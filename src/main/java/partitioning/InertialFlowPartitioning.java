@@ -3,6 +3,7 @@ package partitioning;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -84,7 +85,10 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
     }
 
     @Override
-    public void balancedPartitionAlgorithm(Graph<VertexOfDualGraph> graph, int maxSumVerticesWeight) {
+    public void balancedPartitionAlgorithm(Graph<Vertex> simpleGraph, 
+										   HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph, 
+										   Graph<VertexOfDualGraph> graph, 
+										   int maxSumVerticesWeight) {
 
         Stack<Graph<VertexOfDualGraph>> stack = new Stack<>();
         graph = getLargestConnectedComponent(graph);

@@ -81,7 +81,9 @@ public class BoundSearcher {
         return lastVec.x * newVec.y - lastVec.y * newVec.x;
     }
 
-    public static List<Vertex> findBound(Graph<Vertex> graph, HashSet<VertexOfDualGraph> part, HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph) {
+    public static List<Vertex> findBound(Graph<Vertex> graph, 
+                                        HashSet<VertexOfDualGraph> part, 
+                                        HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph) {
         List<VertexOfDualGraph> orderedFaces = part.stream().toList();
         List<Vertex> bound = new ArrayList<>();
         List<List<Vertex>> verticesByFaces = new ArrayList<>();
