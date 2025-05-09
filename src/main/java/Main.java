@@ -127,7 +127,7 @@ public class Main {
 			Assertions.assertNotNull(v.getVerticesOfFace());
 		}
 
-		List<Vertex> weightedVertices = new ArrayList<>();
+		List<Vertex> weightedVertices;
 
 		try {
 			PointsReader pr = new PointsReader(cc);
@@ -140,13 +140,13 @@ public class Main {
 		HashMap<VertexOfDualGraph, ArrayList<Vertex>> faceToVertices = lp.findFacesForPoints(preparedGraph);
 		try {
 			saveFacesToJson(faceToVertices, "faces.json", true, cc);
-		} catch (Exception e) {
+		} catch (Exception ignored) {
 		}
 
 		for (VertexOfDualGraph v: preparedGraph.verticesArray()) {
 			v.setWeight(0);
 			if (faceToVertices.containsKey(v)) {
-				v.setWeight(faceToVertices.get(v).stream().mapToDouble(p -> p.getWeight()).sum());
+				v.setWeight(faceToVertices.get(v).stream().mapToDouble(Vertex::getWeight).sum());
 			}
 		}
 
@@ -185,17 +185,17 @@ public class Main {
 		System.out.println("Partition size: " + partitionResultForFaces.size());
 
 		ArrayList<HashSet<Vertex>> partitionResult = new ArrayList<>();
-		List<List<Vertex>> bounds = new ArrayList<>();
+		List<Map.Entry<List<Vertex>, Double>> bounds = new ArrayList<>();
 
 		for (int i = 0; i < partitionResultForFaces.size(); i++) {
 			partitionResult.add(new HashSet<>());
 			for (VertexOfDualGraph face : partitionResultForFaces.get(i)) {
 				partitionResult.get(i).addAll(comparisonForDualGraph.get(face).getVerticesOfFace());
 			}
-			bounds.add(BoundSearcher.findBound(graph, partitionResultForFaces.get(i), comparisonForDualGraph));
+			bounds.add(Map.entry(BoundSearcher.findBound(graph, partitionResultForFaces.get(i), comparisonForDualGraph), partitionResultForFaces.get(i).stream().mapToDouble(Vertex::getWeight).sum()));
 		}
 
-		gw.printDualGraphToFile(preparedGraph, dualVertexToPartNumber, partitionResultForFaces.size(), outputDirectory + pathToResultDirectory, "dual.txt", true);
+		gw.printDualGraphWithWeightsToFile(preparedGraph, outputDirectory + pathToResultDirectory, "dual.txt", true);
 		PartitionWriter pw = new PartitionWriter();
 		pw.savePartitionToDirectory(partitioning, partitioning.bp ,outputDirectory + pathToResultDirectory, partitionResultForFaces, true, partitioningTime);
 		pw.printBound(bounds, outputDirectory + pathToResultDirectory, true);
