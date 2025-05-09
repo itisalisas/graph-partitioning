@@ -65,7 +65,7 @@ public class PartitionWriter {
 	}
 	
 	
-	public void printBound(List<List<Vertex>> bounds, String outputDirectory, boolean geodetic) {
+	public void printBound(List<Map.Entry<List<Vertex>, Double>> bounds, String outputDirectory, boolean geodetic) throws IOException {
 		createOutputDirectory(outputDirectory);
 		for (int i = 0; i < bounds.size(); i++) {
 			File boundFile = new File(outputDirectory + File.separator + "bound_" + i + ".txt");
@@ -75,7 +75,10 @@ public class PartitionWriter {
 				throw new RuntimeException("Can't create bound file");
 			}
 			GraphWriter gw = new GraphWriter();
-			gw.printVerticesToFile(bounds.get(i), boundFile, geodetic);
+			gw.printVerticesToFile(bounds.get(i).getKey(), boundFile, geodetic);
+			FileWriter out = new FileWriter(boundFile, true);
+			out.write(String.format("%f", bounds.get(i).getValue()));
+			out.close();
 		}
 	}
 

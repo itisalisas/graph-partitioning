@@ -1,6 +1,7 @@
 package partitioning;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -97,7 +98,7 @@ public class Balancer {
         return true;
     }
 
-    public ArrayList<HashSet<VertexOfDualGraph>> rebalancing() {
+    public ArrayList<HashSet<VertexOfDualGraph>> rebalancing() throws IOException {
         while (removeSmallestRegion()) { }
         double threshold = partitionGraph.verticesWeight() * 0.1;
         double variance = calculateVariance();
@@ -111,7 +112,7 @@ public class Balancer {
         for (PartitionGraphVertex vertex : partitionGraph.verticesArray()) {
             Assertions.assertTrue(vertex.getWeight() <= maxWeight);
         }
-        return new ArrayList<>(partitionGraph.verticesArray().stream().map(v -> new HashSet<VertexOfDualGraph>(v.vertices)).toList());
+        return partitionGraph.verticesArray().stream().map(v -> new HashSet<VertexOfDualGraph>(v.vertices)).collect(Collectors.toCollection(ArrayList::new));
     }
 
     private double calculateVariance() {
@@ -146,7 +147,7 @@ public class Balancer {
         return neighbor;
     } 
     
-    private boolean removeSmallestRegion() {
+    private boolean removeSmallestRegion() throws IOException {
         List<PartitionGraphVertex> ver = PartitionGraphVertex.bestVertex(partitionGraph, maxWeight);
         for (PartitionGraphVertex sm : ver) {
             PartitionGraphVertex smallestVertex = sm.copy();
@@ -206,10 +207,10 @@ public class Balancer {
             }
 
 
-            List<List<Vertex>> bounds = new ArrayList<>();
-            List<PartitionGraphVertex> parts = partitionGraph.verticesArray().stream().sorted(Comparator.comparing(c -> c.getName())).toList();
+            List<Map.Entry<List<Vertex>, Double>> bounds = new ArrayList<>();
+            List<PartitionGraphVertex> parts = partitionGraph.verticesArray().stream().sorted(Comparator.comparing(Vertex::getName)).collect(Collectors.toList());
             for (int i = 0; i < parts.size(); i++) {
-                bounds.add(BoundSearcher.findBound(startGraph, new HashSet<>(parts.get(i).vertices), comparisonForDualGraph));
+                bounds.add(Map.entry(BoundSearcher.findBound(startGraph, new HashSet<>(parts.get(i).vertices), comparisonForDualGraph), parts.get(i).vertices.stream().mapToDouble(Vertex::getWeight).sum()));
             }
 
             PartitionWriter pw = new PartitionWriter();

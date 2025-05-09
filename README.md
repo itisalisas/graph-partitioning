@@ -47,7 +47,9 @@ The program takes the following arguments in the command line:
 
 - `algorithm-name`: The type of the algorithm to use for partitioning. Currently, the supported algorithm is "Inertial Flow", which can be specified as `IF`.
 
-- `path-to-file`: The path to the input file that describes the graph to be partitioned. (From graph-partitioning/src/main/resources/)
+- `path-to-graph-file`: The path to the input file that describes the graph to be partitioned. (From graph-partitioning/src/main/resources/)
+
+- `path-to-buildings-file`: The path to the input file that describes the buildings with their weights. (From graph-partitioning/src/main/resources/)
 
 - `max-sum-vertices-weight`: The maximum total weight of the vertices in the partition parts.
 
@@ -64,13 +66,13 @@ cd graph-partitioning
 
 ./gradlew build
 
-./gradlew run --args="<algorithm-name> <path-to-file> <max-sum-vertices-weight> <output-directory> [param]" 
+./gradlew run --args="<algorithm-name> <path-to-graph-file> <path-to-buildings-file> <max-sum-vertices-weight> <output-directory> [param]" 
 ```
 
 Example:
 
 ```bash
-./gradlew run --args="IF dataExample/spb/simple/graph_59.93893094417527_30.32268115454809_1000.txt 10000 59.93893094417527_30.32268115454809_1000"
+./gradlew run --args="IF dataExample/spb/simple/graph_59.93893094417527_30.32268115454809_500.txt buildings.txt 10000 59.93893094417527_30.32268115454809_500"
 
 ```
 
@@ -122,6 +124,13 @@ Example:
 
 ```bash
 python3 src/scripts/graph_visualizer.py dataExample/spb/graph_59.93893094417527_30.32268115454809_1000.txt graph.html
+```
+
+### Layers Visualizer
+
+Example:
+```bash
+python3 src/scripts/layers_visualizer.py -g dataExample/spb/with_rivers/graph_59.93893094417527_30.32268115454809_500.txt -o graph.html -p buildings.txt
 ```
 
 ## License

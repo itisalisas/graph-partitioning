@@ -51,9 +51,7 @@ public class GraphWriter {
 		out.close();
 	}
 
-		public <T extends Vertex> void printDualGraphWithWeightsToFile(Graph<VertexOfDualGraph> graph, 
-														HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber,
-														int partsNumber,
+	public <T extends Vertex> void printDualGraphWithWeightsToFile(Graph<VertexOfDualGraph> graph,
 														String outputDirectory, 
 														String outFileName,
 														boolean geodetic) throws IOException {
@@ -62,14 +60,11 @@ public class GraphWriter {
 		out.write(String.format("%d\n", graph.getEdges().size()));
 		
 		for (Vertex begin : graph.getEdges().keySet()) {
-			out.write(String.format("%d %f %f %d %d ", begin.getName(), begin.x, begin.y, begin.getWeight(), graph.getEdges().get(begin).size()));
 			if (geodetic) {
 				Vertex nBegin = coordConver.fromEuclidean(begin);
-				out.write(String.format("%d %f %f %d ", begin.getName(), nBegin.x, nBegin.y,
-						 graph.getEdges().get(begin).size()));
+				out.write(String.format("%d %f %f %f %d ", begin.getName(), nBegin.x, nBegin.y, begin.getWeight(), graph.getEdges().get(begin).size()));
 			} else {
-				out.write(String.format("%d %f %f %d ", begin.getName(), begin.x, begin.y, 
-					graph.getEdges().get(begin).size()));
+				out.write(String.format("%d %f %f %f %d ", begin.getName(), begin.x, begin.y, begin.getWeight(), graph.getEdges().get(begin).size()));
 			}
 			for (Vertex end : graph.getEdges().get(begin).keySet()) {
 				if (geodetic) {

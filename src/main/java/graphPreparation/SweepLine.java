@@ -392,14 +392,14 @@ public class SweepLine {
 				
 				if (actualEdges.get(actionEdge.begin.y) != null) {
 					actualEdges.get(actionEdge.begin.y).remove(actionEdge);
-					if (actualEdges.get(actionEdge.begin.y).size() == 0) {
+					if (actualEdges.get(actionEdge.begin.y).isEmpty()) {
 						actualEdges.remove(actionEdge.begin.y);
 					}
 				}
 				
 				if (actualEdges.get(actionEdge.end.y) != null) {
 					actualEdges.get(actionEdge.end.y).remove(actionEdge);
-					if (actualEdges.get(actionEdge.end.y).size() == 0) {
+					if (actualEdges.get(actionEdge.end.y).isEmpty()) {
 						actualEdges.remove(actionEdge.end.y);
 					}
 				}				
