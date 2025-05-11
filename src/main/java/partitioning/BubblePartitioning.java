@@ -9,6 +9,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.junit.jupiter.api.Assertions;
@@ -40,7 +41,7 @@ public class BubblePartitioning extends BalancedPartitioningOfPlanarGraphs {
 										   Graph<VertexOfDualGraph> graph, 
 										   int maxSumVerticesWeight) {
         this.graph = graph;
-        List<List<Vertex>> bounds = new ArrayList<>();
+        List<Map.Entry<List<Vertex>, Double>> bounds = new ArrayList<>();
         //find initial seeds
         int seedsNumber = findSeedsNumber(graph, maxSumVerticesWeight);
         Set<VertexOfDualGraph> seeds = findSeeds(graph.getEdges().keySet(), seedsNumber);
@@ -72,11 +73,18 @@ public class BubblePartitioning extends BalancedPartitioningOfPlanarGraphs {
             iterCounter++;
             bounds.clear();
             for (VertexOfDualGraph v : bubbles.keySet()) {
-                bounds.add(BoundSearcher.findBound(simpleGraph, bubbles.get(v), comparisonForDualGraph));
+                bounds.add(Map.entry(BoundSearcher.findBound(simpleGraph, bubbles.get(v), comparisonForDualGraph), 
+                                    bubbles.get(v).stream().mapToDouble(Vertex::getWeight).sum()));
+
             }
             PartitionWriter pw = new PartitionWriter();
             String str = "src/main/output/testDumpBubbleParal/".replace('/', File.separatorChar) + iterCounter;
-            pw.printBound(bounds, str , true);
+            try {
+                pw.printBound(bounds, str , true);
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
             pw.printCenter(bubbles.keySet(), str, true);            
         }
         System.out.println("    bubbles were grown");
