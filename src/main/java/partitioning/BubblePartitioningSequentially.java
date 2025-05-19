@@ -126,17 +126,19 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
                                    Double borderLength,
                                    double sumBubbleWeight,
                                    int maxBubbleWeight) {
-        Double coefWeight = -1.0;
-        Double coefPerimeter = 1.0;
+        Double coefWeight = 0.0;
+        // Double coefPerimeter = 10.0;
+        Double coefPerimeter = Math.sqrt(graph.verticesSumWeight() / maxBubbleWeight);
         Double coefDistToCenter = 1.0;
         //count vertex rating
         HashMap<VertexOfDualGraph, Double> ratingVertices = new HashMap<>();
         // mute bad weight
         for (VertexOfDualGraph ver : nextVertices) {
-            Double rating = coefWeight * ver.getWeight() + 
-            // delta perimetr
-                            coefPerimeter * countNewPerimeter(borderLength, ver, graph, bubble) + 
-                            coefDistToCenter * seed.getLength(ver);
+            Double rating = countRating(coefWeight, coefPerimeter, coefDistToCenter, borderLength, ver, graph, bubble, seed, maxBubbleWeight);
+            // coefWeight * ver.getWeight() + 
+            // // delta perimetr
+            //                 coefPerimeter * countNewPerimeter(borderLength, ver, graph, bubble) + 
+            //                 coefDistToCenter * seed.getLength(ver);
             ratingVertices.put(ver, rating);
         }
         //find vertex with min rating
@@ -248,6 +250,23 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
             }
             updateSeed(center, bubble, graph, nextVertices, borderLength);
         }
+    }
+
+    private Double countRating(Double coefWeight, 
+                               Double coefPerimeter, 
+                               Double coefDistToCenter, 
+                               Double borderLength,
+                               VertexOfDualGraph ver, 
+                               Graph<VertexOfDualGraph> graph, 
+                               HashSet<VertexOfDualGraph> bubble, 
+                               VertexOfDualGraph seed, 
+                               int maxBubbleWeight) {
+        // return ver.getWeight() * (coefPerimeter * (countNewPerimeter(borderLength, ver, graph, bubble) - borderLength) + 
+        //                           coefDistToCenter * seed.getLength(ver));
+        // return (1 - ver.getWeight() / maxBubbleWeight) * (coefPerimeter * (countNewPerimeter(borderLength, ver, graph, bubble) - borderLength) + 
+        //                           coefDistToCenter * seed.getLength(ver));
+        return Math.pow(1 - ver.getWeight() / maxBubbleWeight, 2) * (coefPerimeter * (countNewPerimeter(borderLength, ver, graph, bubble) - borderLength) + 
+                                  coefDistToCenter * seed.getLength(ver));
     }
     
 }
