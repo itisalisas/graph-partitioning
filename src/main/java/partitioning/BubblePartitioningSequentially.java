@@ -230,23 +230,23 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
             //step picture
             bounds.add(Map.entry(BoundSearcher.findBound(simpleGraph, bubble, comparisonForDualGraph), bubble.stream().mapToDouble(Vertex::getWeight).sum()));
 
-            PartitionWriter pw = new PartitionWriter();
-            String str = "src/main/output/testDumpBubbleSeq/".replace('/', File.separatorChar) + bubbleNumber + "_" + center.name + "_"+ iter;
-            HashSet<VertexOfDualGraph> centerToFile = new HashSet<>();
-            centerToFile.add(center);
-            try {
-                pw.printBound(bounds, str , true);
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-            pw.printCenter(centerToFile, str, true);
+            // PartitionWriter pw = new PartitionWriter();
+            // String str = "src/main/output/testDumpBubbleSeq/".replace('/', File.separatorChar) + bubbleNumber + "_" + center.name + "_"+ iter;
+            // HashSet<VertexOfDualGraph> centerToFile = new HashSet<>();
+            // centerToFile.add(center);
+            // try {
+            //     pw.printBound(bounds, str , true);
+            // } catch (IOException e) {
+            //     // TODO Auto-generated catch block
+            //     e.printStackTrace();
+            // }
+            // pw.printCenter(centerToFile, str, true);
             if (tmp > maxSumVerticesWeight) {
                 return;
             } else {
                 sumBubbleWeight = tmp;
                 //step picture
-                bounds.remove(bounds.size() - 1);
+               // bounds.remove(bounds.size() - 1);
             }
             updateSeed(center, bubble, graph, nextVertices, borderLength);
         }
@@ -265,8 +265,23 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
         //                           coefDistToCenter * seed.getLength(ver));
         // return (1 - ver.getWeight() / maxBubbleWeight) * (coefPerimeter * (countNewPerimeter(borderLength, ver, graph, bubble) - borderLength) + 
         //                           coefDistToCenter * seed.getLength(ver));
-        return Math.pow(1 - ver.getWeight() / maxBubbleWeight, 2) * (coefPerimeter * (countNewPerimeter(borderLength, ver, graph, bubble) - borderLength) + 
-                                  coefDistToCenter * seed.getLength(ver));
+        // return Math.pow(1 - ver.getWeight() / maxBubbleWeight, 2) * (coefPerimeter * (countNewPerimeter(borderLength, ver, graph, bubble) - borderLength) + 
+        //                           coefDistToCenter * seed.getLength(ver));
+        double blength = 0;
+        for (VertexOfDualGraph v : bubble) {
+            if (graph.getEdges().get(v).containsKey(ver)) {
+                blength = blength + graph.getEdges().get(v).get(ver).length;
+            }
+        }
+        return (maxBubbleWeight - sumWeight(bubble)) * Math.pow(countNewPerimeter(borderLength, ver, graph, bubble), 2) / blength;
+    }
+
+    private double sumWeight(HashSet<VertexOfDualGraph> bubble) {
+        double sum = 0;
+        for (VertexOfDualGraph v : bubble) {
+            sum = sum + v.getWeight();
+        }
+        return sum;
     }
     
 }

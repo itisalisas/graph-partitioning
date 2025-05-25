@@ -62,10 +62,10 @@ for idx, row in gdf.iterrows():
         print(f"Ошибка обработки здания {idx}: {e}")
 
 # Запись в файл
-with open('buildings.txt', 'w', encoding='utf-8') as f:
+with open('buildings_spb_1000.txt', 'w', encoding='utf-8') as f:
     f.write(f"{len(buildings)}\n")
     for b in buildings:
         f.write(f"{b['id']} {b['lat']:.6f} {b['lon']:.6f} "
                 f"{b['length']} {b['width']}\n")
 
-print(f"Сохранено {len(buildings)} зданий в buildings.txt")
+print(f"Сохранено {len(buildings)} зданий в buildings_spb_1000.txt")

@@ -77,15 +77,15 @@ public class BubblePartitioning extends BalancedPartitioningOfPlanarGraphs {
                                     bubbles.get(v).stream().mapToDouble(Vertex::getWeight).sum()));
 
             }
-            PartitionWriter pw = new PartitionWriter();
-            String str = "src/main/output/testDumpBubbleParal/".replace('/', File.separatorChar) + iterCounter;
-            try {
-                pw.printBound(bounds, str , true);
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-            pw.printCenter(bubbles.keySet(), str, true);            
+            // PartitionWriter pw = new PartitionWriter();
+            // String str = "src/main/output/testDumpBubbleParal/".replace('/', File.separatorChar) + iterCounter;
+            // try {
+            //     pw.printBound(bounds, str , true);
+            // } catch (IOException e) {
+            //     // TODO Auto-generated catch block
+            //     e.printStackTrace();
+            // }
+            // pw.printCenter(bubbles.keySet(), str, true);            
         }
         System.out.println("    bubbles were grown");
         //bubbles to partition

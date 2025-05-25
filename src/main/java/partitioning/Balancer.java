@@ -19,6 +19,7 @@ import graph.Graph;
 import graph.PartitionGraphVertex;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
+import readWrite.CoordinateConversion;
 import readWrite.PartitionWriter;
 
 public class Balancer {
@@ -98,8 +99,8 @@ public class Balancer {
         return true;
     }
 
-    public ArrayList<HashSet<VertexOfDualGraph>> rebalancing() throws IOException {
-        while (removeSmallestRegion()) { }
+    public ArrayList<HashSet<VertexOfDualGraph>> rebalancing(CoordinateConversion cc) throws IOException {
+        while (removeSmallestRegion(cc)) { }
         double threshold = partitionGraph.verticesWeight() * 0.1;
         double variance = calculateVariance();
 
@@ -147,7 +148,7 @@ public class Balancer {
         return neighbor;
     } 
     
-    private boolean removeSmallestRegion() throws IOException {
+    private boolean removeSmallestRegion(CoordinateConversion cc) throws IOException {
         List<PartitionGraphVertex> ver = PartitionGraphVertex.bestVertex(partitionGraph, maxWeight);
         for (PartitionGraphVertex sm : ver) {
             PartitionGraphVertex smallestVertex = sm.copy();
@@ -213,7 +214,7 @@ public class Balancer {
                 bounds.add(Map.entry(BoundSearcher.findBound(startGraph, new HashSet<>(parts.get(i).vertices), comparisonForDualGraph), parts.get(i).vertices.stream().mapToDouble(Vertex::getWeight).sum()));
             }
 
-            PartitionWriter pw = new PartitionWriter();
+            PartitionWriter pw = new PartitionWriter(cc);
             String currentRemovingPath = pathToResultDirectory + File.separatorChar + "removing_" +  parts.size();
             pw.printBound(bounds, currentRemovingPath, true);
             pw.printRedistributedVerticesDirections(vertexToBestNeighbor, currentRemovingPath, true);
