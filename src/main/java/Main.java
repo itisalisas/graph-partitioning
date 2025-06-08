@@ -226,7 +226,7 @@ public class Main {
 
 		gw.printDualGraphWithWeightsToFile(preparedGraph, outputDirectory + pathToResultDirectory, "dual.txt", true);
 
-		PartitionWriter pw = new PartitionWriter();
+		PartitionWriter pw = new PartitionWriter(cc);
 		pw.savePartitionToDirectory(partitioning, partitioning.bp,outputDirectory + pathToResultDirectory, partitionResultForFaces, true, partitioningTime, cc.referencePoint);
 		pw.printBound(bounds, outputDirectory + pathToResultDirectory, true, cc.referencePoint);
     pw.printPartCenters(centers, outputDirectory + pathToResultDirectory, "centers.txt", true, cc.referencePoint);
