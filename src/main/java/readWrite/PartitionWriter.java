@@ -23,15 +23,17 @@ import partitioning.BalancedPartitioning;
 import partitioning.BalancedPartitioningOfPlanarGraphs;
 
 public class PartitionWriter {
+
+	static CoordinateConversion cc;
+
+	public PartitionWriter(CoordinateConversion cc) {
+		this.cc = cc;
+	}
 	
 	public static <T extends Vertex> void writePartitionToFile(HashSet<T> part, Double cutWeight, File outFile, boolean geodetic, Point center) throws IOException {
 		FileWriter out = new FileWriter(outFile, false);
 		out.write(String.format("%f\n", cutWeight));
 		out.write(String.format("%d\n", part.size()));
-		CoordinateConversion cc = null;
-		if (geodetic) {
-			cc = new CoordinateConversion(center);
-		}
 		for (T v : part) {
 			if (geodetic) {
 				T nV = cc.fromEuclidean(v);
@@ -235,10 +237,6 @@ public class PartitionWriter {
 			throw new RuntimeException("Can't create edges file");
 		}
 		try (FileWriter writer = new FileWriter(edgesFile, false)) {
-			CoordinateConversion cc = null;
-			if (geodetic) {
-				cc = new CoordinateConversion();
-			}
 			for (Map.Entry<VertexOfDualGraph, VertexOfDualGraph> edge: vertexToBestNeighbor.entrySet()) {
 				VertexOfDualGraph start = edge.getKey();
 				VertexOfDualGraph end = edge.getValue();

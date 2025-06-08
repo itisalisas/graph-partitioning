@@ -67,4 +67,5 @@ with open("buildings_" + str(center_lat) + "_" + str(center_lon) + "_" + str(d) 
         f.write(f"{b['id']} {b['lat']:.6f} {b['lon']:.6f} "
                 f"{b['length']} {b['width']}\n")
 
+
 print(f"Сохранено {len(buildings)} зданий в " + "buildings_" + str(center_lat) + "_" + str(center_lon) + "_" + str(d) + '.txt')

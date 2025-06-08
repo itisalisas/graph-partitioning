@@ -385,12 +385,14 @@ def main():
     coordinates = []
     map_osm = folium.Map(location=[0, 0], zoom_start=12)
 
-    if args.bounds:
-        bounds = add_bounds_layer(map_osm, args.bounds)
-
+    
     if args.graph:
         G = add_graph_layer(map_osm, args.graph)
         coordinates.extend([(node["y"], node["x"]) for node in G.nodes.values()])
+
+    if args.bounds:
+        bounds = add_bounds_layer(map_osm, args.bounds)
+
 
     if args.points:
         points = add_points_layer(map_osm, args.points)

@@ -166,7 +166,6 @@ public class Balancer {
         return false;
     }
 
-
     public ArrayList<HashSet<VertexOfDualGraph>> rebalancing() throws IOException {
         while (removeSmallestRegion()) { }
         double threshold = partitionGraph.verticesWeight() * 0.1;
