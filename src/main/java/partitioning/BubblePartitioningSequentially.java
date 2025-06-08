@@ -286,7 +286,7 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
                                             maxSumVerticesWeight);
             //step picture
             bounds.add(Map.entry(BoundSearcher.findBound(simpleGraph, bubble.vertexSet, comparisonForDualGraph), bubble.vertexSet.stream().mapToDouble(Vertex::getWeight).sum()));
-
+            // TODO - add ref point!!
             // PartitionWriter pw = new PartitionWriter();
             // String str = "src/main/output/testDumpBubbleSeq/".replace('/', File.separatorChar) + bubbleNumber + "_" + center.name + "_"+ iter;
             // HashSet<VertexOfDualGraph> centerToFile = new HashSet<>();

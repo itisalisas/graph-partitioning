@@ -15,13 +15,17 @@ public class CoordinateConversion {
         referencePoint = new Point(30.32268115454809, 59.93893094417527);
     }
 
+    public CoordinateConversion(Point refPoint) {
+        referencePoint = refPoint;
+    }
 
-    public <T extends Vertex> CoordinateConversion(Set<T> vertexSet) {
+
+    public <T extends Point> CoordinateConversion(Set<T> vertexSet) {
         referencePoint = findCenter(vertexSet);
     }   
 
 
-    private <T extends Vertex> Point findCenter(Set<T> vertexSet) {
+    private <T extends Point> Point findCenter(Set<T> vertexSet) {
         Point ans = new Point(0, 0);
         double minX = Double.MAX_VALUE, maxX = Double.MIN_VALUE, minY = Double.MAX_VALUE, maxY = Double.MIN_VALUE;
         for (T ver : vertexSet) {
@@ -36,7 +40,7 @@ public class CoordinateConversion {
     }
         
         
-    public <T extends Vertex> void toEuclidean(T p) {
+    public <T extends Point> void toEuclidean(T p) {
         double lat = p.x;
         double lon = p.y;
         p.x = c * Math.cos(referencePoint.y * Math.PI / 180) * (lat - referencePoint.x);
@@ -44,7 +48,7 @@ public class CoordinateConversion {
     }
 
 
-    public <T extends Vertex> T fromEuclidean(T p) {
+    public <T extends Point> T fromEuclidean(T p) {
         T ver = (T) p.copy();
         double x = p.x;
         double y = p.y;

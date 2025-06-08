@@ -26,8 +26,26 @@ def parse_arguments():
     parser.add_argument("-b", "--bounds", help="Path to directory with boundary files")
     parser.add_argument("-p", "--points", help="Path to points file with weights")
     parser.add_argument("-d", "--dual", action='store_true', help="Enable dual graph visualization")
+    parser.add_argument("-c", "--center", action='store_true', help="Enable centers visualization for Bubble algorithm (center.txt file from dump directory)")
     parser.add_argument("-o", "--output", required=True, help="Output HTML file")
     return parser.parse_args()
+
+def load_centers_from_file(centers_path):
+    """Загружает центры из файла centers.txt"""
+    centers = []
+    try:
+        with open(centers_path, 'r') as f:
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) >= 2:
+                    lon = float(parts[0].replace(',', '.'))
+                    lat = float(parts[1].replace(',', '.'))
+                    centers.append((lat, lon))
+    except FileNotFoundError:
+        print(f"Centers file not found: {centers_path}")
+    except Exception as e:
+        print(f"Error reading centers file: {e}")
+    return centers
 
 def generate_distinct_colors(n):
     if n == 0:
@@ -119,10 +137,9 @@ def add_bounds_layer(map_osm, bounds_dir):
 
             return coords, weight
 
-    def calculate_polygon_center(points):
-        lats = [p[0] for p in points]
-        lons = [p[1] for p in points]
-        return (sum(lats)/len(lats), sum(lons)/len(lons))
+    centers_path = os.path.join(bounds_dir, "centers.txt")
+    centers = load_centers_from_file(centers_path)
+    centers_ptr = 0
 
     boundaries = []
     bounds_path = os.path.abspath(bounds_dir)
@@ -137,7 +154,8 @@ def add_bounds_layer(map_osm, bounds_dir):
 
             boundaries.append((boundary_coords, weight))
 
-            center = calculate_polygon_center(boundary_coords)
+            center = centers[centers_ptr]
+            centers_ptr += 1
             folium.Marker(
                 location=center,
                 icon=folium.Icon(color='darkblue', icon='crosshairs', prefix='fa')
@@ -314,6 +332,54 @@ def add_dual_graph_layer(map_osm, bounds_dir):
     dual_group.add_to(map_osm)
     return G
 
+def add_bubble_centers(map_osm, bounds_dir):
+    """Добавляет центры из файла center.txt на карту"""
+    bounds_dir = resolve_path(bounds_dir, os.path.join("src", "main", "output"))
+    center_path = os.path.join(bounds_dir, "center.txt")
+
+    centers_group = folium.FeatureGroup(name='Bubble Centers', show=True)
+
+    if not os.path.exists(center_path):
+        print(f"Center file not found: {center_path}")
+        return centers_group
+
+    try:
+        with open(center_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+
+            # Пропускаем первую строку с количеством точек
+            for line in lines[1:]:
+                parts = line.strip().split()
+                if len(parts) < 4:
+                    continue
+
+                try:
+                    point_id = parts[0]
+                    lon = float(parts[1].replace(',', '.'))
+                    lat = float(parts[2].replace(',', '.'))
+                    value = float(parts[3].replace(',', '.'))
+
+                    # Создаем маркер с всплывающей подсказкой
+                    folium.Marker(
+                        location=(lat, lon),
+                        icon=folium.Icon(
+                            color='cadetblue',
+                            icon='map-pin',
+                            prefix='fa',
+                            icon_color='white'
+                        ),
+                        popup=f"ID: {point_id}<br>Value: {value:.2f}"
+                    ).add_to(centers_group)
+
+                except (ValueError, IndexError) as e:
+                    print(f"Error parsing line: {line.strip()} - {e}")
+
+    except Exception as e:
+        print(f"Error reading center file: {e}")
+
+    centers_group.add_to(map_osm)
+    return centers_group
+
 def main():
     args = parse_arguments()
     coordinates = []
@@ -333,6 +399,9 @@ def main():
 
     if args.dual:
         dual_graph = add_dual_graph_layer(map_osm, args.bounds)
+
+    if args.center:
+        centers = add_bubble_centers(map_osm, args.bounds)
 
     folium.LayerControl(collapsed=False).add_to(map_osm)
 

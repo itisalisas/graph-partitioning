@@ -77,6 +77,7 @@ public class BubblePartitioning extends BalancedPartitioningOfPlanarGraphs {
                                     bubbles.get(v).stream().mapToDouble(Vertex::getWeight).sum()));
 
             }
+            // TODO: add ref point!!
             // PartitionWriter pw = new PartitionWriter();
             // String str = "src/main/output/testDumpBubbleParal/".replace('/', File.separatorChar) + iterCounter;
             // try {

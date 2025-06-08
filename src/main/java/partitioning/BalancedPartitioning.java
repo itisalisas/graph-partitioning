@@ -7,10 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import graph.EdgeOfGraph;
-import graph.Graph;
-import graph.Vertex;
-import graph.VertexOfDualGraph;
+import graph.*;
+import org.junit.jupiter.api.Assertions;
 
 public class BalancedPartitioning {
 	public BalancedPartitioningOfPlanarGraphs bp;
@@ -91,6 +89,31 @@ public class BalancedPartitioning {
 			}
 		}
 		return dualVertexToPartNumber;
+	}
+
+	public static List<Point> calculatePartCenters(ArrayList<HashSet<VertexOfDualGraph>> partition) {
+		List<Point> centers = new ArrayList<>();
+		for (HashSet<VertexOfDualGraph> part : partition) {
+			double sumX = 0, sumY = 0;
+			Point centerPoint;
+			VertexOfDualGraph centerVertex = null;
+			for (VertexOfDualGraph v : part) {
+				sumX += v.x;
+				sumY += v.y;
+			}
+			centerPoint = new Point(sumX / part.size(), sumY / part.size());
+			double minDist2 = Double.MAX_VALUE;
+			for (VertexOfDualGraph v : part) {
+				double dist2 = (v.x - centerPoint.x) * (v.x - centerPoint.x) + (v.y - centerPoint.y) * (v.y - centerPoint.y);
+				if (dist2 < minDist2) {
+					minDist2 = dist2;
+					centerVertex = v;
+				}
+			}
+			Assertions.assertNotNull(centerVertex);
+			centers.add(new Point(centerVertex.x, centerVertex.y));
+		}
+		return centers;
 	}
 
 }

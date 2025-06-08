@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import graph.Graph;
+import graph.Point;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
 
@@ -118,10 +119,10 @@ public class GraphWriter {
 		out.close();
 	}
 	
-	public void printVerticesToFile(List<Vertex> vertices, File file, boolean geodetic) {
+	public void printVerticesToFile(List<Vertex> vertices, File file, boolean geodetic, Point refPoint) {
 		CoordinateConversion cc = null;
 		if (geodetic) {
-			cc = new CoordinateConversion();
+			cc = new CoordinateConversion(refPoint);
 		}
 		for (Vertex vertex : vertices) {
 			try {
@@ -133,6 +134,25 @@ public class GraphWriter {
 				vertex.printVertexToFile(file);
 			} catch (Exception e) {
 				throw new RuntimeException("Can't print vertex to file " + file.getName());
+			}
+		}
+	}
+
+	public void printPointsToFile(List<Point> points, File file, boolean geodetic, Point refPoint) {
+		CoordinateConversion cc = null;
+		if (geodetic) {
+			cc = new CoordinateConversion(refPoint);
+		}
+		for (Point point : points) {
+			try {
+				if (geodetic) {
+					Point nPoint = cc.fromEuclidean(point);
+					nPoint.printPointToFile(file);
+					continue;
+				}
+				point.printPointToFile(file);
+			} catch (Exception e) {
+				throw new RuntimeException("Can't print point to file " + file.getName());
 			}
 		}
 	}

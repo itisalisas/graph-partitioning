@@ -30,4 +30,12 @@ public abstract class BalancedPartitioningOfPlanarGraphs {
 		return partition;
 	}
 
+	public void extractBigVertices(Graph<VertexOfDualGraph> dualGraph, int maxSumVerticesWeight) {
+		for (VertexOfDualGraph v: dualGraph.verticesArray()) {
+			while (v.getWeight() >= maxSumVerticesWeight) {
+				v.setWeight(v.getWeight() - maxSumVerticesWeight);
+			}
+		}
+	}
+
 }
