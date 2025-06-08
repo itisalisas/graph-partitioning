@@ -227,4 +227,42 @@ public class BoundSearcher {
         return diameter;
     }
 
+    public static double findRadius(List<Vertex> vertices) {
+        if (vertices.size() < 2) {
+            return 0.0;
+        } else if (vertices.size() == 2) {
+            Vertex a = vertices.get(0);
+            Vertex b = vertices.get(1);
+            return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2)) / 2.0;
+        }
+
+        Point center = findMinEnclosingCircleCenter(vertices);
+        double maxRadius = 0.0;
+
+        for (Vertex vertex : vertices) {
+            double distance = Math.sqrt(Math.pow(vertex.x - center.x, 2) +
+                    Math.pow(vertex.y - center.y, 2));
+            if (distance > maxRadius) {
+                maxRadius = distance;
+            }
+        }
+
+        return maxRadius;
+    }
+
+    private static Point findMinEnclosingCircleCenter(List<Vertex> vertices) {
+        double sumX = 0.0;
+        double sumY = 0.0;
+
+        for (Vertex vertex : vertices) {
+            sumX += vertex.x;
+            sumY += vertex.y;
+        }
+
+        double centerX = sumX / vertices.size();
+        double centerY = sumY / vertices.size();
+
+        return new Point(centerX, centerY);
+    }
+
 }

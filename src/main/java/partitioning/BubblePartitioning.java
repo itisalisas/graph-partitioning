@@ -80,12 +80,14 @@ public class BubblePartitioning extends BalancedPartitioningOfPlanarGraphs {
             PartitionWriter pw = new PartitionWriter();
             String str = "src/main/output/testDumpBubbleParal/".replace('/', File.separatorChar) + iterCounter;
             try {
-                pw.printBound(bounds, str , true);
+                // TODO: add ref point!!
+                pw.printBound(bounds, str , true, new Point());
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }
-            pw.printCenter(bubbles.keySet(), str, true);            
+            // TODO: add ref point!!
+            pw.printCenter(bubbles.keySet(), str, true, new Point());
         }
         System.out.println("    bubbles were grown");
         //bubbles to partition

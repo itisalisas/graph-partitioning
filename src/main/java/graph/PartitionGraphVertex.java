@@ -94,7 +94,15 @@ public class PartitionGraphVertex extends Vertex {
                         .mapToDouble(neighbor -> maxWeight - neighbor.getWeight())
                         .sum()
                 ))
-                .limit(graph.verticesNumber() / 10)
+                .limit(graph.verticesNumber() / 2)
+                .collect(Collectors.toList());
+    }
+
+    public static List<PartitionGraphVertex> smallestVertex(Graph<PartitionGraphVertex> graph, double maxWeight) {
+        return graph.verticesArray().stream()
+                .sorted(Comparator.comparingDouble(
+                        v -> v.weight
+                ))
                 .collect(Collectors.toList());
     }
     

@@ -8,16 +8,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import graph.*;
 import org.junit.jupiter.api.Assertions;
 
 import com.google.gson.Gson;
 
 import addingPoints.LocalizationPoints;
-import graph.BoundSearcher;
-import graph.Graph;
-import graph.PartitionGraphVertex;
-import graph.Vertex;
-import graph.VertexOfDualGraph;
 import graphPreparation.GraphPreparation;
 import partitioning.BalancedPartitioning;
 import partitioning.Balancer;
@@ -65,8 +61,8 @@ public class Main {
 
 	public static void main(String[] args) throws RuntimeException, IOException {
 
-		if (args.length < 5) {
-			throw new RuntimeException("Use : <algorithm-name> <path-to-file> <path-to-points-file> <max-sum-vertices-weight> <output-directory-name> [param]");
+		if (args.length < 6) {
+			throw new RuntimeException("Use : <algorithm-name> <path-to-file> <path-to-points-file> <max-sum-vertices-weight> <max-region-radius-meters> <output-directory-name> [param]");
 		}
 
 		String algorithmName = args[0];
@@ -79,26 +75,26 @@ public class Main {
 		BalancedPartitioning partitioning;
 
 		if (algorithmName.equals("IF")) {
-			if (args.length < 6) {
+			if (args.length < 7) {
 				partitioning = new BalancedPartitioning(new InertialFlowPartitioning());
 			} else {
 				double partitionParameter;
 				try {
-					partitionParameter = Double.parseDouble(args[5]);
+					partitionParameter = Double.parseDouble(args[6]);
 				} catch (NumberFormatException e) {
 					throw new RuntimeException("Can't parse partition parameter");
 				}
 				partitioning = new BalancedPartitioning(new InertialFlowPartitioning(partitionParameter));
 			}
 		} else if (algorithmName.equals("BUP")) {
-			if (args.length < 5) {
+			if (args.length < 7) {
 				partitioning = new BalancedPartitioning(new BubblePartitioning());
 			} else {
 				System.out.println("check param");
 				partitioning = new BalancedPartitioning(new BubblePartitioning());
 			}
 		} else if (algorithmName.equals("BUS")) {
-			if (args.length < 5) {
+			if (args.length < 7) {
 				partitioning = new BalancedPartitioning(new BubblePartitioningSequentially());
 			} else {
 				System.out.println("check param");
@@ -131,6 +127,13 @@ public class Main {
 			maxSumVerticesWeight = Integer.parseInt(args[3]);
 		} catch (NumberFormatException e) {
 			throw new RuntimeException("Can't parse max sum vertices weight");
+		}
+
+		int maxRegionRadiusMeters;
+		try {
+			maxRegionRadiusMeters = Integer.parseInt(args[4]);
+		} catch (NumberFormatException e) {
+			throw new RuntimeException("Can't parse max region radius");
 		}
 
 		graph = graph.getLargestConnectedComponent();
@@ -166,10 +169,11 @@ public class Main {
 			}
 		}
 
+		partitioning.bp.extractBigVertices(preparedGraph, maxSumVerticesWeight);
     
 		GraphWriter gw = new GraphWriter(cc);
 
-		String pathToResultDirectory = args[4];
+		String pathToResultDirectory = args[5];
 
 		long startTime = System.currentTimeMillis();
 		
@@ -187,8 +191,8 @@ public class Main {
 			}
 		}
 		Graph<PartitionGraphVertex> partitionGraph = PartitionGraphVertex.buildPartitionGraph(preparedGraph, partitionResultForFaces, dualVertexToPartNumber);
-		// Balancer balancer = new Balancer(partitionGraph, preparedGraph, graph, maxSumVerticesWeight, comparisonForDualGraph, outputDirectory + pathToResultDirectory);
-		// partitionResultForFaces = balancer.rebalancing();
+		Balancer balancer = new Balancer(partitionGraph, preparedGraph, graph, maxSumVerticesWeight, comparisonForDualGraph, outputDirectory + pathToResultDirectory);
+		partitionResultForFaces = balancer.rebalancing();
 		HashMap<VertexOfDualGraph, Integer> newDualVertexToPartNumber = new HashMap<>();
 		for (int i = 0; i < partitionResultForFaces.size(); i++) {
 			for (VertexOfDualGraph vertex : partitionResultForFaces.get(i)) {
@@ -204,19 +208,27 @@ public class Main {
 		ArrayList<HashSet<Vertex>> partitionResult = new ArrayList<>();
 		List<Map.Entry<List<Vertex>, Double>> bounds = new ArrayList<>();
 
+		int countPartsWithNonFittingRadius = 0;
 		for (int i = 0; i < partitionResultForFaces.size(); i++) {
 			partitionResult.add(new HashSet<>());
 			for (VertexOfDualGraph face : partitionResultForFaces.get(i)) {
 				partitionResult.get(i).addAll(comparisonForDualGraph.get(face).getVerticesOfFace());
 			}
+			if (BoundSearcher.findRadius(new ArrayList<>(partitionResult.get(i))) > maxRegionRadiusMeters) {
+				countPartsWithNonFittingRadius++;
+			}
 			bounds.add(Map.entry(BoundSearcher.findBound(graph, partitionResultForFaces.get(i), comparisonForDualGraph), partitionResultForFaces.get(i).stream().mapToDouble(Vertex::getWeight).sum()));
 		}
 
+		System.out.println("Number of parts: " + partitionResultForFaces.size() + ", number of parts with radius > max: " + countPartsWithNonFittingRadius);
+
+		List<Point> centers = BalancedPartitioning.calculatePartCenters(partitionResultForFaces);
+
 		gw.printDualGraphWithWeightsToFile(preparedGraph, outputDirectory + pathToResultDirectory, "dual.txt", true);
 		PartitionWriter pw = new PartitionWriter();
-		pw.savePartitionToDirectory(partitioning, partitioning.bp ,outputDirectory + pathToResultDirectory, partitionResultForFaces, true, partitioningTime);
-		pw.printBound(bounds, outputDirectory + pathToResultDirectory, true);
-    
+		pw.savePartitionToDirectory(partitioning, partitioning.bp,outputDirectory + pathToResultDirectory, partitionResultForFaces, true, partitioningTime, cc.referencePoint);
+		pw.printBound(bounds, outputDirectory + pathToResultDirectory, true, cc.referencePoint);
+    	pw.printPartCenters(centers, outputDirectory + pathToResultDirectory, "centers.txt", true, cc.referencePoint);
 	}
 
 }

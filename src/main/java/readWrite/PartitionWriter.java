@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import com.google.gson.GsonBuilder;
 
 import graph.BoundSearcher;
+import graph.Point;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
 import partitioning.BalancedPartitioning;
@@ -23,13 +24,13 @@ import partitioning.BalancedPartitioningOfPlanarGraphs;
 
 public class PartitionWriter {
 	
-	public static <T extends Vertex> void writePartitionToFile(HashSet<T> part, Double cutWeight, File outFile, boolean geodetic) throws IOException {
+	public static <T extends Vertex> void writePartitionToFile(HashSet<T> part, Double cutWeight, File outFile, boolean geodetic, Point center) throws IOException {
 		FileWriter out = new FileWriter(outFile, false);
 		out.write(String.format("%f\n", cutWeight));
 		out.write(String.format("%d\n", part.size()));
 		CoordinateConversion cc = null;
 		if (geodetic) {
-			cc = new CoordinateConversion();
+			cc = new CoordinateConversion(center);
 		}
 		for (T v : part) {
 			if (geodetic) {
@@ -50,9 +51,21 @@ public class PartitionWriter {
 			}
 		}
 	}
+
+	public void printPartCenters(List<Point> centers, String outputDirectory, String fileName, boolean geodetic, Point refPoint) {
+		createOutputDirectory(outputDirectory);
+		File centersFile = new File(outputDirectory + File.separator + fileName);
+		try {
+			centersFile.createNewFile();
+		} catch (IOException e) {
+			throw new RuntimeException("Can't create centers file: " + e.getMessage());
+		}
+		GraphWriter gw = new GraphWriter();
+		gw.printPointsToFile(centers, centersFile, geodetic, refPoint);
+	}
 	
 
-	public void printHull(List<Vertex> hull, String outputDirectory, String fileName, boolean geodetic) {
+	public void printHull(List<Vertex> hull, String outputDirectory, String fileName, boolean geodetic, Point refPoint) {
 		createOutputDirectory(outputDirectory);
 		File boundFile = new File(outputDirectory + File.separator + fileName);
 		try {
@@ -61,11 +74,11 @@ public class PartitionWriter {
 			throw new RuntimeException("Can't create bound file");
 		}
 		GraphWriter gw = new GraphWriter();
-		gw.printVerticesToFile(hull, boundFile, geodetic);
+		gw.printVerticesToFile(hull, boundFile, geodetic, refPoint);
 	}
 	
 	
-	public void printBound(List<Map.Entry<List<Vertex>, Double>> bounds, String outputDirectory, boolean geodetic) throws IOException {
+	public void printBound(List<Map.Entry<List<Vertex>, Double>> bounds, String outputDirectory, boolean geodetic, Point refPoint) throws IOException {
 		createOutputDirectory(outputDirectory);
 		for (int i = 0; i < bounds.size(); i++) {
 			File boundFile = new File(outputDirectory + File.separator + "bound_" + i + ".txt");
@@ -75,14 +88,14 @@ public class PartitionWriter {
 				throw new RuntimeException("Can't create bound file");
 			}
 			GraphWriter gw = new GraphWriter();
-			gw.printVerticesToFile(bounds.get(i).getKey(), boundFile, geodetic);
+			gw.printVerticesToFile(bounds.get(i).getKey(), boundFile, geodetic, refPoint);
 			FileWriter out = new FileWriter(boundFile, true);
 			out.write(String.format("%f", bounds.get(i).getValue()));
 			out.close();
 		}
 	}
 
-	public void printCenter(Set<VertexOfDualGraph> center, String outputDirectory, boolean geodetic) {
+	public void printCenter(Set<VertexOfDualGraph> center, String outputDirectory, boolean geodetic, Point refPoint) {
 		GraphWriter gw = new GraphWriter();
 		List<Vertex> centerList = new ArrayList<Vertex>(center);
 		File outputDirectoryFile = new File(outputDirectory);
@@ -106,11 +119,11 @@ public class PartitionWriter {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		gw.printVerticesToFile(centerList, centerFile, true);
+		gw.printVerticesToFile(centerList, centerFile, true, refPoint);
 	}
 
 
-	public void savePartitionToDirectory(BalancedPartitioning balancedPartitioning, BalancedPartitioningOfPlanarGraphs bp, String outputDirectory, List<HashSet<VertexOfDualGraph>> partitionResult, boolean geodetic, double partitionTime) {
+	public void savePartitionToDirectory(BalancedPartitioning balancedPartitioning, BalancedPartitioningOfPlanarGraphs bp, String outputDirectory, List<HashSet<VertexOfDualGraph>> partitionResult, boolean geodetic, double partitionTime, Point refPoint) {
 		createOutputDirectory(outputDirectory);
 		File outputDirectoryFile = new File(outputDirectory);
 		if (!outputDirectoryFile.exists()) {
@@ -128,7 +141,7 @@ public class PartitionWriter {
 				throw new RuntimeException("Can't create output file");
 			}
 			try {
-				PartitionWriter.writePartitionToFile(part, balancedPartitioning.cutEdgesMap.get(part), outputFile, geodetic);
+				PartitionWriter.writePartitionToFile(part, balancedPartitioning.cutEdgesMap.get(part), outputFile, geodetic, refPoint);
 			} catch (Exception e) {
 				throw new RuntimeException("Can't write partition to file: " + e.getMessage());
 			}

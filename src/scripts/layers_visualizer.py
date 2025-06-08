@@ -30,6 +30,23 @@ def parse_arguments():
     parser.add_argument("-o", "--output", required=True, help="Output HTML file")
     return parser.parse_args()
 
+def load_centers_from_file(centers_path):
+    """Загружает центры из файла centers.txt"""
+    centers = []
+    try:
+        with open(centers_path, 'r') as f:
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) >= 2:
+                    lon = float(parts[0].replace(',', '.'))
+                    lat = float(parts[1].replace(',', '.'))
+                    centers.append((lat, lon))
+    except FileNotFoundError:
+        print(f"Centers file not found: {centers_path}")
+    except Exception as e:
+        print(f"Error reading centers file: {e}")
+    return centers
+
 def generate_distinct_colors(n):
     if n == 0:
         return []
@@ -120,10 +137,9 @@ def add_bounds_layer(map_osm, bounds_dir):
 
             return coords, weight
 
-    def calculate_polygon_center(points):
-        lats = [p[0] for p in points]
-        lons = [p[1] for p in points]
-        return (sum(lats)/len(lats), sum(lons)/len(lons))
+    centers_path = os.path.join(bounds_dir, "centers.txt")
+    centers = load_centers_from_file(centers_path)
+    centers_ptr = 0
 
     boundaries = []
     bounds_path = os.path.abspath(bounds_dir)
@@ -138,7 +154,8 @@ def add_bounds_layer(map_osm, bounds_dir):
 
             boundaries.append((boundary_coords, weight))
 
-            center = calculate_polygon_center(boundary_coords)
+            center = centers[centers_ptr]
+            centers_ptr += 1
             folium.Marker(
                 location=center,
                 icon=folium.Icon(color='darkblue', icon='crosshairs', prefix='fa')

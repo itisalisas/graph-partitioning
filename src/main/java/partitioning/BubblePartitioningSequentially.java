@@ -233,12 +233,14 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
             HashSet<VertexOfDualGraph> centerToFile = new HashSet<>();
             centerToFile.add(center);
             try {
-                pw.printBound(bounds, str , true);
+                // TODO - add ref point!!
+                pw.printBound(bounds, str , true, new Point());
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }
-            pw.printCenter(centerToFile, str, true);
+            // TODO - add ref point!!
+            pw.printCenter(centerToFile, str, true, new Point());
             if (tmp > maxSumVerticesWeight) {
                 return;
             } else {
