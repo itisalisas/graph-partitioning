@@ -11,6 +11,7 @@ public class Bubble {
     Double borderLength;
     VertexOfDualGraph center;
     Boolean completed;
+    Double area;
 
     public Bubble(VertexOfDualGraph center, Graph<VertexOfDualGraph> graph, int maxBubbleWeight) {
         this.center = center;
@@ -31,6 +32,7 @@ public class Bubble {
         } else {
             completed = false;
         }
+        this.area = center.area;
     }
 
     public Bubble(Bubble bubble) {
@@ -39,6 +41,7 @@ public class Bubble {
         this.completed = bubble.completed;
         this.vertexSet = new HashSet<>(bubble.vertexSet);
         this.weight = bubble.weight;
+        this.area = bubble.area;
     }
 
     /**
@@ -56,6 +59,7 @@ public class Bubble {
         borderLength = countNewPerimeter(toAdd, graph);
         vertexSet.add(toAdd);
         center = findNewCenter();
+        area = area + toAdd.area;
         return true;
     }
     /**

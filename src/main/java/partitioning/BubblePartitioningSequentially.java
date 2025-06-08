@@ -330,7 +330,9 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
                 blength = blength + graph.getEdges().get(v).get(ver).length;
             }
         }
-        return (maxBubbleWeight - sumWeight(bubble.vertexSet)) * Math.pow(bubble.countNewPerimeter(ver, graph)- bubble.borderLength, 2) / blength;
+        return (maxBubbleWeight - sumWeight(bubble.vertexSet)) * 
+                Math.pow(bubble.countNewPerimeter(ver, graph)- bubble.borderLength, 2) / blength;
+       // return (maxBubbleWeight - sumWeight(bubble.vertexSet)) * Math.pow(bubble.countNewPerimeter(ver, graph), 2) / (bubble.area + ver.area);
     }
 
     private double sumWeight(HashSet<VertexOfDualGraph> bubble) {
