@@ -199,6 +199,8 @@ public class PartitionWriter {
 					.collect(Collectors.toList());
 
 
+			
+			jsonData.put("estimatorRegionNumber", partitionResult.size()/ Math.ceil(totalGraphWeight / balancedPartitioning.maxSumVerticesWeight));
 			jsonData.put("partitionTime", partitionTime);
     		jsonData.put("dualVertexNumber", bp.graph.verticesNumber());
    			jsonData.put("totalGraphWeight", totalGraphWeight);
