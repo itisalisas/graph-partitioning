@@ -68,7 +68,7 @@ for city, coords in cities.items():
             graph_input = f"{lat}\n{lon}\n{size}\nY\n"
             stdout, stderr = graph_process.communicate(input=graph_input)
 
-            with open(city_size_dir / "graph_creation.log", "w") as log:
+            with open(city_size_dir / "creation_graph.log", "w") as log:
                 log.write(f"=== STDOUT ===\n{stdout}\n")
                 log.write(f"\n=== STDERR ===\n{stderr}\n")
 
@@ -98,7 +98,7 @@ for city, coords in cities.items():
             buildings_input = f"{lat}\n{lon}\n{size}\n"
             stdout, stderr = buildings_process.communicate(input=buildings_input)
 
-            with open(city_size_dir / "buildings_creation.log", "w") as log:
+            with open(city_size_dir / "creation_buildings.log", "w") as log:
                 log.write(f"=== STDOUT ===\n{stdout}\n")
                 log.write(f"\n=== STDERR ===\n{stderr}\n")
 
