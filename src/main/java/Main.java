@@ -231,7 +231,7 @@ public class Main {
 		long usedMemory = runtime.totalMemory() - runtime.freeMemory();
 		System.out.println("Without GC, used memory: " + (usedMemory / 1024 / 1024) + " MB");
 		PartitionWriter pw = new PartitionWriter(cc);
-		pw.savePartitionToDirectory(partitioning, partitioning.bp,outputDirectory + pathToResultDirectory, partitionResultForFaces, true, partitioningTime, cc.referencePoint, usedMemory);
+		pw.savePartitionToDirectory(partitioning, partitioning.bp,outputDirectory + pathToResultDirectory, partitionResultForFaces, true, partitioningTime, cc.referencePoint, usedMemory / 1024 / 1024);
 		pw.printBound(bounds, outputDirectory + pathToResultDirectory, true, cc.referencePoint);
 		pw.printPartCenters(centers, outputDirectory + pathToResultDirectory, "centers.txt", true, cc.referencePoint);
 	}
