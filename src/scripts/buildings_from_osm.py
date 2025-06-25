@@ -5,8 +5,8 @@ import networkx as nx
 from shapely.geometry import Point, box, Polygon, LineString
 from math import atan2, cos, degrees, radians
 
-center_lat = 59.93893094417527
-center_lon = 30.32268115454809
+center_lat = 56.00864
+center_lon = 92.8683
 d = 50
 
 def get_bounding_box(center, distance):
@@ -61,7 +61,7 @@ for idx, row in gdf.iterrows():
     except Exception as e:
         print(f"Ошибка обработки здания {idx}: {e}")
 
-with open("buildings_" + str(center_lat) + "_" + str(center_lon) + "_" + str(d) + '.txt', 'w', encoding='utf-8') as f:
+with open("src/main/resources/data/krasnoyarsk_wr/" +"buildings_" + str(center_lat) + "_" + str(center_lon) + "_" + str(d) + '.txt', 'w', encoding='utf-8') as f:
     f.write(f"{len(buildings)}\n")
     for b in buildings:
         f.write(f"{b['id']} {b['lat']:.6f} {b['lon']:.6f} "

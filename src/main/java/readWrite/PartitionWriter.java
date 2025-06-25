@@ -201,6 +201,8 @@ public class PartitionWriter {
 
 			jsonData.put("partitionTime(s)", partitionTime);
 			jsonData.put("usedMemory(MB)", memory);
+			
+			jsonData.put("estimatorRegionNumber", partitionResult.size()/ Math.ceil(totalGraphWeight / balancedPartitioning.maxSumVerticesWeight));
     		jsonData.put("dualVertexNumber", bp.graph.verticesNumber());
    			jsonData.put("totalGraphWeight", totalGraphWeight);
     		jsonData.put("regionCount", partitionResult.size());
