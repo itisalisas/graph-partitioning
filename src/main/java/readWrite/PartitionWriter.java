@@ -125,7 +125,7 @@ public class PartitionWriter {
 	}
 
 
-	public void savePartitionToDirectory(BalancedPartitioning balancedPartitioning, BalancedPartitioningOfPlanarGraphs bp, String outputDirectory, List<HashSet<VertexOfDualGraph>> partitionResult, boolean geodetic, double partitionTime, Point refPoint) {
+	public void savePartitionToDirectory(BalancedPartitioning balancedPartitioning, BalancedPartitioningOfPlanarGraphs bp, String outputDirectory, List<HashSet<VertexOfDualGraph>> partitionResult, boolean geodetic, double partitionTime, Point refPoint, long memory) {
 		createOutputDirectory(outputDirectory);
 		File outputDirectoryFile = new File(outputDirectory);
 		if (!outputDirectoryFile.exists()) {
@@ -149,13 +149,13 @@ public class PartitionWriter {
 			}
 		}
 
-		printStat(outputDirectory, partitionResult, balancedPartitioning, bp, partitionTime);
+		printStat(outputDirectory, partitionResult, balancedPartitioning, bp, partitionTime, memory);
 
 		System.out.println("Empty parts number: " + balancedPartitioning.countEmptyParts(partitionResult));
 		System.out.println("Graph weight after: " + balancedPartitioning.countSumPartitioningWeight(partitionResult));
 	}
 
-	private void printStat(String outputDirectory, List<HashSet<VertexOfDualGraph>> partitionResult, BalancedPartitioning balancedPartitioning, BalancedPartitioningOfPlanarGraphs bp, double partitionTime) {
+	private void printStat(String outputDirectory, List<HashSet<VertexOfDualGraph>> partitionResult, BalancedPartitioning balancedPartitioning, BalancedPartitioningOfPlanarGraphs bp, double partitionTime, long memory) {
 		List<Double> weights = partitionResult.stream()
             .map(set -> set.stream().mapToDouble(Vertex::getWeight).sum())
             .collect(Collectors.toList());
@@ -199,9 +199,10 @@ public class PartitionWriter {
 					.collect(Collectors.toList());
 
 
+			jsonData.put("partitionTime(s)", partitionTime);
+			jsonData.put("usedMemory(MB)", memory);
 			
 			jsonData.put("estimatorRegionNumber", partitionResult.size()/ Math.ceil(totalGraphWeight / balancedPartitioning.maxSumVerticesWeight));
-			jsonData.put("partitionTime", partitionTime);
     		jsonData.put("dualVertexNumber", bp.graph.verticesNumber());
    			jsonData.put("totalGraphWeight", totalGraphWeight);
     		jsonData.put("regionCount", partitionResult.size());
