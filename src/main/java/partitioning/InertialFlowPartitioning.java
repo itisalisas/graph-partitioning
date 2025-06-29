@@ -171,7 +171,36 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                 index++;
             }
 
-            sinkSet = new HashSet<>(maxSinkSet);
+            if (!maxSinkSet.isEmpty()) {
+                sinkSet = new HashSet<>(maxSinkSet);
+            } else {
+                // if sinkSet empty, cant fit balanced partition, so just take some vertices
+                // as sinkSet and sourceSet
+                sourceSet = new HashSet<>();
+                sinkSet = new HashSet<>();
+
+                List<VertexOfDualGraph> nonLeafVertices = vertices.stream()
+                        .filter(v -> currentGraph.getEdges().get(v).size() >= 2)
+                        .toList();
+
+                if (nonLeafVertices.size() >= 2) {
+                    sourceSet.add(nonLeafVertices.get(0));
+                    sinkSet.add(nonLeafVertices.get(1));
+                } else if (nonLeafVertices.size() == 1) {
+                    sourceSet.add(nonLeafVertices.get(0));
+                    vertices.stream()
+                            .filter(v -> !v.equals(nonLeafVertices.get(0)))
+                            .findFirst()
+                            .ifPresent(sinkSet::add);
+                } else {
+                    if (vertices.size() >= 2) {
+                        sourceSet.add(vertices.get(0));
+                        sinkSet.add(vertices.get(1));
+                    } else {
+                        throw new IllegalStateException("Graph contains less than 2 vertices");
+                    }
+                }
+            }
 
             Graph<VertexOfDualGraph> copyGraph = createGraphWithSourceSink(currentGraph, sourceSet, source, sinkSet, sink);
 

@@ -4,7 +4,7 @@ from pathlib import Path
 import traceback
 
 algorithm = "IF"
-max_sum_vertices_weight = ["1000", "5000", "10000", "20000"]
+max_sum_vertices_weight = ["5000", "10000"]
 max_region_radius_meters = "1000"
 data_root = "src/main/resources/data"
 data_relative_root = "data"
