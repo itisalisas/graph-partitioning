@@ -1,10 +1,12 @@
 import os
 import subprocess
+import shutil
 from pathlib import Path
 import traceback
 
-algorithm = "BUS"
-max_sum_vertices_weight = ["1000", "5000", "10000", "20000"]
+algorithm = "IF"
+max_sum_vertices_weight = ["5000", "10000"]
+
 max_region_radius_meters = "1000"
 data_root = "src/main/resources/data"
 data_relative_root = "data"
@@ -48,6 +50,23 @@ for city in os.listdir(data_root):
         for weight in max_sum_vertices_weight:
             weight_dir = f"max_weight_{weight}"
             output_dir = os.path.join(out_dir_base, city, size, weight_dir)
+            full_output_dir = os.path.join("src", "main", "output", output_dir)
+
+            map_output = os.path.join(full_output_dir, "map.html")
+            if os.path.exists(map_output):
+                print(f"Skipping {city}/{size}/{weight_dir} - map.html already exists")
+                continue
+
+            if os.path.exists(full_output_dir):
+                print(f"Cleaning existing directory {full_output_dir}")
+                try:
+                    shutil.rmtree(full_output_dir)
+                    os.makedirs(full_output_dir, exist_ok=True)
+                except Exception as e:
+                    print(f"Failed to clean directory {full_output_dir}: {e}")
+                    with open(visualization_errors_log, "a") as err_log:
+                        err_log.write(f"Directory cleanup error for {city}/{size}/{weight_dir}: {e}\n{traceback.format_exc()}\n\n")
+                    continue
 
             args = (
                 f"{algorithm} "

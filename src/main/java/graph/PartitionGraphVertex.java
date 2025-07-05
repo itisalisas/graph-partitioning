@@ -103,6 +103,7 @@ public class PartitionGraphVertex extends Vertex {
                 .sorted(Comparator.comparingDouble(
                         v -> v.weight
                 ))
+                .limit(graph.verticesNumber() / 20)
                 .collect(Collectors.toList());
     }
     
