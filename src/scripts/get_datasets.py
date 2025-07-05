@@ -58,7 +58,7 @@ for city, coords in cities.items():
         try:
             print(f"Starting graph creation for {city}/{size}...")
             graph_process = subprocess.Popen(
-                ["python3", str(graph_script_path)],
+                ["python", str(graph_script_path)],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -89,7 +89,7 @@ for city, coords in cities.items():
         try:
             print(f"Starting buildings creation for {city}/{size}...")
             buildings_process = subprocess.Popen(
-                ["python3", str(buildings_script_path)],
+                ["python", str(buildings_script_path)],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,

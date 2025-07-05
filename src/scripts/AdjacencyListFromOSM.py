@@ -5,8 +5,8 @@ import networkx as nx
 from shapely.geometry import Point, box, Polygon, LineString
 from math import atan2, degrees
 
-center_lat = 59.93893
-center_lon = 30.32268
+center_lat = 59.93893094417527
+center_lon = 30.32268115454809
 d = 50
 withRivers = False
 
@@ -153,10 +153,10 @@ nodes_to_add = sorted(nodes_to_add, key=calculate_angle)
 for i in range(len(nodes_to_add)):
     node1 = nodes_to_add[i][0]
     node2 = nodes_to_add[(i + 1) % len(nodes_to_add)][0]
-    distance = geodesic((nodes_to_add[i][2], nodes_to_add[i][1]), (nodes_to_add[(i + 1) % len(nodes_to_add)][2], nodes_to_add[(i + 1) % len(nodes_to_add)][1])).meters
+    distance = geodesic((nodes_to_add[i][1], nodes_to_add[i][2]), (nodes_to_add[(i + 1) % len(nodes_to_add)][1], nodes_to_add[(i + 1) % len(nodes_to_add)][2])).meters
     G.add_edge(node1, node2, length=distance)
 
-file = open("src/main/resources/data/spb_wr/" +"graph_" + str(center_lat) + "_" + str(center_lon) + "_" + str(d) + ".txt", "w")
+file = open("graph_" + str(center_lat) + "_" + str(center_lon) + "_" + str(d) + ".txt", "w")
 file.write(str(G.number_of_nodes()) + " ")
 file.write('\n')
 
@@ -177,4 +177,3 @@ for line in nx.generate_adjlist(G):
     file.write('\n')
 
 file.close()
-
