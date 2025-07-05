@@ -224,7 +224,9 @@ public class SweepLine {
 				@Override
 				public int compare(Action a1, Action a2) {
 					return a1.x() < a2.x() ? -1
-							: a1.x() > a2.x() ? 1 : a1.type() == ActionType.ADD ? 1 : a2.type() == ActionType.ADD ? -1 : 0;
+							: a1.x() > a2.x() ? 1 
+							: a1.type() == ActionType.ADD ? -1 
+							: a2.type() == ActionType.ADD ? 1 : 0;
 				}
 			});
 			HashMap<Integer, EdgeOfGraph<Vertex>> actualEdge = new HashMap<Integer, EdgeOfGraph<Vertex>>();

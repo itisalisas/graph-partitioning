@@ -6,6 +6,7 @@ import traceback
 
 algorithm = "IF"
 max_sum_vertices_weight = ["5000", "10000"]
+
 max_region_radius_meters = "1000"
 data_root = "src/main/resources/data"
 data_relative_root = "data"
@@ -76,7 +77,7 @@ for city in os.listdir(data_root):
                 f"{output_dir}"
             )
 
-            cmd = ["./gradlew", "run", f"--args={args}"]
+            cmd = ["gradlew.bat", "run", f"--args={args}"]
             log_dir = os.path.join("src", "main", "output", output_dir)
             Path(log_dir).mkdir(parents=True, exist_ok=True)
             java_log_file = os.path.join(log_dir, "run.log")
@@ -117,7 +118,7 @@ for city in os.listdir(data_root):
                     map_output = os.path.join("src", "main", "output", bounds_dir, "map.html")
 
                     viz_cmd = [
-                        "python3", visualization_script,
+                        "python", visualization_script,
                         "--graph", graph_path,
                         "--bounds", bounds_dir,
                         "--points", points_path,
