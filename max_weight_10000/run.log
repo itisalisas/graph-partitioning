@@ -1,0 +1,105 @@
+> Task :compileJava
+> Task :processResources UP-TO-DATE
+> Task :classes
+
+> Task :run
+Vertices num: 244215
+Readed all Vertices
+Vertices num: 244215
+Readed all Vertices
+Number of 0 weight vertex, before correction: 0
+Number of 0 weight vertex, before sweepLine: 0
+Start graph weight: 5984873.0
+small edges num after sweepline: 2548
+Number of 0 weight vertex, after sweepLine: 4418
+After sweepline graph weight: 5984873.0
+Dual graph weight: 5361171.394286347
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+check 1 vertex bubble
+    bubbles were grown
+    end bubble
+Partition size: 586
+Exception in thread "main" java.lang.RuntimeException: Multiple common faces for edge
+	at graph.BoundSearcher.findCommonFace(BoundSearcher.java:166)
+	at graph.BoundSearcher.findBound(BoundSearcher.java:134)
+	at Main.main(Main.java:220)
+
+> Task :run FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':run'.
+> Process 'command 'C:\Program Files\Java\jdk-17\bin\java.exe'' finished with non-zero exit value 1
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.2/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 21h 40m 12s
+3 actionable tasks: 2 executed, 1 up-to-date

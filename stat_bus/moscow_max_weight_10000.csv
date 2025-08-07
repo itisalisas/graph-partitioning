@@ -1,0 +1,3 @@
+Size,Graph Edges,Time (s),Memory (MB),Regions,Regions/Optimal,Avg Load
+1000,17758,237.292,29,39,1.219,0.803
+2000,63623,4727.862,17,140,1.176,0.847
