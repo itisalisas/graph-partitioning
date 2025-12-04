@@ -206,10 +206,27 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
             Assertions.assertEquals(currentGraph.verticesNumber() + 2, copyGraph.verticesNumber());
 
-            MaxFlow maxFlow = new MaxFlow(copyGraph, source, sink);
-            FlowResult flowResult = maxFlow.dinic();
+            MaxFlow maxFlow;
+            boolean useReif = false;
+            if (simpleGraph != null) {
+                maxFlow = new MaxFlowReif(simpleGraph, copyGraph, source, sink);
+                useReif = true;
+            } else {
+                maxFlow = new MaxFlowDinic(copyGraph, source, sink);
+            }
+            FlowResult flowResult = maxFlow.findFlow();
+            System.out.println("\n\nFLOW SIZE: " + flowResult.flowSize + "\n\n");
 
-            List<Graph<VertexOfDualGraph>> subpartition = partitionGraph(flowResult);
+            List<Graph<VertexOfDualGraph>> subpartition;
+            if (useReif) {
+                subpartition = partitionGraphReif(flowResult);
+            } else {
+                subpartition = partitionGraph(flowResult);
+            }
+            System.out.println("\n\nSUBPARTITION SIZE: " + subpartition.size());
+            System.out.println("Subgraph 0 vertices: " + subpartition.get(0).verticesNumber() + ", weight: " + subpartition.get(0).verticesWeight());
+            System.out.println("Subgraph 1 vertices: " + subpartition.get(1).verticesNumber() + ", weight: " + subpartition.get(1).verticesWeight());
+            System.out.println("Original graph vertices: " + currentGraph.verticesNumber() + ", weight: " + currentGraph.verticesWeight() + "\n\n");
 
             for (Graph<VertexOfDualGraph> subgraph : subpartition) {
                 stack.push(subgraph);
@@ -304,6 +321,60 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
         }
 
         return newGraph;
+    }
+
+    private List<Graph<VertexOfDualGraph>> partitionGraphReif(FlowResult flow) {
+        Graph<VertexOfDualGraph> graph = flow.graphWithFlow.clone();
+        
+        VertexOfDualGraph source = flow.source;
+        VertexOfDualGraph sink = flow.sink;
+        
+        List<VertexOfDualGraph> allVertices = new ArrayList<>(graph.verticesArray());
+        
+        for (VertexOfDualGraph v : allVertices) {
+            if (graph.getEdges().get(v) == null) continue;
+            
+            List<VertexOfDualGraph> neighbors = new ArrayList<>(graph.getEdges().get(v).keySet());
+            for (VertexOfDualGraph neighbor : neighbors) {
+                Edge edge = graph.getEdges().get(v).get(neighbor);
+                if (edge.flow >= edge.getBandwidth()) {
+                    graph.deleteEdge(v, neighbor);
+                }
+            }
+        }
+        
+        graph.deleteVertex(source);
+        graph.deleteVertex(sink);
+        
+        ArrayList<HashSet<VertexOfDualGraph>> components = graph.splitForConnectedComponents();
+
+        List<Graph<VertexOfDualGraph>> subpartition = new ArrayList<>();
+        
+        if (components.isEmpty()) {
+            System.out.println("No components found, returning empty graphs");
+            subpartition.add(new Graph<>());
+            subpartition.add(new Graph<>());
+        } else if (components.size() == 1) {
+            System.out.println("Only one component, graph not separated");
+            subpartition.add(flow.graphWithFlow.createSubgraph(components.get(0)));
+            subpartition.add(new Graph<>());
+        } else {
+            components.sort((a, b) -> Integer.compare(b.size(), a.size()));
+
+            subpartition.add(flow.graphWithFlow.createSubgraph(components.get(0)));
+            subpartition.add(flow.graphWithFlow.createSubgraph(components.get(1)));
+            
+            for (int i = 2; i < components.size(); i++) {
+                Graph<VertexOfDualGraph> smallComponent = flow.graphWithFlow.createSubgraph(components.get(i));
+                for (VertexOfDualGraph v : smallComponent.verticesArray()) {
+                    components.get(0).add(v);
+                }
+            }
+            
+            subpartition.set(0, flow.graphWithFlow.createSubgraph(components.get(0)));
+        }
+        
+        return subpartition;
     }
 
 }
