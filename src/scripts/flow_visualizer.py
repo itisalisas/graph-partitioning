@@ -85,6 +85,64 @@ def load_neighbor_splits(file_path):
     
     return splits
 
+def load_dual_graph_with_flow(file_path):
+    """Загружает двойственный граф с информацией о потоках"""
+    vertices = {}
+    edges = []
+    
+    if not os.path.exists(file_path):
+        print(f"Warning: Dual graph file {file_path} not found")
+        return vertices, edges
+    
+    with open(file_path, 'r') as file:
+        mode = None
+        for line in file:
+            line = line.strip()
+            if not line:
+                continue
+            
+            if line == 'VERTICES':
+                mode = 'VERTICES'
+                continue
+            elif line == 'EDGES':
+                mode = 'EDGES'
+                continue
+            
+            if mode == 'VERTICES':
+                parts = line.split()
+                if len(parts) >= 4:
+                    vertex_id = int(parts[0])
+                    longitude = float(parts[1])
+                    latitude = float(parts[2])
+                    vertex_type = parts[3]
+                    vertices[vertex_id] = (latitude, longitude, vertex_type)
+            
+            elif mode == 'EDGES':
+                parts = line.split()
+                if len(parts) >= 5:
+                    from_id = int(parts[0])
+                    to_id = int(parts[1])
+                    bandwidth = float(parts[2])
+                    flow = float(parts[3])
+                    edge_type = parts[4]
+                    edges.append({
+                        'from': from_id,
+                        'to': to_id,
+                        'bandwidth': bandwidth,
+                        'flow': flow,
+                        'type': edge_type
+                    })
+    
+    print(f"Loaded dual graph: {len(vertices)} vertices, {len(edges)} edges")
+    if edges:
+        saturated_count = sum(1 for e in edges if e['type'] == 'SATURATED')
+        flow_count = sum(1 for e in edges if e['flow'] > 0)
+        print(f"  - Saturated edges: {saturated_count}")
+        print(f"  - Edges with flow: {flow_count}")
+        print(f"  - Edges without flow: {len(edges) - flow_count}")
+    
+    return vertices, edges
+
 def visualize_reif_flow(directory_name, output_file):
     """Визуализирует результаты работы MaxFlowReif"""
     
@@ -102,6 +160,7 @@ def visualize_reif_flow(directory_name, output_file):
     st_path = load_vertex_list(os.path.join(directory_path, "st_path.txt"))
     best_path = load_vertex_list(os.path.join(directory_path, "best_path.txt"))
     neighbor_splits = load_neighbor_splits(os.path.join(directory_path, "neighbor_splits.txt"))
+    dual_vertices, dual_edges = load_dual_graph_with_flow(os.path.join(directory_path, "dual_graph_flow.txt"))
     
     # Собираем все точки для определения границ карты
     all_points = []
@@ -119,12 +178,100 @@ def visualize_reif_flow(directory_name, output_file):
     map_osm = folium.Map(location=(center_lat, center_lon), zoom_start=15)
     
     # Создаем слои (Feature Groups) для каждого типа данных
+    dual_graph_layer = folium.FeatureGroup(name='Dual Graph with Flow', show=False)
     external_layer = folium.FeatureGroup(name='External Boundary', show=True)
     source_layer = folium.FeatureGroup(name='Source Boundary', show=True)
     sink_layer = folium.FeatureGroup(name='Sink Boundary', show=True)
     st_path_layer = folium.FeatureGroup(name='S-T Path', show=True)
     neighbor_splits_layer = folium.FeatureGroup(name='Neighbor Splits', show=True)
     best_path_layer = folium.FeatureGroup(name='Best Path (Result)', show=True)
+    
+    # 0. Двойственный граф с потоками
+    if dual_vertices and dual_edges:
+        print(f"Visualizing dual graph with {len(dual_vertices)} vertices and {len(dual_edges)} edges")
+        
+        # Рисуем рёбра двойственного графа
+        edges_drawn = 0
+        edges_skipped = 0
+        
+        for edge in dual_edges:
+            from_id = edge['from']
+            to_id = edge['to']
+            bandwidth = edge['bandwidth']
+            flow = edge['flow']
+            edge_type = edge['type']
+            
+            if from_id not in dual_vertices or to_id not in dual_vertices:
+                edges_skipped += 1
+                print(f"Warning: Edge {from_id}→{to_id} references missing vertex")
+                continue
+            
+            from_lat, from_lon, _ = dual_vertices[from_id]
+            to_lat, to_lon, _ = dual_vertices[to_id]
+            
+            # Определяем цвет и толщину в зависимости от потока
+            if edge_type == 'SATURATED':
+                color = '#FF0000'  # Красный для насыщенных рёбер
+                weight = 6
+                opacity = 1.0
+                dash_array = None
+            elif flow > 0:
+                # Рёбра с потоком, но не насыщенные - оранжевые
+                color = '#FF8800'
+                weight = 4
+                opacity = 0.8
+                dash_array = None
+            else:
+                # Рёбра без потока - тёмно-серые пунктирные
+                color = '#888888'
+                weight = 2
+                opacity = 0.6
+                dash_array = '5, 5'
+            
+            tooltip_text = f"Edge {from_id}↔{to_id}<br>Flow: {flow:.2f}<br>Capacity: {bandwidth:.2f}"
+            if edge_type == 'SATURATED':
+                tooltip_text += "<br><b>SATURATED</b>"
+            
+            polyline = folium.PolyLine(
+                locations=[(from_lat, from_lon), (to_lat, to_lon)],
+                color=color,
+                weight=weight,
+                opacity=opacity,
+                tooltip=tooltip_text
+            )
+            
+            if dash_array:
+                polyline.options['dashArray'] = dash_array
+            
+            polyline.add_to(dual_graph_layer)
+            edges_drawn += 1
+        
+        print(f"Drew {edges_drawn} edges, skipped {edges_skipped} edges")
+        
+        # Рисуем вершины двойственного графа (центроиды граней)
+        for vertex_id, (lat, lon, vertex_type) in dual_vertices.items():
+            if vertex_type == 'SOURCE':
+                color = 'green'
+                radius = 8
+                tooltip_text = f"Face {vertex_id} (SOURCE)"
+            elif vertex_type == 'SINK':
+                color = 'red'
+                radius = 8
+                tooltip_text = f"Face {vertex_id} (SINK)"
+            else:
+                color = '#666666'
+                radius = 4
+                tooltip_text = f"Face {vertex_id}"
+            
+            folium.CircleMarker(
+                location=(lat, lon),
+                radius=radius,
+                color=color,
+                fill=True,
+                fill_color=color,
+                fill_opacity=0.7,
+                tooltip=tooltip_text
+            ).add_to(dual_graph_layer)
     
     # 1. Внешняя граница графа (серый полигон)
     if external_boundary:
@@ -306,18 +453,9 @@ def visualize_reif_flow(directory_name, output_file):
             opacity=0.9,
             tooltip="Best Path (Final Result)"
         ).add_to(best_path_layer)
-        
-        for i, (vertex_id, lat, lon) in enumerate(cleaned_best_path):
-            folium.CircleMarker(
-                location=(lat, lon),
-                radius=5,
-                color='darkorange',
-                fill=True,
-                fill_color='yellow',
-                tooltip=f"Best path vertex {vertex_id} (step {i})"
-            ).add_to(best_path_layer)
     
     # Добавляем все слои на карту
+    dual_graph_layer.add_to(map_osm)
     external_layer.add_to(map_osm)
     source_layer.add_to(map_osm)
     sink_layer.add_to(map_osm)
@@ -338,10 +476,15 @@ def visualize_reif_flow(directory_name, output_file):
     # Добавляем легенду
     legend_html = '''
     <div style="position: fixed; 
-                bottom: 50px; right: 50px; width: 280px; height: 290px; 
+                bottom: 50px; right: 50px; width: 320px; height: 390px; 
                 background-color: white; border:2px solid grey; z-index:9999; 
                 font-size:12px; padding: 10px">
     <p><b>MaxFlowReif Visualization</b></p>
+    <p style="margin-bottom: 10px; font-size: 11px;"><b>Dual Graph (toggle layer):</b></p>
+    <p style="margin-left: 15px;"><span style="color:#FF0000; font-weight: bold;">━━━</span> Saturated (flow = capacity)</p>
+    <p style="margin-left: 15px;"><span style="color:#FF8800; font-weight: bold;">━━</span> With flow (flow &lt; capacity)</p>
+    <p style="margin-left: 15px;"><span style="color:#888888;">╌╌</span> No flow (capacity only)</p>
+    <p style="margin-bottom: 10px; margin-top: 10px; font-size: 11px;"><b>Primal Graph:</b></p>
     <p><span style="color:gray;">⬤</span> External Boundary</p>
     <p><span style="color:green;">⬤</span> Source Boundary</p>
     <p><span style="color:red;">⬤</span> Sink Boundary</p>

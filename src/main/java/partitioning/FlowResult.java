@@ -3,7 +3,7 @@ package partitioning;
 import graph.Graph;
 import graph.VertexOfDualGraph;
 
-public class FlowResult {
+public sealed class FlowResult permits ReifFlowResult {
     double flowSize;
     Graph<VertexOfDualGraph> graphWithFlow;
     VertexOfDualGraph source;
