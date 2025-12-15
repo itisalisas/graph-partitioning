@@ -1,0 +1,9 @@
+Metric,Value
+Max Time (s),72775.636
+Max Memory (MB),72.0
+Avg Time/Edge (s/edge),0.0345
+Min Regions/Optimal,1.095238
+Avg Regions/Optimal,1.164913
+Max Regions/Optimal,1.21875
+Avg Load (max_weight=5000),0.851311
+Avg Load (max_weight=10000),0.856889

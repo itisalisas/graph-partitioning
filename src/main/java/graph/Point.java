@@ -1,5 +1,8 @@
 package graph;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 
 public class Point {
@@ -21,16 +24,6 @@ public class Point {
 	public Point(double x, double y) {
 		this.x = x;
 		this.y = y;
-	}
-	
-	
-	public double getX() {
-		return x;
-	}
-	
-	
-	public double getY() {
-		return y;
 	}
 	
 	
@@ -142,5 +135,15 @@ public class Point {
 		} else {
 			return true;
 		}
+	}
+
+	public void printPointToFile(File outFile) throws IOException {
+		FileWriter out = new FileWriter(outFile, true);
+		out.write(String.format("%f %f\n", this.x, this.y));
+		out.close();
+	}
+
+	public Point copy() {
+		return new Point(this);
 	}
 }

@@ -7,10 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import graph.EdgeOfGraph;
-import graph.Graph;
-import graph.Vertex;
-import graph.VertexOfDualGraph;
+import graph.*;
+import org.junit.jupiter.api.Assertions;
 
 public class BalancedPartitioning {
 	public BalancedPartitioningOfPlanarGraphs bp;
@@ -19,33 +17,35 @@ public class BalancedPartitioning {
 
 	public Map<Set<VertexOfDualGraph>, Double> cutEdgesMap;
 
-	public double partitioningTime;
-
 	public BalancedPartitioning(BalancedPartitioningOfPlanarGraphs bp) {
 		this.bp = bp;
 	}
 
-	public ArrayList<HashSet<VertexOfDualGraph>> partition(Graph<VertexOfDualGraph> graph,
-												int maxSumVerticesWeight) {
+	public ArrayList<HashSet<VertexOfDualGraph>> partition(Graph<Vertex> simpleGraph, 
+														   HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph, 
+														   Graph<VertexOfDualGraph> graph,
+														   int maxSumVerticesWeight) {
 		bp.partition = new ArrayList<>();
 		this.maxSumVerticesWeight = maxSumVerticesWeight;
-		long startTime = System.currentTimeMillis();
-		bp.balancedPartitionAlgorithm(graph, maxSumVerticesWeight);
-		partitioningTime = ((double) (System.currentTimeMillis() - startTime)) / 1000;
+		bp.balancedPartitionAlgorithm(simpleGraph, comparisonForDualGraph, graph, maxSumVerticesWeight);
 		ArrayList<HashSet<VertexOfDualGraph>> partitionResult = bp.getPartition();
 		calculateCutWeights(bp.graph, partitionResult);
 		return partitionResult;
 	}
 
-	private void calculateCutWeights(Graph graph, List<HashSet<VertexOfDualGraph>> partitions) {
+	private void calculateCutWeights(Graph<VertexOfDualGraph> graph, List<HashSet<VertexOfDualGraph>> partitions) {
 		cutEdgesMap = new HashMap<>();
-
+		if (graph == null) {
+			System.out.println("graph - null1");
+		}
 		for (Set<VertexOfDualGraph> partition : partitions) {
 			double cutEdgesWeightSum = 0;
-
-			for (EdgeOfGraph edge : graph.edgesArray()) {
-				Vertex u = edge.begin;
-				Vertex v = edge.end;
+			if (graph == null) {
+				System.out.println("graph - null2");
+			}
+			for (EdgeOfGraph<VertexOfDualGraph> edge : graph.edgesArray()) {
+				VertexOfDualGraph u = edge.begin;
+				VertexOfDualGraph v = edge.end;
 				double weight = edge.getBandwidth();
 
 				if (partition.contains(u) && !partition.contains(v)) {
@@ -89,6 +89,31 @@ public class BalancedPartitioning {
 			}
 		}
 		return dualVertexToPartNumber;
+	}
+
+	public static List<Point> calculatePartCenters(ArrayList<HashSet<VertexOfDualGraph>> partition) {
+		List<Point> centers = new ArrayList<>();
+		for (HashSet<VertexOfDualGraph> part : partition) {
+			double sumX = 0, sumY = 0;
+			Point centerPoint;
+			VertexOfDualGraph centerVertex = null;
+			for (VertexOfDualGraph v : part) {
+				sumX += v.x;
+				sumY += v.y;
+			}
+			centerPoint = new Point(sumX / part.size(), sumY / part.size());
+			double minDist2 = Double.MAX_VALUE;
+			for (VertexOfDualGraph v : part) {
+				double dist2 = (v.x - centerPoint.x) * (v.x - centerPoint.x) + (v.y - centerPoint.y) * (v.y - centerPoint.y);
+				if (dist2 < minDist2) {
+					minDist2 = dist2;
+					centerVertex = v;
+				}
+			}
+			Assertions.assertNotNull(centerVertex);
+			centers.add(new Point(centerVertex.x, centerVertex.y));
+		}
+		return centers;
 	}
 
 }

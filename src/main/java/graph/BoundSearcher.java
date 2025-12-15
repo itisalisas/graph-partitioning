@@ -81,7 +81,9 @@ public class BoundSearcher {
         return lastVec.x * newVec.y - lastVec.y * newVec.x;
     }
 
-    public static List<Vertex> findBound(Graph<Vertex> graph, HashSet<VertexOfDualGraph> part, HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph) {
+    public static List<Vertex> findBound(Graph<Vertex> graph, 
+                                        HashSet<VertexOfDualGraph> part, 
+                                        HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph) {
         List<VertexOfDualGraph> orderedFaces = part.stream().toList();
         List<Vertex> bound = new ArrayList<>();
         List<List<Vertex>> verticesByFaces = new ArrayList<>();
@@ -103,13 +105,14 @@ public class BoundSearcher {
                 .flatMap(Collection::stream)
                 .collect(Collectors.toSet());
 
+        
+        Assertions.assertTrue(graph.isConnected());
         Graph<Vertex> partSubgraph = graph.createSubgraphFromFaces(verticesByFaces).makeUndirectedGraph();
         Assertions.assertTrue(partSubgraph.isConnected());
 
         HashMap<Vertex, TreeSet<EdgeOfGraph<Vertex>>> arrangedEdges = partSubgraph.arrangeByAngle();
 
         Vertex start = findLeftmostVertex(allVertices);
-        //  System.out.println("start vertex = " + start.getName());
         bound.add(start);
 
         // start is the highest among the leftmost ones, all incident edges must lie in [0;pi/2) U [3pi/2; 2pi)
@@ -118,8 +121,7 @@ public class BoundSearcher {
         Assertions.assertTrue((0 <= startEdge.getCorner() && startEdge.getCorner() < Math.PI / 2.0) ||
                 (3.0 * Math.PI) / 2.0 <= startEdge.getCorner() && startEdge.getCorner() < 2 * Math.PI);
 
-        // System.out.println(startEdge.getBegin().getName() + " -> " + startEdge.getEnd().getName());
-        EdgeOfGraph prevEdge = new EdgeOfGraph(startEdge.end, startEdge.begin, 0);
+        EdgeOfGraph<Vertex> prevEdge = new EdgeOfGraph<>(startEdge.end, startEdge.begin, 0);
         Vertex current = startEdge.end;
         Assertions.assertTrue(Arrays.stream(partSubgraph.edgesArray()).toList().contains(startEdge));
         int faceIndex = findCommonFace(startEdge.begin, startEdge.end, verticesByFaces);
@@ -127,22 +129,18 @@ public class BoundSearcher {
             bound.add(current);
             Vertex next;
             if (numberOfFaces.get(current) > 1) {
-                // System.out.println("change face");
-                EdgeOfGraph edge = findNextEdge(prevEdge, arrangedEdges.get(current));
+                EdgeOfGraph<Vertex> edge = findNextEdge(prevEdge, arrangedEdges.get(current));
                 assert edge != null;
                 faceIndex = findCommonFace(edge.begin, edge.end, verticesByFaces);
                 next = edge.end;
             } else {
                 next = verticesByFaces.get(faceIndex).get((verticesByFaces.get(faceIndex).indexOf(current) + 1) % verticesByFaces.get(faceIndex).size());
             }
-            // System.out.println(current.getName() + " -> " + next.getName());
-            prevEdge = new EdgeOfGraph(next, current, 0);
+            prevEdge = new EdgeOfGraph<Vertex>(next, current, 0);
             current = next;
         }
 
         Assertions.assertTrue(bound.size() >= 3);
-
-        // System.out.println("Bound size: " + bound.size());
 
         return bound;
     }
@@ -159,7 +157,7 @@ public class BoundSearcher {
 
     private static int findCommonFace(Vertex v1, Vertex v2, List<List<Vertex>> verticesByFaces) {
         int faceNumber = -1;
-        //System.out.println("Search common face for " + v1.getName() + " and " + v2.getName());
+
         for (List<Vertex> face : verticesByFaces) {
             for (int ptr = 0; ptr < face.size(); ptr++) {
                 if ((face.get(ptr).equals(v1) && face.get((ptr + 1) % face.size()).equals(v2)) ||
@@ -227,6 +225,44 @@ public class BoundSearcher {
             }
         }
         return diameter;
+    }
+
+    public static double findRadius(List<Vertex> vertices) {
+        if (vertices.size() < 2) {
+            return 0.0;
+        } else if (vertices.size() == 2) {
+            Vertex a = vertices.get(0);
+            Vertex b = vertices.get(1);
+            return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2)) / 2.0;
+        }
+
+        Point center = findMinEnclosingCircleCenter(vertices);
+        double maxRadius = 0.0;
+
+        for (Vertex vertex : vertices) {
+            double distance = Math.sqrt(Math.pow(vertex.x - center.x, 2) +
+                    Math.pow(vertex.y - center.y, 2));
+            if (distance > maxRadius) {
+                maxRadius = distance;
+            }
+        }
+
+        return maxRadius;
+    }
+
+    private static Point findMinEnclosingCircleCenter(List<Vertex> vertices) {
+        double sumX = 0.0;
+        double sumY = 0.0;
+
+        for (Vertex vertex : vertices) {
+            sumX += vertex.x;
+            sumY += vertex.y;
+        }
+
+        double centerX = sumX / vertices.size();
+        double centerY = sumY / vertices.size();
+
+        return new Point(centerX, centerY);
     }
 
 }

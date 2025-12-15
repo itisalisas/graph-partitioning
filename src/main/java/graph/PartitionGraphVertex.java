@@ -1,8 +1,11 @@
 package graph;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class PartitionGraphVertex extends Vertex {
     public ArrayList<VertexOfDualGraph> vertices;
@@ -69,7 +72,7 @@ public class PartitionGraphVertex extends Vertex {
             for (VertexOfDualGraph v2 : dualGraph.getEdges().get(v1).keySet()) {
                 int partition2 = dualVertexToPartNumber.get(v2);
                 if (partition1 != partition2) {
-                    double edgeLength = dualGraph.getEdges().get(v1).get(v2).getLength();
+                    double edgeLength = dualGraph.getEdges().get(v1).get(v2).length;
                     PartitionGraphVertex pv1 = vertices.get(partition1);
                     PartitionGraphVertex pv2 = vertices.get(partition2);
 
@@ -82,6 +85,26 @@ public class PartitionGraphVertex extends Vertex {
         }
 
         return partitionGraph;
+    }
+
+    public static List<PartitionGraphVertex> bestVertex(Graph<PartitionGraphVertex> graph, double maxWeight) {
+        return graph.verticesArray().stream()
+                .sorted(Comparator.comparingDouble(
+                    v -> -graph.sortNeighbors(v).stream()
+                        .mapToDouble(neighbor -> maxWeight - neighbor.getWeight())
+                        .sum()
+                ))
+                .limit(graph.verticesNumber() / 2)
+                .collect(Collectors.toList());
+    }
+
+    public static List<PartitionGraphVertex> smallestVertex(Graph<PartitionGraphVertex> graph, double maxWeight) {
+        return graph.verticesArray().stream()
+                .sorted(Comparator.comparingDouble(
+                        v -> v.weight
+                ))
+                .limit(graph.verticesNumber() / 20)
+                .collect(Collectors.toList());
     }
     
     @Override

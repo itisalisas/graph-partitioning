@@ -49,7 +49,7 @@ def visualize_bounds(directory_name, map_osm):
 
         folium.Polygon(
             locations=points,
-            color=color,
+            color='black',
             fill=True,
             fill_color=color,
             fill_opacity=0.5,
@@ -77,11 +77,11 @@ def main(bounds_directory, output_file):
     print(f"Map with boundaries saved to {output_file}")
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python bound_visualizer.py <directory_path> <output_file.html>")
+    if len(sys.argv) != 2:
+        print("Usage: python bound_visualizer.py <directory_path>")
         sys.exit(1)
 
     directory_name = sys.argv[1]
-    output_file = sys.argv[2]
+    output_file = "bound.html"
 
     main(directory_name, output_file)

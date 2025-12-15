@@ -12,3 +12,5 @@ src/main/resources/testGraphs/*.html
 src/main/resources/testGraphs/*_dual.txt
 .vscode/
 cache/
+*.html
+src/main/resources/data/

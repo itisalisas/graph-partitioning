@@ -29,28 +29,34 @@ public class MakingDualGraph {
     return res;
   }
 
-  private void addDualEdges(Graph<VertexOfDualGraph> res, HashMap<EdgeOfGraph<Vertex>, VertexOfDualGraph> inFace) {
-    EdgeOfGraph back = null;
+  private void addDualEdges(Graph<VertexOfDualGraph> res, 
+                            HashMap<EdgeOfGraph<Vertex>, 
+                            VertexOfDualGraph> inFace) {
+    EdgeOfGraph<Vertex> back = null;
     double oldLength = 0;
-    for (EdgeOfGraph edge : inFace.keySet()) {
-      back = new EdgeOfGraph(edge.end, edge.begin, edge.getLength());
+    for (EdgeOfGraph<Vertex> edge : inFace.keySet()) {
+      back = new EdgeOfGraph<Vertex>(edge.end, edge.begin, edge.length);
       if (inFace.get(edge).equals((inFace).get(back))) {
         continue;
       }
       oldLength = 0;
       if (res.getEdges().get(inFace.get(edge)).containsKey(inFace.get(back))) {
-        oldLength = res.getEdges().get(inFace.get(edge)).get(inFace.get(back)).getLength();
+        oldLength = res.getEdges().get(inFace.get(edge)).get(inFace.get(back)).length;
         res.getEdges().get(inFace.get(edge)).remove(inFace.get(back));
         res.getEdges().get(inFace.get(back)).remove(inFace.get(edge));
       }
-      res.getEdges().get(inFace.get(edge)).put(inFace.get(back), new Edge(oldLength + edge.getLength() / 2));
-      res.getEdges().get(inFace.get(back)).put(inFace.get(edge), new Edge(oldLength + edge.getLength() / 2));
+      res.getEdges().get(inFace.get(edge)).put(inFace.get(back), new Edge(oldLength + edge.length / 2));
+      res.getEdges().get(inFace.get(back)).put(inFace.get(edge), new Edge(oldLength + edge.length / 2));
     }
 
   }
 
-  private void buildDualVertices(Graph<VertexOfDualGraph> res, HashMap<EdgeOfGraph<Vertex>, VertexOfDualGraph> inFace,
-                   HashMap<Vertex, TreeSet<EdgeOfGraph<Vertex>>> sortedGraph, EdgeOfGraph<Vertex>[] edgesList, HashMap<Vertex, Integer> vertexInFaceNumber) {
+  private void buildDualVertices(Graph<VertexOfDualGraph> res,
+                                 HashMap<EdgeOfGraph<Vertex>, 
+                                 VertexOfDualGraph> inFace,
+                                 HashMap<Vertex, TreeSet<EdgeOfGraph<Vertex>>> sortedGraph,
+                                 EdgeOfGraph<Vertex>[] edgesList,
+                                 HashMap<Vertex, Integer> vertexInFaceNumber) {
     ArrayList<Vertex> verticesOfFace = new ArrayList<Vertex>();
     HashSet<EdgeOfGraph<Vertex>> inActualFace = new HashSet<EdgeOfGraph<Vertex>>();
     long vertName = 0;
@@ -63,11 +69,13 @@ public class MakingDualGraph {
       Assertions.assertTrue(verticesOfFace.size() >= 3);
       vertName++;
       //System.out.print(vertName + " ");
-      VertexOfDualGraph vert = new VertexOfDualGraph(vertName, Vertex.findCenter(verticesOfFace),
-          VertexOfDualGraph.sumVertexWeight(verticesOfFace), verticesOfFace);
+      VertexOfDualGraph vert = new VertexOfDualGraph(vertName, 
+                                                    Vertex.findCenter(verticesOfFace),
+                                                    VertexOfDualGraph.sumVertexWeight(verticesOfFace), 
+                                                    verticesOfFace);
       res.addVertex(vert);
       comparison.put(vert, vert);
-      for (EdgeOfGraph edge : inActualFace) {
+      for (EdgeOfGraph<Vertex> edge : inActualFace) {
         inFace.put(edge, vert);
       }
       verticesOfFace.clear();
@@ -77,15 +85,17 @@ public class MakingDualGraph {
     correctFacesWeight(res, sortedGraph, vertexInFaceNumber);
   }
 
-  private void correctFacesWeight(Graph<VertexOfDualGraph> res, HashMap<Vertex, TreeSet<EdgeOfGraph<Vertex>>> sortedGraph,
-                  HashMap<Vertex, Integer> vertexInFaceNumber) {
+  private void correctFacesWeight(Graph<VertexOfDualGraph> res,
+                                  HashMap<Vertex, TreeSet<EdgeOfGraph<Vertex>>> sortedGraph,
+                                  HashMap<Vertex, Integer> vertexInFaceNumber) {
     for (VertexOfDualGraph v : res.getEdges().keySet()) {
       v.setWeight(countFaceWeight(v, vertexInFaceNumber));
     }
     
   }
 
-  private double countFaceWeight(VertexOfDualGraph v, HashMap<Vertex, Integer> vertexInFaceNumber) {
+  private double countFaceWeight(VertexOfDualGraph v, 
+                                HashMap<Vertex, Integer> vertexInFaceNumber) {
     double ans = 0;
     for (Vertex ver : comparison.get(v).getVerticesOfFace()) {
       ans = ans + ver.getWeight() / vertexInFaceNumber.get(ver);
@@ -94,8 +104,11 @@ public class MakingDualGraph {
   }
 
 
-  public <T extends Vertex> void findFace(ArrayList<T> verticesOfFace, HashSet<EdgeOfGraph<T>> inActualFace,
-              HashMap<T, TreeSet<EdgeOfGraph<T>>> sortedGraph, EdgeOfGraph<T> firstEdge, HashMap<T, Integer> vertexInFaceNumber) {
+  public <T extends Vertex> void findFace(ArrayList<T> verticesOfFace, 
+                                          HashSet<EdgeOfGraph<T>> inActualFace,
+                                          HashMap<T, TreeSet<EdgeOfGraph<T>>> sortedGraph,
+                                          EdgeOfGraph<T> firstEdge, 
+                                          HashMap<T, Integer> vertexInFaceNumber) {
     double faceWeight = 0;
     T prev = firstEdge.begin;
     T begin = firstEdge.end;
@@ -136,7 +149,7 @@ public class MakingDualGraph {
       actualEdge = null;
     } while (!(begin.equals(firstEdge.end) && prev.equals(firstEdge.begin)));
     //System.out.println("begin = " + begin.getName() + ", prev = " + prev.getName());
-    //System.out.println("begin = " + begin.getX() + "y = " + begin.getY() + ", prev = " + prev.getName());
+    //System.out.println("begin = " + begin.x() + "y = " + begin.y() + ", prev = " + prev.getName());
     //System.out.println("firstEdge.begin = " + firstEdge.getBegin().getName() + ", end = " + firstEdge.getEnd().getName());
   }
 
@@ -148,12 +161,12 @@ public class MakingDualGraph {
     for (VertexOfDualGraph dualVertex : dualGraph.verticesArray()) {
       for (Vertex v : dualVertex.getVerticesOfFace()) {
         Point point = v;
-        if (leftTop == null || (point.getX() < leftTop.getX() ||
-            (point.getX() == leftTop.getX() && point.getY() > leftTop.getY()))) {
+        if (leftTop == null || (point.x < leftTop.x ||
+            (point.x == leftTop.x && point.y > leftTop.y))) {
           leftTop = v;
         }
-        if (rightBottom == null || (point.getX() > rightBottom.getX() ||
-            (point.getX() == rightBottom.getX() && point.getY() < rightBottom.getY()))) {
+        if (rightBottom == null || (point.x > rightBottom.x ||
+            (point.x == rightBottom.x && point.y < rightBottom.y))) {
           rightBottom = v;
         }
       }
