@@ -55,39 +55,8 @@ public class MaxFlowReif implements MaxFlow {
         List<Vertex> sourceBoundary = BoundSearcher.findBound(initGraph, sourceNeighbors, comparisonForDualGraph);
         List<Vertex> sinkBoundary = BoundSearcher.findBound(initGraph, sinkNeighbors, comparisonForDualGraph);
 
-        Graph<Vertex> modifiedGraph = initGraph.clone();
-
-        Set<Vertex> sourceFaceVertices = new HashSet<>();
-        Set<Vertex> sinkFaceVertices = new HashSet<>();
-
-        for (VertexOfDualGraph face : sourceNeighbors) {
-            if (face.getVerticesOfFace() != null) {
-                sourceFaceVertices.addAll(face.getVerticesOfFace());
-            }
-        }
-
-        for (VertexOfDualGraph face : sinkNeighbors) {
-            if (face.getVerticesOfFace() != null) {
-                sinkFaceVertices.addAll(face.getVerticesOfFace());
-            }
-        }
-
-        List<Vertex> verticesToRemove = new ArrayList<>();
-        for (Vertex v : modifiedGraph.verticesArray()) {
-            if (sourceFaceVertices.contains(v) && !sourceBoundary.contains(v)) {
-                verticesToRemove.add(v);
-            }
-            else if (sinkFaceVertices.contains(v) && !sinkBoundary.contains(v)) {
-                verticesToRemove.add(v);
-            }
-        }
-
-        for (Vertex v : verticesToRemove) {
-            modifiedGraph.deleteVertex(v);
-        }
-
-        keepOnlyBoundaryCycleEdges(modifiedGraph, sourceBoundary);
-        keepOnlyBoundaryCycleEdges(modifiedGraph, sinkBoundary);
+        Graph<Vertex> modifiedGraph = new Graph<>();
+        createModifiedSubgraph(modifiedGraph, sourceBoundary, sinkBoundary, sourceNeighbors, sinkNeighbors);
 
         DijkstraResult shortestPathResult = dijkstraMultiSource(modifiedGraph, sourceBoundary, sinkBoundary);
 
@@ -107,12 +76,11 @@ public class MaxFlowReif implements MaxFlow {
             neighborSplits = preprocessNeighborSplits(modifiedGraph, shortestPath, sourceBoundary, sinkBoundary);
         } catch (RuntimeException e) {
             if (e.getMessage() != null && e.getMessage().contains("broken boundary")) {
-                System.out.println("⚠ Broken boundary detected: " + e.getMessage());
-                // Дампим визуализацию с тем что есть (без neighborSplits и bestPath)
+                System.out.println("Broken boundary detected: " + e.getMessage());
                 dumpVisualizationData(externalBoundary, sourceBoundary, sinkBoundary, shortestPath, null, new HashMap<>(), sourceNeighbors, sinkNeighbors, 0);
                 return new FlowResult(0, dualGraph, source, sink);
             }
-            throw e; // Если это другое исключение - пробрасываем дальше
+            throw e;
         }
 
         Map<Vertex, Vertex> splitToOriginalMap = new HashMap<>();
@@ -170,6 +138,37 @@ public class MaxFlowReif implements MaxFlow {
         dumpVisualizationData(externalBoundary, sourceBoundary, sinkBoundary, shortestPath, bestPath, neighborSplits, sourceNeighbors, sinkNeighbors, flow);
 
         return new FlowResult(flow, dualGraph, source, sink);
+    }
+
+    private void createModifiedSubgraph(Graph<Vertex> modifiedGraph,
+                                        List<Vertex> sourceBoundary,
+                                        List<Vertex> sinkBoundary,
+                                        HashSet<VertexOfDualGraph> sourceNeighbors,
+                                        HashSet<VertexOfDualGraph> sinkNeighbors) {
+        modifiedGraph.addBoundEdges(sourceBoundary);
+        modifiedGraph.addBoundEdges(sinkBoundary);
+
+
+        Set<Vertex> sourceFaceVertices = new HashSet<>();
+        Set<Vertex> sinkFaceVertices = new HashSet<>();
+
+        for (VertexOfDualGraph face : sourceNeighbors) {
+            if (face.getVerticesOfFace() != null) {
+                sourceFaceVertices.addAll(face.getVerticesOfFace());
+            }
+        }
+
+        for (VertexOfDualGraph face : sinkNeighbors) {
+            if (face.getVerticesOfFace() != null) {
+                sinkFaceVertices.addAll(face.getVerticesOfFace());
+            }
+        }
+
+        for (Vertex v: initGraph.verticesArray()) {
+            if (!sinkFaceVertices.contains(v) && !sourceFaceVertices.contains(v)) {
+                modifiedGraph.addVertexInSubgraph(v, initGraph);
+            }
+        }
     }
 
     private void dumpVisualizationData(List<Vertex> externalBoundary, List<Vertex> sourceBoundary,
@@ -323,55 +322,6 @@ public class MaxFlowReif implements MaxFlow {
         }
     }
 
-    private void keepOnlyBoundaryCycleEdges(Graph<Vertex> graph, List<Vertex> boundary) {
-        if (boundary.size() < 2) return;
-
-        Set<Long> boundaryNames = boundary.stream()
-                .map(Vertex::getName)
-                .collect(Collectors.toSet());
-
-        for (Vertex v: boundary) {
-            if (graph.getEdges().get(v) == null) {
-                continue;
-            }
-
-            List<Vertex> edgesToDelete = new ArrayList<>();
-
-            for (Vertex neighbor: graph.getEdges().get(v).keySet()) {
-                if (boundaryNames.contains(neighbor.getName())) {
-                    edgesToDelete.add(neighbor);
-                }
-            }
-
-            for (Vertex neighbor : edgesToDelete) {
-                graph.deleteEdge(v, neighbor);
-            }
-        }
-
-        for (int i = 0; i < boundary.size(); i++) {
-            Vertex current = boundary.get(i);
-            Vertex next = boundary.get((i + 1) % boundary.size());
-
-            Vertex currentInGraph = null;
-            Vertex nextInGraph = null;
-
-            for (Vertex v : graph.verticesArray()) {
-                if (v.getName() == current.getName()) {
-                    currentInGraph = v;
-                }
-                if (v.getName() == next.getName()) {
-                    nextInGraph = v;
-                }
-            }
-
-            if (currentInGraph != null && nextInGraph != null) {
-                double edgeLength = currentInGraph.getLength(nextInGraph);
-                graph.addEdge(currentInGraph, nextInGraph, edgeLength);
-            }
-        }
-    }
-
-
     private static class NeighborSplit {
         List<Vertex> pathNeighbors;
         List<Vertex> leftNeighbors;
@@ -388,15 +338,28 @@ public class MaxFlowReif implements MaxFlow {
                                                               List<Vertex> sourceBoundary, List<Vertex> sinkBoundary) {
         Map<Long, NeighborSplit> splits = new HashMap<>();
 
+        Set<Long> sourceBoundaryNames = sourceBoundary.stream().map(Vertex::getName).collect(Collectors.toSet());
+        Set<Long> sinkBoundaryNames = sinkBoundary.stream().map(Vertex::getName).collect(Collectors.toSet());
+
         for (int i = 0; i < path.size(); i++) {
             Vertex currentVertex = path.get(i);
 
             Vertex prevVertex = (i > 0) ? path.get(i - 1) : null;
             Vertex nextVertex = (i < path.size() - 1) ? path.get(i + 1) : null;
 
-            double pathDirX, pathDirY;
             boolean isFirstVertex = (prevVertex == null);
             boolean isLastVertex = (nextVertex == null);
+            boolean isOnBothBoundaries = sourceBoundaryNames.contains(currentVertex.getName())
+                    && sinkBoundaryNames.contains(currentVertex.getName());
+
+            if (isOnBothBoundaries && (isFirstVertex || isLastVertex || path.size() == 1)) {
+                NeighborSplit split = handleBoundaryIntersectionVertex(graph, currentVertex,
+                        sourceBoundary, sinkBoundary);
+                splits.put(currentVertex.getName(), split);
+                continue;
+            }
+
+            double pathDirX, pathDirY;
 
             if (!isFirstVertex && !isLastVertex) {
                 pathDirX = (nextVertex.x - prevVertex.x);
@@ -477,6 +440,81 @@ public class MaxFlowReif implements MaxFlow {
         }
 
         return splits;
+    }
+
+    private NeighborSplit handleBoundaryIntersectionVertex(Graph<Vertex> graph, Vertex currentVertex,
+                                                           List<Vertex> sourceBoundary, List<Vertex> sinkBoundary) {
+        List<Vertex> sourceNeighbors = new ArrayList<>();
+        List<Vertex> sinkNeighbors = new ArrayList<>();
+
+        for (int j = 0; j < sourceBoundary.size(); j++) {
+            Vertex bv = sourceBoundary.get(j);
+            if (bv.getName() == currentVertex.getName()) {
+                sourceNeighbors.add(sourceBoundary.get((j + 1) % sourceBoundary.size()));
+                sourceNeighbors.add(sourceBoundary.get((j - 1 + sourceBoundary.size()) % sourceBoundary.size()));
+                break;
+            }
+        }
+
+        for (int j = 0; j < sinkBoundary.size(); j++) {
+            Vertex bv = sinkBoundary.get(j);
+            if (bv.getName() == currentVertex.getName()) {
+                sinkNeighbors.add(sinkBoundary.get((j + 1) % sinkBoundary.size()));
+                sinkNeighbors.add(sinkBoundary.get((j - 1 + sinkBoundary.size()) % sinkBoundary.size()));
+                break;
+            }
+        }
+
+        Set<Long> sourceNeighborNames = sourceNeighbors.stream().map(Vertex::getName).collect(Collectors.toSet());
+        Set<Long> sinkNeighborNames = sinkNeighbors.stream().map(Vertex::getName).collect(Collectors.toSet());
+
+        List<Vertex> commonNeighbors = new ArrayList<>();
+        List<Vertex> onlySourceNeighbors = new ArrayList<>();
+        List<Vertex> onlySinkNeighbors = new ArrayList<>();
+
+        for (Vertex v : sourceNeighbors) {
+            if (sinkNeighborNames.contains(v.getName())) {
+                commonNeighbors.add(v);
+            } else {
+                onlySourceNeighbors.add(v);
+            }
+        }
+
+        for (Vertex v : sinkNeighbors) {
+            if (!sourceNeighborNames.contains(v.getName())) {
+                onlySinkNeighbors.add(v);
+            }
+        }
+
+        System.out.println("Intersection vertex " + currentVertex.getName() +
+                ": common=" + commonNeighbors.size() +
+                ", onlySource=" + onlySourceNeighbors.size() +
+                ", onlySink=" + onlySinkNeighbors.size());
+
+        List<Vertex> pathNeighbors = new ArrayList<>();
+        List<Vertex> leftNeighbors = new ArrayList<>();
+        List<Vertex> rightNeighbors = new ArrayList<>();
+
+        if (commonNeighbors.size() == 1 && onlySourceNeighbors.size() == 1 && onlySinkNeighbors.size() == 1) {
+            leftNeighbors.addAll(commonNeighbors);
+            rightNeighbors.addAll(onlySourceNeighbors);
+            rightNeighbors.addAll(onlySinkNeighbors);
+        }
+        else if (commonNeighbors.size() == 2 && onlySourceNeighbors.isEmpty() && onlySinkNeighbors.isEmpty()) {
+            leftNeighbors.add(commonNeighbors.get(0));
+            rightNeighbors.add(commonNeighbors.get(1));
+        }
+        else {
+            leftNeighbors.addAll(onlySourceNeighbors);
+            leftNeighbors.addAll(commonNeighbors);
+            rightNeighbors.addAll(onlySinkNeighbors);
+        }
+
+        System.out.println("Split result: path=" + pathNeighbors.size() +
+                ", left=" + leftNeighbors.size() +
+                ", right=" + rightNeighbors.size());
+
+        return new NeighborSplit(pathNeighbors, leftNeighbors, rightNeighbors);
     }
 
     private Map.Entry<Vertex, Vertex> splitVertex(Graph<Vertex> splitGraph, Vertex vertex,
