@@ -56,24 +56,56 @@ public class MaxFlowReif implements MaxFlow {
         List<Vertex> sinkBoundary = BoundSearcher.findBound(initGraph, sinkNeighbors, comparisonForDualGraph);
 
         Graph<Vertex> modifiedGraph = new Graph<>();
-        createModifiedSubgraph(modifiedGraph, sourceBoundary, sinkBoundary, sourceNeighbors, sinkNeighbors);
-
-        DijkstraResult shortestPathResult = dijkstraMultiSource(modifiedGraph, sourceBoundary, sinkBoundary);
-
-        if (shortestPathResult == null || shortestPathResult.path.isEmpty()) {
-            return new FlowResult(0, dualGraph, source, sink);
+        createModifiedSubgraph(modifiedGraph, sourceBoundary, sinkBoundary, sourceNeighbors, sinkNeighbors, dualGraph);
+        
+        // Проверяем что границы присутствуют в modifiedGraph
+        int sourceBoundaryInGraph = 0;
+        int sinkBoundaryInGraph = 0;
+        for (Vertex v : sourceBoundary) {
+            if (modifiedGraph.getEdges().containsKey(v)) sourceBoundaryInGraph++;
         }
+        for (Vertex v : sinkBoundary) {
+            if (modifiedGraph.getEdges().containsKey(v)) sinkBoundaryInGraph++;
+        }
+        System.out.println("Boundaries in modifiedGraph: source=" + sourceBoundaryInGraph + "/" + sourceBoundary.size() + 
+                           ", sink=" + sinkBoundaryInGraph + "/" + sinkBoundary.size());
 
-        List<Vertex> shortestPath = shortestPathResult.path;
-
+        // Получаем externalBoundary заранее для дампа
         HashSet<VertexOfDualGraph> allDualVerticesSet = new HashSet<>(allDualVertices);
         allDualVerticesSet.remove(source);
         allDualVerticesSet.remove(sink);
         List<Vertex> externalBoundary = BoundSearcher.findBound(initGraph, allDualVerticesSet, comparisonForDualGraph);
+        
+        if (externalBoundary == null || externalBoundary.isEmpty()) {
+            System.out.println("ERROR: External boundary is empty!");
+            return new FlowResult(0, dualGraph, source, sink);
+        }
+        System.out.println("External boundary size: " + externalBoundary.size());
+
+        DijkstraResult shortestPathResult = dijkstraMultiSource(modifiedGraph, sourceBoundary, sinkBoundary);
+
+        if (shortestPathResult == null || shortestPathResult.path.isEmpty()) {
+            System.out.println("ERROR: No shortest path found between source and sink boundaries!");
+            System.out.println("  modifiedGraph vertices: " + modifiedGraph.verticesArray().size());
+            System.out.println("  sourceBoundary size: " + sourceBoundary.size());
+            System.out.println("  sinkBoundary size: " + sinkBoundary.size());
+            
+            // Дамп визуализации для отладки
+            dumpVisualizationData(externalBoundary, sourceBoundary, sinkBoundary, 
+                                 new ArrayList<>(), new ArrayList<>(), new HashMap<>(), 
+                                 sourceNeighbors, sinkNeighbors, 0);
+            
+            return new FlowResult(0, dualGraph, source, sink);
+        }
+        
+        System.out.println("Found shortest path with " + shortestPathResult.path.size() + " vertices, distance: " + shortestPathResult.distance);
+
+        List<Vertex> shortestPath = shortestPathResult.path;
 
         Map<Long, NeighborSplit> neighborSplits;
         try {
             neighborSplits = preprocessNeighborSplits(modifiedGraph, shortestPath, sourceBoundary, sinkBoundary);
+            System.out.println("Created " + neighborSplits.size() + " neighbor splits for " + shortestPath.size() + " vertices in path");
         } catch (RuntimeException e) {
             if (e.getMessage() != null && e.getMessage().contains("broken boundary")) {
                 System.out.println("Broken boundary detected: " + e.getMessage());
@@ -101,7 +133,11 @@ public class MaxFlowReif implements MaxFlow {
             DijkstraResult path2ToBoundary = dijkstraMultiSource(modifiedGraph, Collections.singletonList(splitVertex2), externalBoundary);
 
             if (path1ToBoundary == null || path2ToBoundary == null) {
-                System.out.println("Null path: " + (path1ToBoundary == null) + " " + (path2ToBoundary == null));
+                System.out.println("ERROR: Path to external boundary not found!");
+                System.out.println("  Split vertex original ID: " + splitToOriginalMap.get(splitVertex1).getName());
+                System.out.println("  Path1ToBoundary: " + (path1ToBoundary != null ? "found" : "NULL"));
+                System.out.println("  Path2ToBoundary: " + (path2ToBoundary != null ? "found" : "NULL"));
+                System.out.println("  External boundary size: " + externalBoundary.size());
                 continue;
             }
 
@@ -144,11 +180,17 @@ public class MaxFlowReif implements MaxFlow {
                                         List<Vertex> sourceBoundary,
                                         List<Vertex> sinkBoundary,
                                         HashSet<VertexOfDualGraph> sourceNeighbors,
-                                        HashSet<VertexOfDualGraph> sinkNeighbors) {
-        modifiedGraph.addBoundEdges(sourceBoundary);
-        modifiedGraph.addBoundEdges(sinkBoundary);
+                                        HashSet<VertexOfDualGraph> sinkNeighbors,
+                                        Graph<VertexOfDualGraph> dualGraph) {
+        // Собираем все вершины из граней двойственного графа
+        Set<Vertex> allowedVertices = new HashSet<>();
+        for (VertexOfDualGraph face : dualGraph.verticesArray()) {
+            if (face.getVerticesOfFace() != null) {
+                allowedVertices.addAll(face.getVerticesOfFace());
+            }
+        }
 
-
+        // Собираем вершины source и sink граней для исключения
         Set<Vertex> sourceFaceVertices = new HashSet<>();
         Set<Vertex> sinkFaceVertices = new HashSet<>();
 
@@ -164,10 +206,58 @@ public class MaxFlowReif implements MaxFlow {
             }
         }
 
+        // Сначала добавляем границы
+        modifiedGraph.addBoundEdges(sourceBoundary);
+        modifiedGraph.addBoundEdges(sinkBoundary);
+
+        int skippedZeroVertices = 0;
+        int addedVertices = 0;
         for (Vertex v: initGraph.verticesArray()) {
-            if (!sinkFaceVertices.contains(v) && !sourceFaceVertices.contains(v)) {
-                modifiedGraph.addVertexInSubgraph(v, initGraph);
+            // Пропускаем вершины с name = 0, так как они дублируют существующие вершины
+            if (v.getName() == 0) {
+                skippedZeroVertices++;
+                continue;
             }
+            
+            // Добавляем вершину только если она в allowedVertices и не в source/sink гранях
+            if (allowedVertices.contains(v) && 
+                !sourceFaceVertices.contains(v) && 
+                !sinkFaceVertices.contains(v)) {
+                modifiedGraph.addVertexInSubgraph(v, initGraph);
+                addedVertices++;
+            }
+        }
+        
+        // Добавляем ребра от границ к их соседям (которые уже в графе)
+        for (Vertex boundaryVertex : sourceBoundary) {
+            if (initGraph.getEdges().containsKey(boundaryVertex)) {
+                for (Map.Entry<Vertex, Edge> neighborEntry : initGraph.getEdges().get(boundaryVertex).entrySet()) {
+                    Vertex neighbor = neighborEntry.getKey();
+                    Edge edge = neighborEntry.getValue();
+                    // Добавляем ребро только если сосед уже в modifiedGraph
+                    if (modifiedGraph.getEdges().containsKey(neighbor)) {
+                        modifiedGraph.addEdge(boundaryVertex, neighbor, edge.length, edge.getBandwidth());
+                    }
+                }
+            }
+        }
+        
+        for (Vertex boundaryVertex : sinkBoundary) {
+            if (initGraph.getEdges().containsKey(boundaryVertex)) {
+                for (Map.Entry<Vertex, Edge> neighborEntry : initGraph.getEdges().get(boundaryVertex).entrySet()) {
+                    Vertex neighbor = neighborEntry.getKey();
+                    Edge edge = neighborEntry.getValue();
+                    // Добавляем ребро только если сосед уже в modifiedGraph
+                    if (modifiedGraph.getEdges().containsKey(neighbor)) {
+                        modifiedGraph.addEdge(boundaryVertex, neighbor, edge.length, edge.getBandwidth());
+                    }
+                }
+            }
+        }
+        
+        System.out.println("Modified graph: added " + addedVertices + " vertices from dual graph faces");
+        if (skippedZeroVertices > 0) {
+            System.out.println("Skipped " + skippedZeroVertices + " vertices with name=0 to avoid coordinate conflicts");
         }
     }
 
@@ -197,7 +287,9 @@ public class MaxFlowReif implements MaxFlow {
             }
 
             writeNeighborSplitsToFile(outputDir + "neighbor_splits.txt", neighborSplits);
+            writeDualGraph(outputDir + "dual_graph.txt", dualGraph, source, sink);
             writeDualGraphWithFlow(outputDir + "dual_graph_flow.txt", dualGraph, source, sink);
+            writePrimalGraph(outputDir + "primal_graph.txt", initGraph, sourceNeighbors, sinkNeighbors);
 
             System.out.println("Visualization data saved to " + outputDir);
         } catch (Exception e) {
@@ -215,22 +307,15 @@ public class MaxFlowReif implements MaxFlow {
     }
 
     private void writeNeighborSplitsToFile(String filename, Map<Long, NeighborSplit> neighborSplits) throws java.io.IOException {
+        System.out.println("Writing neighbor splits, total: " + neighborSplits.size());
         try (java.io.FileWriter writer = new java.io.FileWriter(filename)) {
 
             for (Map.Entry<Long, NeighborSplit> entry : neighborSplits.entrySet()) {
                 long vertexId = entry.getKey();
                 NeighborSplit split = entry.getValue();
 
-                Vertex vertex = null;
-                for (Vertex v : initGraph.verticesArray()) {
-                    if (v.getName() == vertexId) {
-                        vertex = v;
-                        break;
-                    }
-                }
-
-                if (vertex == null) continue;
-
+                // Используем сохраненную в NeighborSplit вершину
+                Vertex vertex = split.vertex;
                 Vertex geoVertex = coordConversion.fromEuclidean(vertex);
                 writer.write(String.format("%d %.10f %.10f\n", geoVertex.getName(), geoVertex.x, geoVertex.y));
 
@@ -253,6 +338,106 @@ public class MaxFlowReif implements MaxFlow {
                 }
 
                 writer.write("---\n");
+            }
+            System.out.println("Neighbor splits file written");
+        }
+    }
+
+    private void writePrimalGraph(String filename, Graph<Vertex> graph,
+                                  HashSet<VertexOfDualGraph> sourceNeighbors,
+                                  HashSet<VertexOfDualGraph> sinkNeighbors) throws java.io.IOException {
+        // Внешняя грань существует только в двойственном графе, не в исходном
+        // Поэтому включаем все вершины, включая с name = 0
+        
+        try (java.io.FileWriter writer = new java.io.FileWriter(filename)) {
+            // Записываем все вершины
+            writer.write("VERTICES\n");
+            int vertexCount = 0;
+            for (Vertex v : graph.verticesArray()) {
+                Vertex geoVertex = coordConversion.fromEuclidean(v);
+                writer.write(String.format("%d %.10f %.10f\n",
+                        v.getName(), geoVertex.x, geoVertex.y));
+                vertexCount++;
+            }
+            System.out.println("Wrote " + vertexCount + " vertices to primal graph");
+
+            // Записываем рёбра (неориентированные, каждое только один раз)
+            writer.write("EDGES\n");
+            Set<String> recordedEdges = new HashSet<>();
+            int edgeCount = 0;
+
+            for (Vertex v1 : graph.verticesArray()) {
+                if (graph.getEdges().get(v1) == null) continue;
+
+                for (Vertex v2 : graph.getEdges().get(v1).keySet()) {
+                    long id1 = v1.getName();
+                    long id2 = v2.getName();
+                    String edgeKey = (id1 < id2) ? (id1 + "_" + id2) : (id2 + "_" + id1);
+
+                    if (!recordedEdges.contains(edgeKey)) {
+                        recordedEdges.add(edgeKey);
+                        double length = graph.getEdges().get(v1).get(v2).length;
+                        writer.write(String.format("%d %d %.6f\n",
+                                Math.min(id1, id2), Math.max(id1, id2), length));
+                        edgeCount++;
+                    }
+                }
+            }
+            System.out.println("Wrote " + edgeCount + " edges to primal graph");
+        }
+    }
+
+    private void writeDualGraph(String filename, Graph<VertexOfDualGraph> dualGraph,
+                                VertexOfDualGraph source, VertexOfDualGraph sink) throws java.io.IOException {
+        try (java.io.FileWriter writer = new java.io.FileWriter(filename)) {
+            // Записываем вершины двойственного графа (центроиды граней)
+            writer.write("VERTICES\n");
+            for (VertexOfDualGraph face : dualGraph.verticesArray()) {
+                List<Vertex> faceVertices = face.getVerticesOfFace();
+                if (faceVertices == null || faceVertices.isEmpty()) continue;
+
+                double sumX = 0, sumY = 0;
+                for (Vertex v : faceVertices) {
+                    sumX += v.x;
+                    sumY += v.y;
+                }
+                double centroidX = sumX / faceVertices.size();
+                double centroidY = sumY / faceVertices.size();
+
+                Vertex euclideanCentroid = new Vertex(face.getName(), centroidX, centroidY, 0);
+                Vertex geoCentroid = coordConversion.fromEuclidean(euclideanCentroid);
+
+                String type = "NORMAL";
+                if (face.equals(source)) type = "SOURCE";
+                else if (face.equals(sink)) type = "SINK";
+
+                writer.write(String.format("%d %.10f %.10f %s\n",
+                        face.getName(), geoCentroid.x, geoCentroid.y, type));
+            }
+
+            // Записываем рёбра без информации о потоке
+            writer.write("EDGES\n");
+            Set<String> recordedEdges = new HashSet<>();
+
+            for (VertexOfDualGraph face : dualGraph.verticesArray()) {
+                if (dualGraph.getEdges().get(face) == null) continue;
+
+                for (Map.Entry<VertexOfDualGraph, Edge> edgeEntry : dualGraph.getEdges().get(face).entrySet()) {
+                    VertexOfDualGraph neighbor = edgeEntry.getKey();
+                    Edge edge = edgeEntry.getValue();
+
+                    long id1 = face.getName();
+                    long id2 = neighbor.getName();
+                    String edgeKey = (id1 < id2) ? (id1 + "_" + id2) : (id2 + "_" + id1);
+
+                    if (!recordedEdges.contains(edgeKey)) {
+                        recordedEdges.add(edgeKey);
+
+                        double bandwidth = edge.getBandwidth();
+                        writer.write(String.format("%d %d %.6f\n",
+                                Math.min(id1, id2), Math.max(id1, id2), bandwidth));
+                    }
+                }
             }
         }
     }
@@ -323,11 +508,13 @@ public class MaxFlowReif implements MaxFlow {
     }
 
     private static class NeighborSplit {
+        Vertex vertex;  // Сама вершина, которую разделяем
         List<Vertex> pathNeighbors;
         List<Vertex> leftNeighbors;
         List<Vertex> rightNeighbors;
 
-        NeighborSplit(List<Vertex> path, List<Vertex> left, List<Vertex> right) {
+        NeighborSplit(Vertex vertex, List<Vertex> path, List<Vertex> left, List<Vertex> right) {
+            this.vertex = vertex;
             this.pathNeighbors = path;
             this.leftNeighbors = left;
             this.rightNeighbors = right;
@@ -335,7 +522,8 @@ public class MaxFlowReif implements MaxFlow {
     }
 
     private Map<Long, NeighborSplit> preprocessNeighborSplits(Graph<Vertex> graph, List<Vertex> path,
-                                                              List<Vertex> sourceBoundary, List<Vertex> sinkBoundary) {
+                                                               List<Vertex> sourceBoundary, List<Vertex> sinkBoundary) {
+        System.out.println("Preprocessing neighbor splits for " + path.size() + " vertices in path");
         Map<Long, NeighborSplit> splits = new HashMap<>();
 
         Set<Long> sourceBoundaryNames = sourceBoundary.stream().map(Vertex::getName).collect(Collectors.toSet());
@@ -433,12 +621,11 @@ public class MaxFlowReif implements MaxFlow {
                 }
             }
 
-            System.out.println("Path neighbors: " + pathNeighbors.size());
-            System.out.println("Left neighbors: " + leftNeighbors.size());
-            System.out.println("Right neighbors: " + rightNeighbors.size());
-            splits.put(currentVertex.getName(), new NeighborSplit(pathNeighbors, leftNeighbors, rightNeighbors));
+            System.out.println("Vertex " + currentVertex.getName() + ": Path=" + pathNeighbors.size() + ", Left=" + leftNeighbors.size() + ", Right=" + rightNeighbors.size());
+            splits.put(currentVertex.getName(), new NeighborSplit(currentVertex, pathNeighbors, leftNeighbors, rightNeighbors));
         }
 
+        System.out.println("Preprocessed " + splits.size() + " neighbor splits");
         return splits;
     }
 
@@ -504,6 +691,28 @@ public class MaxFlowReif implements MaxFlow {
             leftNeighbors.add(commonNeighbors.get(0));
             rightNeighbors.add(commonNeighbors.get(1));
         }
+        else if (commonNeighbors.isEmpty() && onlySourceNeighbors.size() == 2 && onlySinkNeighbors.size() == 2) {
+            // Случай когда границы не пересекаются в соседях (4 разных соседа)
+            // Сортируем source и sink отдельно по углу
+            onlySourceNeighbors.sort((v1, v2) -> {
+                double angle1 = Math.atan2(v1.y - currentVertex.y, v1.x - currentVertex.x);
+                double angle2 = Math.atan2(v2.y - currentVertex.y, v2.x - currentVertex.x);
+                return Double.compare(angle1, angle2);
+            });
+            
+            onlySinkNeighbors.sort((v1, v2) -> {
+                double angle1 = Math.atan2(v1.y - currentVertex.y, v1.x - currentVertex.x);
+                double angle2 = Math.atan2(v2.y - currentVertex.y, v2.x - currentVertex.x);
+                return Double.compare(angle1, angle2);
+            });
+            
+            // Один source + один sink в каждую сторону
+            // Меняем порядок для sink: первый sink вправо, второй влево
+            leftNeighbors.add(onlySourceNeighbors.get(0));
+            leftNeighbors.add(onlySinkNeighbors.get(1));
+            rightNeighbors.add(onlySourceNeighbors.get(1));
+            rightNeighbors.add(onlySinkNeighbors.get(0));
+        }
         else {
             leftNeighbors.addAll(onlySourceNeighbors);
             leftNeighbors.addAll(commonNeighbors);
@@ -514,7 +723,7 @@ public class MaxFlowReif implements MaxFlow {
                 ", left=" + leftNeighbors.size() +
                 ", right=" + rightNeighbors.size());
 
-        return new NeighborSplit(pathNeighbors, leftNeighbors, rightNeighbors);
+        return new NeighborSplit(currentVertex, pathNeighbors, leftNeighbors, rightNeighbors);
     }
 
     private Map.Entry<Vertex, Vertex> splitVertex(Graph<Vertex> splitGraph, Vertex vertex,

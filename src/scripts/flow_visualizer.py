@@ -85,6 +85,52 @@ def load_neighbor_splits(file_path):
     
     return splits
 
+def load_primal_graph(file_path):
+    """Загружает исходный (primal) граф"""
+    vertices = {}
+    edges = []
+    
+    if not os.path.exists(file_path):
+        print(f"Warning: Primal graph file {file_path} not found")
+        return vertices, edges
+    
+    with open(file_path, 'r') as file:
+        mode = None
+        for line in file:
+            line = line.strip()
+            if not line:
+                continue
+            
+            if line == 'VERTICES':
+                mode = 'VERTICES'
+                continue
+            elif line == 'EDGES':
+                mode = 'EDGES'
+                continue
+            
+            if mode == 'VERTICES':
+                parts = line.split()
+                if len(parts) >= 3:
+                    vertex_id = int(parts[0])
+                    longitude = float(parts[1])
+                    latitude = float(parts[2])
+                    vertices[vertex_id] = (latitude, longitude)
+            
+            elif mode == 'EDGES':
+                parts = line.split()
+                if len(parts) >= 3:
+                    from_id = int(parts[0])
+                    to_id = int(parts[1])
+                    length = float(parts[2])
+                    edges.append({
+                        'from': from_id,
+                        'to': to_id,
+                        'length': length
+                    })
+    
+    print(f"Loaded primal graph: {len(vertices)} vertices, {len(edges)} edges")
+    return vertices, edges
+
 def load_dual_graph_with_flow(file_path):
     """Загружает двойственный граф с информацией о потоках"""
     vertices = {}
@@ -160,6 +206,7 @@ def visualize_reif_flow(directory_name, output_file):
     st_path = load_vertex_list(os.path.join(directory_path, "st_path.txt"))
     best_path = load_vertex_list(os.path.join(directory_path, "best_path.txt"))
     neighbor_splits = load_neighbor_splits(os.path.join(directory_path, "neighbor_splits.txt"))
+    primal_vertices, primal_edges = load_primal_graph(os.path.join(directory_path, "primal_graph.txt"))
     dual_vertices, dual_edges = load_dual_graph_with_flow(os.path.join(directory_path, "dual_graph_flow.txt"))
     
     # Собираем все точки для определения границ карты
@@ -178,7 +225,9 @@ def visualize_reif_flow(directory_name, output_file):
     map_osm = folium.Map(location=(center_lat, center_lon), zoom_start=15)
     
     # Создаем слои (Feature Groups) для каждого типа данных
+    primal_graph_layer = folium.FeatureGroup(name='Primal Graph (Original)', show=False)
     dual_graph_layer = folium.FeatureGroup(name='Dual Graph with Flow', show=False)
+    dual_graph_no_saturated_layer = folium.FeatureGroup(name='Dual Graph (No Saturated Edges)', show=False)
     external_layer = folium.FeatureGroup(name='External Boundary', show=True)
     source_layer = folium.FeatureGroup(name='Source Boundary', show=True)
     sink_layer = folium.FeatureGroup(name='Sink Boundary', show=True)
@@ -186,7 +235,45 @@ def visualize_reif_flow(directory_name, output_file):
     neighbor_splits_layer = folium.FeatureGroup(name='Neighbor Splits', show=True)
     best_path_layer = folium.FeatureGroup(name='Best Path (Result)', show=True)
     
-    # 0. Двойственный граф с потоками
+    # 0. Исходный (primal) граф
+    if primal_vertices and primal_edges:
+        print(f"Visualizing primal graph with {len(primal_vertices)} vertices and {len(primal_edges)} edges")
+        
+        # Рисуем рёбра исходного графа
+        for edge in primal_edges:
+            from_id = edge['from']
+            to_id = edge['to']
+            length = edge['length']
+            
+            if from_id not in primal_vertices or to_id not in primal_vertices:
+                continue
+            
+            from_lat, from_lon = primal_vertices[from_id]
+            to_lat, to_lon = primal_vertices[to_id]
+            
+            tooltip_text = f"Edge {from_id}↔{to_id}<br>Length: {length:.2f}m"
+            
+            folium.PolyLine(
+                locations=[(from_lat, from_lon), (to_lat, to_lon)],
+                color='#4A90E2',  # Синий цвет для исходного графа
+                weight=1.5,
+                opacity=0.4,
+                tooltip=tooltip_text
+            ).add_to(primal_graph_layer)
+        
+        # Рисуем вершины исходного графа
+        for vertex_id, (lat, lon) in primal_vertices.items():
+            folium.CircleMarker(
+                location=(lat, lon),
+                radius=2,
+                color='#2E5C8A',
+                fill=True,
+                fill_color='#4A90E2',
+                fill_opacity=0.6,
+                tooltip=f"Vertex {vertex_id}"
+            ).add_to(primal_graph_layer)
+    
+    # 1. Двойственный граф с потоками
     if dual_vertices and dual_edges:
         print(f"Visualizing dual graph with {len(dual_vertices)} vertices and {len(dual_edges)} edges")
         
@@ -273,7 +360,82 @@ def visualize_reif_flow(directory_name, output_file):
                 tooltip=tooltip_text
             ).add_to(dual_graph_layer)
     
-    # 1. Внешняя граница графа (серый полигон)
+    # 1.5. Двойственный граф БЕЗ насыщенных рёбер (только рёбра с flow < bandwidth)
+    if dual_vertices and dual_edges:
+        print(f"Visualizing dual graph without saturated edges")
+        
+        # Рисуем только ненасыщенные рёбра
+        non_saturated_count = 0
+        
+        for edge in dual_edges:
+            from_id = edge['from']
+            to_id = edge['to']
+            bandwidth = edge['bandwidth']
+            flow = edge['flow']
+            edge_type = edge['type']
+            
+            # Пропускаем насыщенные рёбра
+            if edge_type == 'SATURATED':
+                continue
+            
+            if from_id not in dual_vertices or to_id not in dual_vertices:
+                continue
+            
+            from_lat, from_lon, _ = dual_vertices[from_id]
+            to_lat, to_lon, _ = dual_vertices[to_id]
+            
+            # Определяем цвет и толщину
+            if flow > 0:
+                # Рёбра с потоком, но не насыщенные - оранжевые
+                color = '#FF8800'
+                weight = 4
+                opacity = 0.8
+            else:
+                # Рёбра без потока - серые
+                color = '#888888'
+                weight = 2
+                opacity = 0.6
+            
+            tooltip_text = f"Edge {from_id}↔{to_id}<br>Flow: {flow:.2f}<br>Capacity: {bandwidth:.2f}"
+            
+            folium.PolyLine(
+                locations=[(from_lat, from_lon), (to_lat, to_lon)],
+                color=color,
+                weight=weight,
+                opacity=opacity,
+                tooltip=tooltip_text
+            ).add_to(dual_graph_no_saturated_layer)
+            
+            non_saturated_count += 1
+        
+        print(f"Drew {non_saturated_count} non-saturated edges")
+        
+        # Рисуем вершины для этого слоя тоже
+        for vertex_id, (lat, lon, vertex_type) in dual_vertices.items():
+            if vertex_type == 'SOURCE':
+                color = 'green'
+                radius = 8
+                tooltip_text = f"Face {vertex_id} (SOURCE)"
+            elif vertex_type == 'SINK':
+                color = 'red'
+                radius = 8
+                tooltip_text = f"Face {vertex_id} (SINK)"
+            else:
+                color = '#666666'
+                radius = 4
+                tooltip_text = f"Face {vertex_id}"
+            
+            folium.CircleMarker(
+                location=(lat, lon),
+                radius=radius,
+                color=color,
+                fill=True,
+                fill_color=color,
+                fill_opacity=0.7,
+                tooltip=tooltip_text
+            ).add_to(dual_graph_no_saturated_layer)
+    
+    # 2. Внешняя граница графа (серый полигон)
     if external_boundary:
         boundary_coords = [(lat, lon) for _, lat, lon in external_boundary]
         folium.Polygon(
@@ -297,7 +459,7 @@ def visualize_reif_flow(directory_name, output_file):
                 tooltip=f"Boundary vertex {vertex_id}"
             ).add_to(external_layer)
     
-    # 2. Граница source (зеленый)
+    # 3. Граница source (зеленый)
     if source_boundary:
         source_coords = [(lat, lon) for _, lat, lon in source_boundary]
         folium.Polygon(
@@ -320,7 +482,7 @@ def visualize_reif_flow(directory_name, output_file):
                 tooltip=f"Source boundary vertex {vertex_id}"
             ).add_to(source_layer)
     
-    # 3. Граница sink (красный)
+    # 4. Граница sink (красный)
     if sink_boundary:
         sink_coords = [(lat, lon) for _, lat, lon in sink_boundary]
         folium.Polygon(
@@ -343,7 +505,7 @@ def visualize_reif_flow(directory_name, output_file):
                 tooltip=f"Sink boundary vertex {vertex_id}"
             ).add_to(sink_layer)
     
-    # 4. Путь s-t между границами (синий)
+    # 5. Путь s-t между границами (синий)
     if st_path:
         st_coords = [(lat, lon) for _, lat, lon in st_path]
         folium.PolyLine(
@@ -357,28 +519,104 @@ def visualize_reif_flow(directory_name, output_file):
         for i, (vertex_id, lat, lon) in enumerate(st_path):
             folium.CircleMarker(
                 location=(lat, lon),
-                radius=4,
+                radius=5,
                 color='blue',
                 fill=True,
                 fill_color='lightblue',
-                tooltip=f"S-T path vertex {vertex_id} (step {i})"
+                fill_opacity=0.8,
+                weight=2,
+                tooltip=f"S-T path vertex {vertex_id}",
+                popup=folium.Popup(f"<b>Vertex ID: {vertex_id}</b>", max_width=200)
             ).add_to(st_path_layer)
     
-    # 4.5. Разделение соседей (стрелки от вершин к соседям)
+    # 6. Разделение соседей (стрелки от вершин к соседям)
+    print(f"Neighbor splits loaded: {len(neighbor_splits) if neighbor_splits else 0}")
     if neighbor_splits:
+        print(f"First split: {neighbor_splits[0] if neighbor_splits else 'None'}")
+        # Проверяем, состоит ли путь из одной вершины
+        single_vertex_path = (len(st_path) == 1) if st_path else False
+        print(f"Single vertex path: {single_vertex_path}, st_path length: {len(st_path) if st_path else 0}")
+        
+        items_added = 0
         for split in neighbor_splits:
             vertex_id, vertex_lat, vertex_lon = split['vertex']
             vertex_coords = (vertex_lat, vertex_lon)
+            print(f"Processing split for vertex {vertex_id} at ({vertex_lat}, {vertex_lon})")
+            print(f"  - Path neighbors: {len(split['path'])}")
+            print(f"  - Left neighbors: {len(split['left'])}")
+            print(f"  - Right neighbors: {len(split['right'])}")
+            
+            # Для одновершинного пути создаем визуальное разделение
+            if single_vertex_path:
+                # Смещение в метрах (примерно 10 метров в градусах)
+                offset = 0.0001
+                
+                # Левая копия вершины (для left neighbors)
+                left_copy_coords = (vertex_lat - offset, vertex_lon - offset)
+                # Правая копия вершины (для right neighbors)
+                right_copy_coords = (vertex_lat + offset, vertex_lon + offset)
+                
+                # Рисуем две копии вершины
+                folium.CircleMarker(
+                    location=left_copy_coords,
+                    radius=8,
+                    color='purple',
+                    fill=True,
+                    fill_color='purple',
+                    fill_opacity=0.7,
+                    weight=3,
+                    tooltip=f"Split 1 (left): Vertex {vertex_id}"
+                ).add_to(neighbor_splits_layer)
+                
+                folium.CircleMarker(
+                    location=right_copy_coords,
+                    radius=8,
+                    color='cyan',
+                    fill=True,
+                    fill_color='cyan',
+                    fill_opacity=0.7,
+                    weight=3,
+                    tooltip=f"Split 2 (right): Vertex {vertex_id}"
+                ).add_to(neighbor_splits_layer)
+                
+                # Линия между копиями
+                folium.PolyLine(
+                    locations=[left_copy_coords, right_copy_coords],
+                    color='gray',
+                    weight=2,
+                    opacity=0.5,
+                    dash_array='5, 5'
+                ).add_to(neighbor_splits_layer)
+            else:
+                left_copy_coords = vertex_coords
+                right_copy_coords = vertex_coords
             
             # Соседи на пути - желтые толстые стрелки (подключены к обеим частям)
             for neighbor_id, neighbor_lat, neighbor_lon in split['path']:
-                folium.PolyLine(
-                    locations=[vertex_coords, (neighbor_lat, neighbor_lon)],
-                    color='gold',
-                    weight=3,
-                    opacity=0.9,
-                    tooltip=f"Path neighbor (both splits): {vertex_id} → {neighbor_id}"
-                ).add_to(neighbor_splits_layer)
+                # Для одновершинного пути рисуем от обеих копий
+                if single_vertex_path:
+                    folium.PolyLine(
+                        locations=[left_copy_coords, (neighbor_lat, neighbor_lon)],
+                        color='gold',
+                        weight=2,
+                        opacity=0.7,
+                        tooltip=f"Path neighbor: {vertex_id} → {neighbor_id}"
+                    ).add_to(neighbor_splits_layer)
+                    folium.PolyLine(
+                        locations=[right_copy_coords, (neighbor_lat, neighbor_lon)],
+                        color='gold',
+                        weight=2,
+                        opacity=0.7,
+                        tooltip=f"Path neighbor: {vertex_id} → {neighbor_id}"
+                    ).add_to(neighbor_splits_layer)
+                else:
+                    folium.PolyLine(
+                        locations=[vertex_coords, (neighbor_lat, neighbor_lon)],
+                        color='gold',
+                        weight=3,
+                        opacity=0.9,
+                        tooltip=f"Path neighbor (both splits): {vertex_id} → {neighbor_id}"
+                    ).add_to(neighbor_splits_layer)
                 
                 # Добавляем стрелку в конце (маркер)
                 folium.CircleMarker(
@@ -390,47 +628,50 @@ def visualize_reif_flow(directory_name, output_file):
                     fill_opacity=0.9
                 ).add_to(neighbor_splits_layer)
             
-            # Левые соседи - фиолетовые стрелки
+            # Левые соседи - фиолетовые стрелки (от левой копии)
             for neighbor_id, neighbor_lat, neighbor_lon in split['left']:
                 folium.PolyLine(
-                    locations=[vertex_coords, (neighbor_lat, neighbor_lon)],
+                    locations=[left_copy_coords, (neighbor_lat, neighbor_lon)],
                     color='purple',
-                    weight=2,
-                    opacity=0.6,
+                    weight=3 if single_vertex_path else 2,
+                    opacity=0.8 if single_vertex_path else 0.6,
                     tooltip=f"Left neighbor (split 1): {vertex_id} → {neighbor_id}"
                 ).add_to(neighbor_splits_layer)
                 
                 # Добавляем стрелку в конце (маркер)
                 folium.CircleMarker(
                     location=(neighbor_lat, neighbor_lon),
-                    radius=2,
+                    radius=3 if single_vertex_path else 2,
                     color='purple',
                     fill=True,
                     fill_color='purple',
-                    fill_opacity=0.8
+                    fill_opacity=0.9 if single_vertex_path else 0.8
                 ).add_to(neighbor_splits_layer)
             
-            # Правые соседи - бирюзовые/голубые стрелки
+            # Правые соседи - бирюзовые/голубые стрелки (от правой копии)
             for neighbor_id, neighbor_lat, neighbor_lon in split['right']:
                 folium.PolyLine(
-                    locations=[vertex_coords, (neighbor_lat, neighbor_lon)],
+                    locations=[right_copy_coords, (neighbor_lat, neighbor_lon)],
                     color='cyan',
-                    weight=2,
-                    opacity=0.6,
+                    weight=3 if single_vertex_path else 2,
+                    opacity=0.8 if single_vertex_path else 0.6,
                     tooltip=f"Right neighbor (split 2): {vertex_id} → {neighbor_id}"
                 ).add_to(neighbor_splits_layer)
                 
                 # Добавляем стрелку в конце (маркер)
                 folium.CircleMarker(
                     location=(neighbor_lat, neighbor_lon),
-                    radius=2,
+                    radius=3 if single_vertex_path else 2,
                     color='cyan',
                     fill=True,
                     fill_color='cyan',
-                    fill_opacity=0.8
+                    fill_opacity=0.9 if single_vertex_path else 0.8
                 ).add_to(neighbor_splits_layer)
+                items_added += 1
+        
+        print(f"Added {items_added} items to neighbor_splits_layer")
     
-    # 5. Лучший найденный путь (оранжевый/желтый - самый важный, рисуем последним)
+    # 7. Лучший найденный путь (оранжевый/желтый - самый важный, рисуем последним)
     if best_path:
         # Убираем последовательные дубликаты и проверяем на замыкание цикла
         cleaned_best_path = []
@@ -453,9 +694,39 @@ def visualize_reif_flow(directory_name, output_file):
             opacity=0.9,
             tooltip="Best Path (Final Result)"
         ).add_to(best_path_layer)
+        
+        # Добавляем маркеры для каждой вершины в лучшем пути
+        for i, (vertex_id, lat, lon) in enumerate(cleaned_best_path):
+            # Определяем тип вершины (начало/конец/промежуточная)
+            if i == 0:
+                marker_color = 'green'
+                marker_text = f"START: Vertex {vertex_id}"
+                icon_color = 'lightgreen'
+            elif i == len(cleaned_best_path) - 1:
+                marker_color = 'red'
+                marker_text = f"END: Vertex {vertex_id}"
+                icon_color = 'lightcoral'
+            else:
+                marker_color = 'orange'
+                marker_text = f"Vertex {vertex_id}"
+                icon_color = 'lightyellow'
+            
+            folium.CircleMarker(
+                location=(lat, lon),
+                radius=6,
+                color=marker_color,
+                fill=True,
+                fill_color=icon_color,
+                fill_opacity=0.9,
+                weight=2,
+                tooltip=marker_text,
+                popup=folium.Popup(f"<b>Vertex ID: {vertex_id}</b>", max_width=200)
+            ).add_to(best_path_layer)
     
     # Добавляем все слои на карту
+    primal_graph_layer.add_to(map_osm)
     dual_graph_layer.add_to(map_osm)
+    dual_graph_no_saturated_layer.add_to(map_osm)
     external_layer.add_to(map_osm)
     source_layer.add_to(map_osm)
     sink_layer.add_to(map_osm)
@@ -476,23 +747,31 @@ def visualize_reif_flow(directory_name, output_file):
     # Добавляем легенду
     legend_html = '''
     <div style="position: fixed; 
-                bottom: 50px; right: 50px; width: 320px; height: 390px; 
+                bottom: 50px; right: 50px; width: 360px; height: 550px; 
                 background-color: white; border:2px solid grey; z-index:9999; 
                 font-size:12px; padding: 10px">
     <p><b>MaxFlowReif Visualization</b></p>
-    <p style="margin-bottom: 10px; font-size: 11px;"><b>Dual Graph (toggle layer):</b></p>
+    <p style="margin-bottom: 8px; font-size: 11px;"><b>Primal Graph (Original, toggle):</b></p>
+    <p style="margin-left: 15px;"><span style="color:#4A90E2;">━</span> Edges</p>
+    <p style="margin-left: 15px;"><span style="color:#4A90E2;">⬤</span> Vertices</p>
+    <p style="margin-bottom: 8px; margin-top: 8px; font-size: 11px;"><b>Dual Graph (Full, toggle):</b></p>
     <p style="margin-left: 15px;"><span style="color:#FF0000; font-weight: bold;">━━━</span> Saturated (flow = capacity)</p>
     <p style="margin-left: 15px;"><span style="color:#FF8800; font-weight: bold;">━━</span> With flow (flow &lt; capacity)</p>
     <p style="margin-left: 15px;"><span style="color:#888888;">╌╌</span> No flow (capacity only)</p>
-    <p style="margin-bottom: 10px; margin-top: 10px; font-size: 11px;"><b>Primal Graph:</b></p>
+    <p style="margin-bottom: 8px; margin-top: 8px; font-size: 11px;"><b>Dual Graph (No Saturated, toggle):</b></p>
+    <p style="margin-left: 15px;"><span style="color:#FF8800; font-weight: bold;">━━</span> With flow (flow &lt; capacity)</p>
+    <p style="margin-left: 15px;"><span style="color:#888888;">━</span> No flow</p>
+    <p style="margin-left: 15px; font-size: 10px; font-style: italic;">Saturated edges removed</p>
+    <p style="margin-bottom: 8px; margin-top: 8px; font-size: 11px;"><b>Algorithm Data:</b></p>
     <p><span style="color:gray;">⬤</span> External Boundary</p>
     <p><span style="color:green;">⬤</span> Source Boundary</p>
     <p><span style="color:red;">⬤</span> Sink Boundary</p>
-    <p><span style="color:blue;">━</span> S-T Path</p>
+    <p><span style="color:blue;">━ ⬤</span> S-T Path</p>
     <p><span style="color:gold;">⇒</span> Path Neighbors (both splits)</p>
-    <p><span style="color:purple;">→</span> Left Neighbors (split 1)</p>
-    <p><span style="color:cyan;">→</span> Right Neighbors (split 2)</p>
-    <p><span style="color:orange;">━</span> <b>Best Path (Result)</b></p>
+    <p><span style="color:purple;">⬤ →</span> Left Neighbors (split 1)</p>
+    <p><span style="color:cyan;">⬤ →</span> Right Neighbors (split 2)</p>
+    <p style="margin-left: 15px; font-size: 10px; font-style: italic;">For 1-vertex paths: split copies shown</p>
+    <p><span style="color:orange;">━ ⬤</span> <b>Best Path</b></p>
     </div>
     '''
     map_osm.get_root().html.add_child(folium.Element(legend_html))

@@ -141,6 +141,8 @@ public class Main {
 		GraphPreparation preparation = new GraphPreparation(false, false);
 
 		Graph<VertexOfDualGraph> preparedGraph = preparation.prepareGraph(graph, 1, outputDirectory, cc);
+        GraphWriter grWr = new GraphWriter(cc);
+        grWr.printGraphToFile(graph, outputDirectory, "my_graph.txt", true);
 
 		for (VertexOfDualGraph v : preparedGraph.verticesArray()) {
 			Assertions.assertNotNull(v.getVerticesOfFace());
