@@ -207,7 +207,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             Assertions.assertEquals(currentGraph.verticesNumber() + 2, copyGraph.verticesNumber());
 
             MaxFlow maxFlow;
-            boolean useReif = false;
+            boolean useReif = true;
             if (useReif) {
                 maxFlow = new MaxFlowReif(simpleGraph, copyGraph, source, sink);
             } else {

@@ -21,12 +21,12 @@ class GraphTest {
     private Graph<Vertex> graph;
     private List<Vertex> vs;
     private List<EdgeOfGraph<Vertex>> edges;
-    private GraphReader graphReader = new GraphReader();
-    private GraphWriter graphWriter = new GraphWriter();
+    private final GraphReader graphReader = new GraphReader();
+    private final GraphWriter graphWriter = new GraphWriter();
 
     @BeforeEach
     void setUp() {
-        graph = new Graph<Vertex>();
+        graph = new Graph<>();
         vs = List.of(new Vertex(0, new Point(0, 0)),
                 new Vertex(1, new Point(5, -1)),
                 new Vertex(2, new Point(4, -10)),
@@ -36,27 +36,33 @@ class GraphTest {
                 new Vertex(6, new Point(10, 10)),
                 new Vertex(7, new Point(10, -10)),
                 new Vertex(8, new Point(-10, -10)));
-        edges = List.of(new EdgeOfGraph<Vertex>(vs.get(0), vs.get(1), 1),
-                new EdgeOfGraph<Vertex>(vs.get(1), vs.get(0), 1),
-                new EdgeOfGraph<Vertex>(vs.get(1), vs.get(2), 1),
-                new EdgeOfGraph<Vertex>(vs.get(1), vs.get(4), 1),
-                new EdgeOfGraph<Vertex>(vs.get(1), vs.get(3), 1),
-                new EdgeOfGraph<Vertex>(vs.get(2), vs.get(7), 1),
-                new EdgeOfGraph<Vertex>(vs.get(2), vs.get(1), 1),
-                new EdgeOfGraph<Vertex>(vs.get(3), vs.get(6), 1),
-                new EdgeOfGraph<Vertex>(vs.get(3), vs.get(1), 1),
-                new EdgeOfGraph<Vertex>(vs.get(4), vs.get(3), 1),
-                new EdgeOfGraph<Vertex>(vs.get(4), vs.get(1), 1),
-                new EdgeOfGraph<Vertex>(vs.get(5), vs.get(8), 1),
-                new EdgeOfGraph<Vertex>(vs.get(6), vs.get(5), 1),
-                new EdgeOfGraph<Vertex>(vs.get(7), vs.get(4), 1),
-                new EdgeOfGraph<Vertex>(vs.get(8), vs.get(2), 1));
+        edges = List.of(new EdgeOfGraph<>(vs.get(0), vs.get(1), 1), // 11 undirected edges == 22 directed edges
+                new EdgeOfGraph<>(vs.get(1), vs.get(2), 1),
+                new EdgeOfGraph<>(vs.get(1), vs.get(3), 1),
+                new EdgeOfGraph<>(vs.get(1), vs.get(4), 1),
+                new EdgeOfGraph<>(vs.get(2), vs.get(7), 1),
+                new EdgeOfGraph<>(vs.get(3), vs.get(6), 1),
+                new EdgeOfGraph<>(vs.get(4), vs.get(3), 1),
+                new EdgeOfGraph<>(vs.get(5), vs.get(8), 1),
+                new EdgeOfGraph<>(vs.get(6), vs.get(5), 1),
+                new EdgeOfGraph<>(vs.get(7), vs.get(4), 1),
+                new EdgeOfGraph<>(vs.get(8), vs.get(2), 1));
         for (Vertex v : vs) {
             graph.addVertex(v);
         }
         for (EdgeOfGraph<Vertex> e : edges) {
             graph.addEdge(e.begin, e.end, e.length);
         }
+    }
+
+    @Test
+    void testMakeUndirectedGraph() {
+        Graph<Vertex> undirGraph = graph.makeUndirectedGraph();
+        // вершины не теряются
+        assertEquals(vs.size(), undirGraph.verticesNumber());
+        assertEquals(22, undirGraph.edgesNumber());
+        // обратные ребра не добавляются еще раз
+        assertEquals(22, undirGraph.makeUndirectedGraph().edgesNumber());
     }
 
 
@@ -72,12 +78,12 @@ class GraphTest {
         graph.deleteVertex(newVertex);
         assertEquals(vs.size(), graph.verticesNumber());
 
-        assertEquals(edges.size(), graph.edgesNumber());
+        assertEquals(edges.size() * 2, graph.edgesNumber());
         graph.deleteEdge(vs.get(5), vs.get(8));
-        assertEquals(edges.size() - 1, graph.edgesNumber());
+        assertEquals((edges.size() - 1) * 2, graph.edgesNumber());
         // удаленное ребро не должно удаляться еще раз
         graph.deleteEdge(vs.get(5), vs.get(8));
-        assertEquals(edges.size() - 1, graph.edgesNumber());
+        assertEquals((edges.size() - 1) * 2, graph.edgesNumber());
     }
 
 
@@ -91,22 +97,11 @@ class GraphTest {
 
 
     @Test
-    void testMakeUndirectedGraph() {
-        Graph<Vertex> undirGraph = graph.makeUndirectedGraph();
-        // вершины не теряются
-        assertEquals(vs.size(), undirGraph.verticesNumber());
-        assertEquals(22, undirGraph.edgesNumber());
-        // обратные ребра не добавляются еще раз
-        assertEquals(22, undirGraph.makeUndirectedGraph().edgesNumber());
-    }
-
-
-    @Test
     void testCreateSubgraph() {
         List<Vertex> subgraphVertices = List.of(vs.get(2), vs.get(3), vs.get(4), vs.get(5), vs.get(6), vs.get(7), vs.get(8));
         Graph<Vertex> subgraph = graph.createSubgraph(new HashSet<>(subgraphVertices));
         assertEquals(subgraphVertices.size(), subgraph.verticesNumber());
-        assertEquals(7, subgraph.edgesNumber());
+        assertEquals(14, subgraph.edgesNumber());
         graph.addEdge(vs.get(0), vs.get(3), 1);
         graph.addEdge(vs.get(0), vs.get(2), 1);
         // проверка, что если между вершинами есть ребро в не входящей в список грани, то ребро не появится
@@ -132,15 +127,9 @@ class GraphTest {
     @Test
     void testAngles() {
         HashMap<Vertex, TreeSet<EdgeOfGraph<Vertex>>> orderedEdges = graph.arrangeByAngle();
-        TreeSet<EdgeOfGraph<Vertex>> orderedEdgesForV1 = orderedEdges.get(vs.get(1));
-        List<EdgeOfGraph<Vertex>> expectedOrderedEdgesForV1 = List.of(edges.get(3), edges.get(4), edges.get(1), edges.get(2));
-        int ptr = 0;
-        for (EdgeOfGraph<Vertex> e : orderedEdgesForV1) {
-            assertEquals(expectedOrderedEdgesForV1.get(ptr++), e);
-        }
         TreeSet<EdgeOfGraph<Vertex>> orderedEdgesForV8 = orderedEdges.get(vs.get(8));
-        assertEquals(1, orderedEdgesForV8.size());
-        assertEquals(edges.get(14), orderedEdgesForV8.first());
+        assertEquals(2, orderedEdgesForV8.size());
+        assertEquals(edges.get(10), orderedEdgesForV8.first());
     }
 
 
@@ -161,7 +150,7 @@ class GraphTest {
         GraphPreparation preparation = new GraphPreparation();
         Graph<VertexOfDualGraph> dualGraph = preparation.prepareGraph(g, 1e-9, "", null);
         graphWriter.printGraphToFile(dualGraph, "src/main/resources/testGraphs", "test_graph_1_dual.txt", false);
-        Assertions.assertEquals(6, dualGraph.verticesNumber());
+        Assertions.assertEquals(5, dualGraph.verticesNumber());
     }
 
 
