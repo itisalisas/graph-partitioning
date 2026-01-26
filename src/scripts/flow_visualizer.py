@@ -189,6 +189,100 @@ def load_dual_graph_with_flow(file_path):
     
     return vertices, edges
 
+
+def load_spt(file_path):
+    """Загружает Shortest Path Tree (SPT) с информацией о весах регионов"""
+    spt_data = {
+        'root': None,
+        'total_region_weight': 0.0,
+        'boundary_leaves': [],  # list of (id, lat, lon, cumulative_weight)
+        'tree_edges': [],       # list of (from_id, from_lat, from_lon, to_id, to_lat, to_lon, distance)
+        'vertices': {}          # id -> (lat, lon, distance)
+    }
+    
+    if not os.path.exists(file_path):
+        print(f"Warning: SPT file {file_path} not found")
+        return None
+    
+    with open(file_path, 'r') as file:
+        mode = None
+        for line in file:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            
+            if line == 'ROOT':
+                mode = 'ROOT'
+                continue
+            elif line == 'TOTAL_REGION_WEIGHT':
+                mode = 'TOTAL_REGION_WEIGHT'
+                continue
+            elif line == 'BOUNDARY_LEAVES':
+                mode = 'BOUNDARY_LEAVES'
+                continue
+            elif line == 'TREE_EDGES':
+                mode = 'TREE_EDGES'
+                continue
+            elif line == 'VERTICES':
+                mode = 'VERTICES'
+                continue
+            
+            if mode == 'ROOT':
+                parts = line.split()
+                if len(parts) >= 3:
+                    vertex_id = int(parts[0])
+                    longitude = float(parts[1])
+                    latitude = float(parts[2])
+                    spt_data['root'] = (vertex_id, latitude, longitude)
+            
+            elif mode == 'TOTAL_REGION_WEIGHT':
+                spt_data['total_region_weight'] = float(line)
+            
+            elif mode == 'BOUNDARY_LEAVES':
+                parts = line.split()
+                if len(parts) >= 4:
+                    vertex_id = int(parts[0])
+                    longitude = float(parts[1])
+                    latitude = float(parts[2])
+                    cumulative_weight = float(parts[3])
+                    # boundary_index is optional (for backwards compatibility)
+                    boundary_index = int(parts[4]) if len(parts) >= 5 else -1
+                    spt_data['boundary_leaves'].append((vertex_id, latitude, longitude, cumulative_weight, boundary_index))
+            
+            elif mode == 'TREE_EDGES':
+                parts = line.split()
+                if len(parts) >= 7:
+                    from_id = int(parts[0])
+                    from_lon = float(parts[1])
+                    from_lat = float(parts[2])
+                    to_id = int(parts[3])
+                    to_lon = float(parts[4])
+                    to_lat = float(parts[5])
+                    distance = float(parts[6])
+                    spt_data['tree_edges'].append({
+                        'from_id': from_id,
+                        'from_lat': from_lat,
+                        'from_lon': from_lon,
+                        'to_id': to_id,
+                        'to_lat': to_lat,
+                        'to_lon': to_lon,
+                        'distance': distance
+                    })
+            
+            elif mode == 'VERTICES':
+                parts = line.split()
+                if len(parts) >= 4:
+                    vertex_id = int(parts[0])
+                    longitude = float(parts[1])
+                    latitude = float(parts[2])
+                    distance = float(parts[3])
+                    spt_data['vertices'][vertex_id] = (latitude, longitude, distance)
+    
+    print(f"Loaded SPT: root={spt_data['root']}, {len(spt_data['boundary_leaves'])} boundary leaves, "
+          f"{len(spt_data['tree_edges'])} tree edges, total_weight={spt_data['total_region_weight']:.2f}")
+    
+    return spt_data
+
 def visualize_reif_flow(directory_name, output_file):
     """Визуализирует результаты работы MaxFlowReif"""
     
@@ -208,6 +302,10 @@ def visualize_reif_flow(directory_name, output_file):
     neighbor_splits = load_neighbor_splits(os.path.join(directory_path, "neighbor_splits.txt"))
     primal_vertices, primal_edges = load_primal_graph(os.path.join(directory_path, "primal_graph.txt"))
     dual_vertices, dual_edges = load_dual_graph_with_flow(os.path.join(directory_path, "dual_graph_flow.txt"))
+    
+    # Load SPT data
+    spt1 = load_spt(os.path.join(directory_path, "spt1.txt"))
+    spt2 = load_spt(os.path.join(directory_path, "spt2.txt"))
     
     # Собираем все точки для определения границ карты
     all_points = []
@@ -234,6 +332,8 @@ def visualize_reif_flow(directory_name, output_file):
     st_path_layer = folium.FeatureGroup(name='S-T Path', show=True)
     neighbor_splits_layer = folium.FeatureGroup(name='Neighbor Splits', show=True)
     best_path_layer = folium.FeatureGroup(name='Best Path (Result)', show=True)
+    spt1_layer = folium.FeatureGroup(name='SPT 1 (Left Split)', show=False)
+    spt2_layer = folium.FeatureGroup(name='SPT 2 (Right Split)', show=False)
     
     # 0. Исходный (primal) граф
     if primal_vertices and primal_edges:
@@ -671,7 +771,142 @@ def visualize_reif_flow(directory_name, output_file):
         
         print(f"Added {items_added} items to neighbor_splits_layer")
     
-    # 7. Лучший найденный путь (оранжевый/желтый - самый важный, рисуем последним)
+    # 7. Shortest Path Trees (SPT) with region weights
+    def visualize_spt(spt_data, layer, color_scheme, spt_name):
+        """Визуализирует SPT с весами регионов"""
+        if spt_data is None:
+            return
+        
+        # Colors for the scheme
+        edge_color = color_scheme['edge']
+        root_color = color_scheme['root']
+        leaf_color = color_scheme['leaf']
+        vertex_color = color_scheme['vertex']
+        
+        # Draw tree edges
+        for edge in spt_data['tree_edges']:
+            folium.PolyLine(
+                locations=[
+                    (edge['from_lat'], edge['from_lon']),
+                    (edge['to_lat'], edge['to_lon'])
+                ],
+                color=edge_color,
+                weight=2,
+                opacity=0.7,
+                tooltip=f"Tree edge: {edge['from_id']} → {edge['to_id']}<br>Distance: {edge['distance']:.2f}"
+            ).add_to(layer)
+        
+        # Draw root vertex
+        if spt_data['root']:
+            root_id, root_lat, root_lon = spt_data['root']
+            folium.CircleMarker(
+                location=(root_lat, root_lon),
+                radius=10,
+                color=root_color,
+                fill=True,
+                fill_color=root_color,
+                fill_opacity=0.9,
+                weight=3,
+                tooltip=f"ROOT ({spt_name}): Vertex {root_id}<br>Total region weight: {spt_data['total_region_weight']:.2f}"
+            ).add_to(layer)
+        
+        # Draw boundary leaves with region weights
+        total_weight = spt_data['total_region_weight']
+        num_leaves = len(spt_data['boundary_leaves'])
+        
+        for i, leaf_data in enumerate(spt_data['boundary_leaves']):
+            # Handle both old (4 fields) and new (5 fields) format
+            if len(leaf_data) >= 5:
+                leaf_id, leaf_lat, leaf_lon, cumulative_weight, boundary_index = leaf_data
+            else:
+                leaf_id, leaf_lat, leaf_lon, cumulative_weight = leaf_data
+                boundary_index = i
+            
+            # Calculate percentage for color intensity
+            weight_percentage = (cumulative_weight / total_weight * 100) if total_weight > 0 else 0
+            right_weight = total_weight - cumulative_weight
+            
+            # Also show position-based percentage (index / total)
+            position_percentage = ((i + 1) / num_leaves * 100) if num_leaves > 0 else 0
+            
+            # Create tooltip with detailed info
+            tooltip_text = (
+                f"<b>Boundary Leaf L{i}</b>: Vertex {leaf_id}<br>"
+                f"Position: {i+1}/{num_leaves} ({position_percentage:.1f}%)<br>"
+                f"Boundary index: {boundary_index}<br>"
+                f"Left weight (R0..R{i}): {cumulative_weight:.2f} ({weight_percentage:.1f}%)<br>"
+                f"Right weight: {right_weight:.2f} ({100-weight_percentage:.1f}%)<br>"
+                f"Total: {total_weight:.2f}"
+            )
+            
+            # Draw leaf marker
+            folium.CircleMarker(
+                location=(leaf_lat, leaf_lon),
+                radius=7,
+                color=leaf_color,
+                fill=True,
+                fill_color=leaf_color,
+                fill_opacity=0.8,
+                weight=2,
+                tooltip=tooltip_text
+            ).add_to(layer)
+            
+            # Add label showing both position and weight percentage
+            # Use position-based label to show ordering is correct
+            label_text = f"L{i}"
+            if total_weight > 0 and cumulative_weight >= 0:
+                label_text = f"{weight_percentage:.0f}%"
+            
+            folium.Marker(
+                location=(leaf_lat, leaf_lon),
+                icon=folium.DivIcon(
+                    html=f'<div style="font-size: 9px; color: {leaf_color}; font-weight: bold; '
+                         f'text-shadow: 1px 1px white, -1px -1px white, 1px -1px white, -1px 1px white;">'
+                         f'{label_text}</div>',
+                    icon_size=(30, 15),
+                    icon_anchor=(15, 0)
+                )
+            ).add_to(layer)
+        
+        # Draw intermediate vertices (smaller, less prominent)
+        for vertex_id, (lat, lon, distance) in spt_data['vertices'].items():
+            # Skip root and boundary leaves (already drawn)
+            is_root = spt_data['root'] and vertex_id == spt_data['root'][0]
+            is_leaf = any(leaf[0] == vertex_id for leaf in spt_data['boundary_leaves'])
+            
+            if is_root or is_leaf:
+                continue
+            
+            folium.CircleMarker(
+                location=(lat, lon),
+                radius=3,
+                color=vertex_color,
+                fill=True,
+                fill_color=vertex_color,
+                fill_opacity=0.5,
+                weight=1,
+                tooltip=f"SPT vertex {vertex_id}<br>Distance from root: {distance:.2f}"
+            ).add_to(layer)
+    
+    # Visualize SPT 1 (purple/magenta scheme)
+    if spt1:
+        visualize_spt(spt1, spt1_layer, {
+            'edge': '#9932CC',      # Dark orchid
+            'root': '#8B008B',      # Dark magenta
+            'leaf': '#DA70D6',      # Orchid
+            'vertex': '#DDA0DD'     # Plum
+        }, 'SPT1')
+    
+    # Visualize SPT 2 (teal/cyan scheme)
+    if spt2:
+        visualize_spt(spt2, spt2_layer, {
+            'edge': '#008B8B',      # Dark cyan
+            'root': '#006666',      # Darker teal
+            'leaf': '#20B2AA',      # Light sea green
+            'vertex': '#66CDAA'     # Medium aquamarine
+        }, 'SPT2')
+    
+    # 8. Лучший найденный путь (оранжевый/желтый - самый важный, рисуем последним)
     if best_path:
         # Убираем последовательные дубликаты и проверяем на замыкание цикла
         cleaned_best_path = []
@@ -732,6 +967,8 @@ def visualize_reif_flow(directory_name, output_file):
     sink_layer.add_to(map_osm)
     st_path_layer.add_to(map_osm)
     neighbor_splits_layer.add_to(map_osm)
+    spt1_layer.add_to(map_osm)
+    spt2_layer.add_to(map_osm)
     best_path_layer.add_to(map_osm)
     
     # Добавляем контроль слоев (переключатель в правом верхнем углу)
@@ -747,22 +984,18 @@ def visualize_reif_flow(directory_name, output_file):
     # Добавляем легенду
     legend_html = '''
     <div style="position: fixed; 
-                bottom: 50px; right: 50px; width: 360px; height: 550px; 
+                bottom: 50px; right: 50px; width: 380px; height: 680px; 
                 background-color: white; border:2px solid grey; z-index:9999; 
-                font-size:12px; padding: 10px">
+                font-size:11px; padding: 10px; overflow-y: auto;">
     <p><b>MaxFlowReif Visualization</b></p>
-    <p style="margin-bottom: 8px; font-size: 11px;"><b>Primal Graph (Original, toggle):</b></p>
+    <p style="margin-bottom: 6px; font-size: 10px;"><b>Primal Graph (Original, toggle):</b></p>
     <p style="margin-left: 15px;"><span style="color:#4A90E2;">━</span> Edges</p>
     <p style="margin-left: 15px;"><span style="color:#4A90E2;">⬤</span> Vertices</p>
-    <p style="margin-bottom: 8px; margin-top: 8px; font-size: 11px;"><b>Dual Graph (Full, toggle):</b></p>
+    <p style="margin-bottom: 6px; margin-top: 6px; font-size: 10px;"><b>Dual Graph (Full, toggle):</b></p>
     <p style="margin-left: 15px;"><span style="color:#FF0000; font-weight: bold;">━━━</span> Saturated (flow = capacity)</p>
     <p style="margin-left: 15px;"><span style="color:#FF8800; font-weight: bold;">━━</span> With flow (flow &lt; capacity)</p>
     <p style="margin-left: 15px;"><span style="color:#888888;">╌╌</span> No flow (capacity only)</p>
-    <p style="margin-bottom: 8px; margin-top: 8px; font-size: 11px;"><b>Dual Graph (No Saturated, toggle):</b></p>
-    <p style="margin-left: 15px;"><span style="color:#FF8800; font-weight: bold;">━━</span> With flow (flow &lt; capacity)</p>
-    <p style="margin-left: 15px;"><span style="color:#888888;">━</span> No flow</p>
-    <p style="margin-left: 15px; font-size: 10px; font-style: italic;">Saturated edges removed</p>
-    <p style="margin-bottom: 8px; margin-top: 8px; font-size: 11px;"><b>Algorithm Data:</b></p>
+    <p style="margin-bottom: 6px; margin-top: 6px; font-size: 10px;"><b>Algorithm Data:</b></p>
     <p><span style="color:gray;">⬤</span> External Boundary</p>
     <p><span style="color:green;">⬤</span> Source Boundary</p>
     <p><span style="color:red;">⬤</span> Sink Boundary</p>
@@ -770,7 +1003,18 @@ def visualize_reif_flow(directory_name, output_file):
     <p><span style="color:gold;">⇒</span> Path Neighbors (both splits)</p>
     <p><span style="color:purple;">⬤ →</span> Left Neighbors (split 1)</p>
     <p><span style="color:cyan;">⬤ →</span> Right Neighbors (split 2)</p>
-    <p style="margin-left: 15px; font-size: 10px; font-style: italic;">For 1-vertex paths: split copies shown</p>
+    <p style="margin-bottom: 6px; margin-top: 6px; font-size: 10px;"><b>SPT 1 - Left Split (toggle):</b></p>
+    <p style="margin-left: 15px;"><span style="color:#9932CC;">━</span> Tree edges</p>
+    <p style="margin-left: 15px;"><span style="color:#8B008B;">⬤</span> Root vertex</p>
+    <p style="margin-left: 15px;"><span style="color:#DA70D6;">⬤</span> Boundary leaves (% = left weight)</p>
+    <p style="margin-bottom: 6px; margin-top: 6px; font-size: 10px;"><b>SPT 2 - Right Split (toggle):</b></p>
+    <p style="margin-left: 15px;"><span style="color:#008B8B;">━</span> Tree edges</p>
+    <p style="margin-left: 15px;"><span style="color:#006666;">⬤</span> Root vertex</p>
+    <p style="margin-left: 15px;"><span style="color:#20B2AA;">⬤</span> Boundary leaves (% = left weight)</p>
+    <p style="margin-left: 15px; font-size: 9px; font-style: italic;">
+    Li → weight(R0+...+Ri) / total<br>
+    Shows cumulative region weight split
+    </p>
     <p><span style="color:orange;">━ ⬤</span> <b>Best Path</b></p>
     </div>
     '''

@@ -5,6 +5,10 @@ import java.util.stream.Collectors;
 
 import graph.*;
 import readWrite.CoordinateConversion;
+import readWrite.FlowWriter;
+
+import static partitioning.VertexSplitter.preprocessNeighborSplits;
+import static partitioning.VertexSplitter.splitVertex;
 
 public class MaxFlowReif implements MaxFlow {
     Graph<Vertex> initGraph;
@@ -60,11 +64,16 @@ public class MaxFlowReif implements MaxFlow {
 
         long time02 = System.currentTimeMillis();
 
-        // Получаем externalBoundary заранее для дампа
         HashSet<VertexOfDualGraph> allDualVerticesSet = new HashSet<>(allDualVertices);
         allDualVerticesSet.remove(source);
         allDualVerticesSet.remove(sink);
         List<Vertex> externalBoundary = BoundSearcher.findBound(initGraph, allDualVerticesSet, comparisonForDualGraph);
+
+        if (externalBoundary.isEmpty()) {
+            System.out.println("ERROR: External boundary is empty!");
+            return new FlowResult(0, dualGraph, source, sink);
+        }
+        System.out.println("External boundary size: " + externalBoundary.size());
 
         long time03 = System.currentTimeMillis();
 
@@ -73,11 +82,22 @@ public class MaxFlowReif implements MaxFlow {
 
         long time1 = System.currentTimeMillis();
 
-        if (externalBoundary.isEmpty()) {
-            System.out.println("ERROR: External boundary is empty!");
-            return new FlowResult(0, dualGraph, source, sink);
+        Set<Long> sourceBoundaryNames = sourceBoundary.stream().map(Vertex::getName).collect(Collectors.toSet());
+        Set<Long> sinkBoundaryNames = sinkBoundary.stream().map(Vertex::getName).collect(Collectors.toSet());
+        
+        List<Vertex> sourceCorners = new ArrayList<>();
+        List<Vertex> sinkCorners = new ArrayList<>();
+        
+        for (Vertex v : externalBoundary) {
+            if (sourceBoundaryNames.contains(v.getName())) {
+                sourceCorners.add(v);
+            }
+            if (sinkBoundaryNames.contains(v.getName())) {
+                sinkCorners.add(v);
+            }
         }
-        System.out.println("External boundary size: " + externalBoundary.size());
+
+        System.out.println("Found " + sourceCorners.size() + " source corners and " + sinkCorners.size() + " sink corners on external boundary");
 
         DijkstraResult shortestPathResult = dijkstraMultiSource(modifiedGraph, sourceBoundary, sinkBoundary);
 
@@ -89,7 +109,7 @@ public class MaxFlowReif implements MaxFlow {
             System.out.println("  sourceBoundary size: " + sourceBoundary.size());
             System.out.println("  sinkBoundary size: " + sinkBoundary.size());
 
-            dumpVisualizationData(externalBoundary, sourceBoundary, sinkBoundary, List.of(), List.of(), Map.of(), sourceNeighbors, sinkNeighbors, 0, modifiedGraph);
+            FlowWriter.dumpVisualizationData(externalBoundary, sourceBoundary, sinkBoundary, List.of(), List.of(), Map.of(), sourceNeighbors, sinkNeighbors, 0, modifiedGraph, dualGraph, source, sink, coordConversion);
 
             return new FlowResult(0, dualGraph, source, sink);
         }
@@ -98,14 +118,14 @@ public class MaxFlowReif implements MaxFlow {
 
         List<Vertex> shortestPath = shortestPathResult.path;
 
-        Map<Long, NeighborSplit> neighborSplits;
+        Map<Long, VertexSplitter.NeighborSplit> neighborSplits;
         try {
             neighborSplits = preprocessNeighborSplits(modifiedGraph, shortestPath, sourceBoundary, sinkBoundary);
             System.out.println("Created " + neighborSplits.size() + " neighbor splits for " + shortestPath.size() + " vertices in path");
         } catch (RuntimeException e) {
             if (e.getMessage() != null && e.getMessage().contains("broken boundary")) {
                 System.out.println("Broken boundary detected: " + e.getMessage());
-                dumpVisualizationData(externalBoundary, sourceBoundary, sinkBoundary, shortestPath, null, new HashMap<>(), sourceNeighbors, sinkNeighbors, 0, modifiedGraph);
+                FlowWriter.dumpVisualizationData(externalBoundary, sourceBoundary, sinkBoundary, shortestPath, null, new HashMap<>(), sourceNeighbors, sinkNeighbors, 0, modifiedGraph, dualGraph, source, sink, coordConversion);
                 return new FlowResult(0, dualGraph, source, sink);
             }
             throw e;
@@ -124,13 +144,21 @@ public class MaxFlowReif implements MaxFlow {
 
         double minPathLength = Double.MAX_VALUE;
         List<Vertex> bestPath = null;
+        DijkstraResult bestPath1ToBoundary = null;
+        DijkstraResult bestPath2ToBoundary = null;
+        Vertex bestSplitVertex1 = null;
+        Vertex bestSplitVertex2 = null;
 
         for (Map.Entry<Vertex, Vertex> splitVertex : splitVertices) {
             Vertex splitVertex1 = splitVertex.getKey();
             Vertex splitVertex2 = splitVertex.getValue();
 
-            DijkstraResult path1ToBoundary = dijkstraMultiSource(modifiedGraph, Collections.singletonList(splitVertex1), externalBoundary);
-            DijkstraResult path2ToBoundary = dijkstraMultiSource(modifiedGraph, Collections.singletonList(splitVertex2), externalBoundary);
+            DijkstraResult path1ToBoundary = dijkstraMultiSourceWithRegionWeights(
+                    modifiedGraph, Collections.singletonList(splitVertex1), externalBoundary, dualGraph,
+                    sourceCorners, sinkCorners, true);
+            DijkstraResult path2ToBoundary = dijkstraMultiSourceWithRegionWeights(
+                    modifiedGraph, Collections.singletonList(splitVertex2), externalBoundary, dualGraph,
+                    sourceCorners, sinkCorners, false);
 
             if (path1ToBoundary == null || path2ToBoundary == null) {
                 System.out.println("ERROR: Path to external boundary not found!");
@@ -160,6 +188,10 @@ public class MaxFlowReif implements MaxFlow {
                     pathInOriginalGraph.add(splitToOriginalMap.getOrDefault(v, v));
                 }
                 bestPath = pathInOriginalGraph;
+                bestPath1ToBoundary = path1ToBoundary;
+                bestPath2ToBoundary = path2ToBoundary;
+                bestSplitVertex1 = splitVertex1;
+                bestSplitVertex2 = splitVertex2;
             }
         }
 
@@ -167,7 +199,7 @@ public class MaxFlowReif implements MaxFlow {
 
         if (bestPath == null) {
             System.out.println("No path found");
-            dumpVisualizationData(externalBoundary, sourceBoundary, sinkBoundary, shortestPath, bestPath, neighborSplits, sourceNeighbors, sinkNeighbors, 0, modifiedGraph);
+            FlowWriter.dumpVisualizationData(externalBoundary, sourceBoundary, sinkBoundary, shortestPath, bestPath, neighborSplits, sourceNeighbors, sinkNeighbors, 0, modifiedGraph, dualGraph, source, sink, coordConversion);
             return new FlowResult(0, dualGraph, source, sink);
         }
 
@@ -175,7 +207,11 @@ public class MaxFlowReif implements MaxFlow {
 
         long time6 = System.currentTimeMillis();
 
-        dumpVisualizationData(externalBoundary, sourceBoundary, sinkBoundary, shortestPath, bestPath, neighborSplits, sourceNeighbors, sinkNeighbors, flow, modifiedGraph);
+        FlowWriter.dumpVisualizationData(externalBoundary, sourceBoundary, sinkBoundary, shortestPath, bestPath, neighborSplits, sourceNeighbors, sinkNeighbors, flow, modifiedGraph, dualGraph, source, sink, coordConversion);
+        FlowWriter.dumpSPTVisualizationData(
+                bestPath1ToBoundary, bestPath2ToBoundary,
+                bestSplitVertex1, bestSplitVertex2,
+                splitToOriginalMap, sourceNeighbors, sinkNeighbors, flow, coordConversion);
         System.out.println("TIME: time01-time00: " + (time01-time00) + ", time02-time01:" + (time02-time01) + ", time03-time02:" + (time03-time02)  + ", time1-time03:" + (time1-time03) + ", time2-time1:" + (time2-time1) + ", time3-time2:" + (time3-time2) + ", time4-time3:" + (time4-time3) + ", time5-time4:" + (time5-time4) + ", time6-time5" + (time6-time5));
 
 
@@ -242,655 +278,6 @@ public class MaxFlowReif implements MaxFlow {
         }
     }
 
-    private void dumpVisualizationData(List<Vertex> externalBoundary, List<Vertex> sourceBoundary,
-                                       List<Vertex> sinkBoundary, List<Vertex> stPath, List<Vertex> bestPath,
-                                       Map<Long, NeighborSplit> neighborSplits,
-                                       HashSet<VertexOfDualGraph> sourceNeighbors,
-                                       HashSet<VertexOfDualGraph> sinkNeighbors,
-                                       double size,
-                                       Graph<Vertex> graph) {
-        try {
-            String subDirName = String.format("flow_%d_%d_%f", sourceNeighbors.size(), sinkNeighbors.size(), size);
-            String baseDir = "src/main/output/reif_flow_debug/";
-            String outputDir = baseDir + subDirName + "/";
-
-            java.io.File dir = new java.io.File(outputDir);
-            if (!dir.exists()) {
-                dir.mkdirs();
-            }
-
-            writeVertexListToFile(outputDir + "external_boundary.txt", externalBoundary);
-            writeVertexListToFile(outputDir + "source_boundary.txt", sourceBoundary);
-            writeVertexListToFile(outputDir + "sink_boundary.txt", sinkBoundary);
-            writeVertexListToFile(outputDir + "st_path.txt", stPath);
-
-            if (bestPath != null) {
-                writeVertexListToFile(outputDir + "best_path.txt", bestPath);
-            }
-
-            writeNeighborSplitsToFile(outputDir + "neighbor_splits.txt", neighborSplits);
-            writeDualGraph(outputDir + "dual_graph.txt", dualGraph, source, sink);
-            writeDualGraphWithFlow(outputDir + "dual_graph_flow.txt", dualGraph, source, sink);
-            writePrimalGraph(outputDir + "primal_graph.txt", graph, sourceNeighbors, sinkNeighbors);
-
-            System.out.println("Visualization data saved to " + outputDir);
-        } catch (Exception e) {
-            System.err.println("Error saving visualization data: " + e.getMessage());
-        }
-    }
-
-    private void writeVertexListToFile(String filename, List<Vertex> vertices) throws java.io.IOException {
-        try (java.io.FileWriter writer = new java.io.FileWriter(filename)) {
-            for (Vertex v : vertices) {
-                Vertex geoVertex = coordConversion.fromEuclidean(v);
-                writer.write(String.format("%d %.10f %.10f\n", geoVertex.getName(), geoVertex.x, geoVertex.y));
-            }
-        }
-    }
-
-    private void writeNeighborSplitsToFile(String filename, Map<Long, NeighborSplit> neighborSplits) throws java.io.IOException {
-        System.out.println("Writing neighbor splits, total: " + neighborSplits.size());
-        try (java.io.FileWriter writer = new java.io.FileWriter(filename)) {
-
-            for (Map.Entry<Long, NeighborSplit> entry : neighborSplits.entrySet()) {
-                long vertexId = entry.getKey();
-                NeighborSplit split = entry.getValue();
-
-                // Используем сохраненную в NeighborSplit вершину
-                Vertex vertex = split.vertex;
-                Vertex geoVertex = coordConversion.fromEuclidean(vertex);
-                writer.write(String.format("%d %.10f %.10f\n", geoVertex.getName(), geoVertex.x, geoVertex.y));
-
-                for (Vertex neighbor : split.pathNeighbors) {
-                    Vertex geoNeighbor = coordConversion.fromEuclidean(neighbor);
-                    writer.write(String.format("PATH %d %.10f %.10f\n",
-                            geoNeighbor.getName(), geoNeighbor.x, geoNeighbor.y));
-                }
-
-                for (Vertex neighbor : split.leftNeighbors) {
-                    Vertex geoNeighbor = coordConversion.fromEuclidean(neighbor);
-                    writer.write(String.format("LEFT %d %.10f %.10f\n",
-                            geoNeighbor.getName(), geoNeighbor.x, geoNeighbor.y));
-                }
-
-                for (Vertex neighbor : split.rightNeighbors) {
-                    Vertex geoNeighbor = coordConversion.fromEuclidean(neighbor);
-                    writer.write(String.format("RIGHT %d %.10f %.10f\n",
-                            geoNeighbor.getName(), geoNeighbor.x, geoNeighbor.y));
-                }
-
-                writer.write("---\n");
-            }
-            System.out.println("Neighbor splits file written");
-        }
-    }
-
-    private void writePrimalGraph(String filename, Graph<Vertex> graph,
-                                  HashSet<VertexOfDualGraph> sourceNeighbors,
-                                  HashSet<VertexOfDualGraph> sinkNeighbors) throws java.io.IOException {
-        // Внешняя грань существует только в двойственном графе, не в исходном
-        // Поэтому включаем все вершины, включая с name = 0
-        
-        try (java.io.FileWriter writer = new java.io.FileWriter(filename)) {
-            // Записываем все вершины
-            writer.write("VERTICES\n");
-            int vertexCount = 0;
-            for (Vertex v : graph.verticesArray()) {
-                Vertex geoVertex = coordConversion.fromEuclidean(v);
-                writer.write(String.format("%d %.10f %.10f\n",
-                        v.getName(), geoVertex.x, geoVertex.y));
-                vertexCount++;
-            }
-            System.out.println("Wrote " + vertexCount + " vertices to primal graph");
-
-            // Записываем рёбра (неориентированные, каждое только один раз)
-            writer.write("EDGES\n");
-            Set<String> recordedEdges = new HashSet<>();
-            int edgeCount = 0;
-
-            for (Vertex v1 : graph.verticesArray()) {
-                if (graph.getEdges().get(v1) == null) continue;
-
-                for (Vertex v2 : graph.getEdges().get(v1).keySet()) {
-                    long id1 = v1.getName();
-                    long id2 = v2.getName();
-                    String edgeKey = (id1 < id2) ? (id1 + "_" + id2) : (id2 + "_" + id1);
-
-                    if (!recordedEdges.contains(edgeKey)) {
-                        recordedEdges.add(edgeKey);
-                        double length = graph.getEdges().get(v1).get(v2).length;
-                        writer.write(String.format("%d %d %.6f\n",
-                                Math.min(id1, id2), Math.max(id1, id2), length));
-                        edgeCount++;
-                    }
-                }
-            }
-            System.out.println("Wrote " + edgeCount + " edges to primal graph");
-        }
-    }
-
-    private void writeDualGraph(String filename, Graph<VertexOfDualGraph> dualGraph,
-                                VertexOfDualGraph source, VertexOfDualGraph sink) throws java.io.IOException {
-        try (java.io.FileWriter writer = new java.io.FileWriter(filename)) {
-            // Записываем вершины двойственного графа (центроиды граней)
-            writer.write("VERTICES\n");
-            for (VertexOfDualGraph face : dualGraph.verticesArray()) {
-                List<Vertex> faceVertices = face.getVerticesOfFace();
-                if (faceVertices == null || faceVertices.isEmpty()) continue;
-
-                double sumX = 0, sumY = 0;
-                for (Vertex v : faceVertices) {
-                    sumX += v.x;
-                    sumY += v.y;
-                }
-                double centroidX = sumX / faceVertices.size();
-                double centroidY = sumY / faceVertices.size();
-
-                Vertex euclideanCentroid = new Vertex(face.getName(), centroidX, centroidY, 0);
-                Vertex geoCentroid = coordConversion.fromEuclidean(euclideanCentroid);
-
-                String type = "NORMAL";
-                if (face.equals(source)) type = "SOURCE";
-                else if (face.equals(sink)) type = "SINK";
-
-                writer.write(String.format("%d %.10f %.10f %s\n",
-                        face.getName(), geoCentroid.x, geoCentroid.y, type));
-            }
-
-            // Записываем рёбра без информации о потоке
-            writer.write("EDGES\n");
-            Set<String> recordedEdges = new HashSet<>();
-
-            for (VertexOfDualGraph face : dualGraph.verticesArray()) {
-                if (dualGraph.getEdges().get(face) == null) continue;
-
-                for (Map.Entry<VertexOfDualGraph, Edge> edgeEntry : dualGraph.getEdges().get(face).entrySet()) {
-                    VertexOfDualGraph neighbor = edgeEntry.getKey();
-                    Edge edge = edgeEntry.getValue();
-
-                    long id1 = face.getName();
-                    long id2 = neighbor.getName();
-                    String edgeKey = (id1 < id2) ? (id1 + "_" + id2) : (id2 + "_" + id1);
-
-                    if (!recordedEdges.contains(edgeKey)) {
-                        recordedEdges.add(edgeKey);
-
-                        double bandwidth = edge.getBandwidth();
-                        writer.write(String.format("%d %d %.6f\n",
-                                Math.min(id1, id2), Math.max(id1, id2), bandwidth));
-                    }
-                }
-            }
-        }
-    }
-
-    private void writeDualGraphWithFlow(String filename, Graph<VertexOfDualGraph> dualGraph,
-                                        VertexOfDualGraph source, VertexOfDualGraph sink) throws java.io.IOException {
-        try (java.io.FileWriter writer = new java.io.FileWriter(filename)) {
-            // Сначала записываем вершины двойственного графа (центроиды граней)
-            writer.write("VERTICES\n");
-            for (VertexOfDualGraph face : dualGraph.verticesArray()) {
-                // Вычисляем центроид грани
-                List<Vertex> faceVertices = face.getVerticesOfFace();
-                if (faceVertices == null || faceVertices.isEmpty()) continue;
-
-                double sumX = 0, sumY = 0;
-                for (Vertex v : faceVertices) {
-                    sumX += v.x;
-                    sumY += v.y;
-                }
-                double centroidX = sumX / faceVertices.size();
-                double centroidY = sumY / faceVertices.size();
-
-                // Конвертируем в географические координаты
-                Vertex euclideanCentroid = new Vertex(face.getName(), centroidX, centroidY, 0);
-                Vertex geoCentroid = coordConversion.fromEuclidean(euclideanCentroid);
-
-                // Определяем тип вершины
-                String type = "NORMAL";
-                if (face.equals(source)) type = "SOURCE";
-                else if (face.equals(sink)) type = "SINK";
-
-                writer.write(String.format("%d %.10f %.10f %s\n",
-                        face.getName(), geoCentroid.x, geoCentroid.y, type));
-            }
-
-            // Затем записываем рёбра с информацией о потоке
-            writer.write("EDGES\n");
-            Set<String> recordedEdges = new HashSet<>();
-
-            for (VertexOfDualGraph face : dualGraph.verticesArray()) {
-                if (dualGraph.getEdges().get(face) == null) continue;
-
-                for (Map.Entry<VertexOfDualGraph, Edge> edgeEntry : dualGraph.getEdges().get(face).entrySet()) {
-                    VertexOfDualGraph neighbor = edgeEntry.getKey();
-                    Edge edge = edgeEntry.getValue();
-
-                    // Создаём уникальный ключ для ребра (неориентированного)
-                    long id1 = face.getName();
-                    long id2 = neighbor.getName();
-                    String edgeKey = (id1 < id2) ? (id1 + "_" + id2) : (id2 + "_" + id1);
-
-                    // Записываем каждое ребро только один раз (как неориентированное)
-                    if (!recordedEdges.contains(edgeKey)) {
-                        recordedEdges.add(edgeKey);
-
-                        double bandwidth = edge.getBandwidth();
-                        double flow = edge.flow;
-                        boolean isSaturated = Math.abs(flow - bandwidth) < 1e-9 && flow > 1e-9;
-
-                        // Записываем в порядке возрастания ID для единообразия
-                        writer.write(String.format("%d %d %.6f %.6f %s\n",
-                                Math.min(id1, id2), Math.max(id1, id2), bandwidth, flow,
-                                isSaturated ? "SATURATED" : "NORMAL"));
-                    }
-                }
-            }
-        }
-    }
-
-    private static class NeighborSplit {
-        Vertex vertex;  // Сама вершина, которую разделяем
-        List<Vertex> pathNeighbors;
-        List<Vertex> leftNeighbors;
-        List<Vertex> rightNeighbors;
-
-        NeighborSplit(Vertex vertex, List<Vertex> path, List<Vertex> left, List<Vertex> right) {
-            this.vertex = vertex;
-            this.pathNeighbors = path;
-            this.leftNeighbors = left;
-            this.rightNeighbors = right;
-        }
-    }
-
-    private Map<Long, NeighborSplit> preprocessNeighborSplits(Graph<Vertex> graph, List<Vertex> path,
-                                                              List<Vertex> sourceBoundary, List<Vertex> sinkBoundary) {
-        System.out.println("Preprocessing neighbor splits for " + path.size() + " vertices in path");
-        Map<Long, NeighborSplit> splits = new HashMap<>();
-
-        Set<Long> sourceBoundaryNames = sourceBoundary.stream().map(Vertex::getName).collect(Collectors.toSet());
-        Set<Long> sinkBoundaryNames = sinkBoundary.stream().map(Vertex::getName).collect(Collectors.toSet());
-        var orderedEdges = graph.arrangeByAngle();
-
-        for (int i = 0; i < path.size(); i++) {
-            Vertex currentVertex = path.get(i);
-
-            Vertex prevVertex = (i > 0) ? path.get(i - 1) : null;
-            Vertex nextVertex = (i < path.size() - 1) ? path.get(i + 1) : null;
-
-            boolean isFirstVertex = (prevVertex == null);
-            boolean isLastVertex = (nextVertex == null);
-            boolean isOnBothBoundaries = sourceBoundaryNames.contains(currentVertex.getName())
-                    && sinkBoundaryNames.contains(currentVertex.getName());
-
-            if (isOnBothBoundaries && (isFirstVertex || isLastVertex || path.size() == 1)) {
-                NeighborSplit split = handleBoundaryIntersectionVertex(graph, currentVertex,
-                        sourceBoundary, sinkBoundary);
-                splits.put(currentVertex.getName(), split);
-                continue;
-            }
-
-            var curVertexEdges = orderedEdges.get(currentVertex).stream().toList();
-            List<Vertex> pathNeighbors = new ArrayList<>();
-            List<Vertex> leftNeighbors = new ArrayList<>();
-            List<Vertex> rightNeighbors = new ArrayList<>();
-
-            if (!isFirstVertex && !isLastVertex) {
-                pathNeighbors.add(prevVertex);
-                pathNeighbors.add(nextVertex);
-
-                int prevVertexEdgeIdx = -1;
-                int nextVertexEdgeIdx = -1;
-
-                for (int j = 0; j < curVertexEdges.size(); j++) {
-                    var edge = curVertexEdges.get(j);
-                    if (edge.begin.equals(edge.end)) {
-                        continue;
-                    }
-
-                    if (edge.end.equals(prevVertex)) {
-                        prevVertexEdgeIdx = j;
-                    }
-                    if (edge.end.equals(nextVertex)) {
-                        nextVertexEdgeIdx = j;
-                    }
-                    if (prevVertexEdgeIdx != -1 && nextVertexEdgeIdx != -1) {
-                        break;
-                    }
-                }
-
-
-                if (prevVertexEdgeIdx != -1 && nextVertexEdgeIdx != -1) {
-                    // Убеждаемся, что prevVertexEdgeIdx < nextVertexEdgeIdx
-                    // Если нет, то меняем их местами и инвертируем стороны
-                    int firstIdx = prevVertexEdgeIdx;
-                    int secondIdx = nextVertexEdgeIdx;
-                    boolean shouldSwapSides = false;
-
-                    if (firstIdx > secondIdx) {
-                        int temp = firstIdx;
-                        firstIdx = secondIdx;
-                        secondIdx = temp;
-                        shouldSwapSides = true;
-                    }
-
-                    for (int j = 0; j < curVertexEdges.size(); j++) {
-                        var edge = curVertexEdges.get(j);
-                        if (edge.begin.equals(edge.end)) {
-                            continue;
-                        }
-
-                        if (edge.end.equals(prevVertex) || edge.end.equals(nextVertex)) {
-                            continue;
-                        }
-
-                        // Соседи между двумя рёбрами пути
-                        boolean isBetween = (j > firstIdx && j < secondIdx);
-
-                        if (shouldSwapSides) {
-                            // Если мы поменяли индексы местами, то меняем и стороны
-                            if (isBetween) {
-                                leftNeighbors.add(edge.end);
-                            } else {
-                                rightNeighbors.add(edge.end);
-                            }
-                        } else {
-                            if (isBetween) {
-                                rightNeighbors.add(edge.end);
-                            } else {
-                                leftNeighbors.add(edge.end);
-                            }
-                        }
-                    }
-                } else {
-                    System.err.println("Warning: could not find path edges for vertex " + currentVertex.getName());
-                }
-            } else {
-                double pathDirX, pathDirY;
-                List<Vertex> boundaryToUse = isFirstVertex ? sourceBoundary : sinkBoundary;
-                List<Vertex> boundaryNeighbors = new ArrayList<>();
-                for (int j = 0; j < boundaryToUse.size(); j++) {
-                    Vertex bv = boundaryToUse.get(j);
-                    if (bv.getName() == currentVertex.getName()) {
-                        boundaryNeighbors.add(boundaryToUse.get((j + 1) % boundaryToUse.size()));
-                        boundaryNeighbors.add(boundaryToUse.get((j - 1 + boundaryToUse.size()) % boundaryToUse.size()));
-                        break;
-                    }
-                }
-
-                System.out.println("Boundary neighbors: " + boundaryNeighbors.size());
-                if (boundaryNeighbors.size() == 2) {
-                    Vertex bn1 = boundaryNeighbors.get(0);
-                    Vertex bn2 = boundaryNeighbors.get(1);
-
-                    double vec1X = bn1.x - currentVertex.x;
-                    double vec1Y = bn1.y - currentVertex.y;
-                    double vec2X = bn2.x - currentVertex.x;
-                    double vec2Y = bn2.y - currentVertex.y;
-
-                    double len1 = Math.sqrt(vec1X * vec1X + vec1Y * vec1Y);
-                    double len2 = Math.sqrt(vec2X * vec2X + vec2Y * vec2Y);
-                    if (len1 > 1e-10) { vec1X /= len1; vec1Y /= len1; }
-                    if (len2 > 1e-10) { vec2X /= len2; vec2Y /= len2; }
-
-                    pathDirX = vec1X + vec2X;
-                    pathDirY = vec1Y + vec2Y;
-                } else {
-                    System.out.println("BROKEN BOUNDARY FOR VERTEX " + currentVertex.getName() + " NEIGHBORS: " + boundaryNeighbors.stream().map(Vertex::getName).collect(Collectors.toList()));
-                    for (Vertex neighbor : boundaryToUse) {
-                        if (graph.getEdges().get(neighbor) != null) {
-                            System.out.println("vertex: " + neighbor.getName() + " neighbors size: " + graph.getEdges().get(neighbor).keySet().size() + " neighbors: " + graph.getEdges().get(neighbor).keySet().stream().map(Vertex::getName).collect(Collectors.toList()));
-                        } else {
-                            System.out.println("vertex: " + neighbor.getName() + " neighbors size: 0");
-                        }
-                    }
-                    throw new RuntimeException("broken boundary, neighbors: " + boundaryNeighbors.size() + " neighbors: " + boundaryNeighbors.stream().map(Vertex::getName).collect(Collectors.toList()) + " currentVertex: " + currentVertex.getName());
-                }
-
-                double pathLen = Math.sqrt(pathDirX * pathDirX + pathDirY * pathDirY);
-                pathDirX /= pathLen;
-                pathDirY /= pathLen;
-
-                Set<Long> pathVertexNames = path.stream().map(Vertex::getName).collect(Collectors.toSet());
-
-                for (Vertex neighbor : graph.getEdges().get(currentVertex).keySet()) {
-                    if (pathVertexNames.contains(neighbor.getName())) {
-                        pathNeighbors.add(neighbor);
-                    } else {
-                        double toNeighborX = neighbor.x - currentVertex.x;
-                        double toNeighborY = neighbor.y - currentVertex.y;
-
-                        double crossProduct = pathDirX * toNeighborY - pathDirY * toNeighborX;
-                        if (crossProduct >= 0) {
-                            leftNeighbors.add(neighbor);
-                        } else {
-                            rightNeighbors.add(neighbor);
-                        }
-                    }
-                }
-            }
-
-            System.out.println("Vertex " + currentVertex.getName() + ": Path=" + pathNeighbors.size() + ", Left=" + leftNeighbors.size() + ", Right=" + rightNeighbors.size());
-            splits.put(currentVertex.getName(), new NeighborSplit(currentVertex, pathNeighbors, leftNeighbors, rightNeighbors));
-        }
-
-        System.out.println("Preprocessed " + splits.size() + " neighbor splits");
-        return splits;
-    }
-
-    private NeighborSplit handleBoundaryIntersectionVertex(Graph<Vertex> graph, Vertex currentVertex,
-                                                           List<Vertex> sourceBoundary, List<Vertex> sinkBoundary) {
-        var angle = graph.arrangeByAngle();
-        List<Vertex> leftNeighbors = new ArrayList<>();
-        List<Vertex> rightNeighbors = new ArrayList<>();
-        List<EdgeOfGraph<Vertex>> neighbors = new ArrayList<>();
-        for (var edge: angle.get(currentVertex)) {
-            if (!edge.begin.equals(edge.end)) {
-                neighbors.add(edge);
-            }
-        }
-
-        if (neighbors.size() == 2) {
-            return new NeighborSplit(currentVertex, List.of(), List.of(neighbors.get(0).end), List.of(neighbors.get(1).end));
-        } else if (neighbors.size() == 3) {
-            for (var n: neighbors) {
-                if (sourceBoundary.contains(n.end) && sinkBoundary.contains(n.end)) {
-                    boolean ok1 = false;
-                    int sinkLen = sinkBoundary.size();
-                    for (int ptr = 0; ptr < sinkBoundary.size(); ptr++) {
-                        if (sinkBoundary.get(ptr).equals(n.end) &&
-                                (sinkBoundary.get((ptr + 1) % sinkLen).equals(currentVertex)
-                                        || sinkBoundary.get((ptr - 1 + sinkLen) % sinkLen).equals(currentVertex))) {
-                            ok1 = true;
-                            break;
-                        }
-                    }
-                    boolean ok2 = false;
-                    int sourceLen = sourceBoundary.size();
-                    for (int ptr = 0; ptr < sourceBoundary.size(); ptr++) {
-                        if (sourceBoundary.get(ptr).equals(n.end) &&
-                                (sourceBoundary.get((ptr + 1) % sourceLen).equals(currentVertex)
-                                        || sourceBoundary.get((ptr - 1 + sourceLen) % sourceLen).equals(currentVertex))) {
-                            ok2 = true;
-                            break;
-                        }
-                    }
-                    if (ok1 && ok2) {
-                        rightNeighbors.add(n.end);
-                    } else {
-                        leftNeighbors.add(n.end);
-                    }
-                } else {
-                    leftNeighbors.add(n.end);
-                }
-            }
-            if (rightNeighbors.isEmpty()) {
-                throw new RuntimeException("no common neighbor");
-            }
-
-            return new NeighborSplit(currentVertex, List.of(), leftNeighbors, rightNeighbors);
-        }
-
-        int meetSink = 0, meetSource = 0, prevMeetSink = 0, prevMeetSource = 0;
-        boolean isRight = true;
-        System.out.println("split for " + currentVertex.name);
-        for (var edge: angle.get(currentVertex)) {
-            if (edge.begin.equals(edge.end)) {
-                continue;
-            }
-            int newMeetSink = meetSink;
-            if (sinkBoundary.contains(edge.end)) {
-                boolean ok = false;
-                int sinkLen = sinkBoundary.size();
-                for (int ptr = 0; ptr < sinkBoundary.size(); ptr++) {
-                    if (sinkBoundary.get(ptr).equals(edge.end) &&
-                            (sinkBoundary.get((ptr + 1) % sinkLen).equals(currentVertex)
-                            || sinkBoundary.get((ptr - 1 + sinkLen) % sinkLen).equals(currentVertex))) {
-                        ok = true;
-                        break;
-                    }
-                }
-                if (ok) {
-                    newMeetSink++;
-                }
-            }
-            int newMeetSource = meetSource;
-            if (sourceBoundary.contains(edge.end)) {
-                boolean ok = false;
-                int sourceLen = sourceBoundary.size();
-                for (int ptr = 0; ptr < sourceBoundary.size(); ptr++) {
-                    if (sourceBoundary.get(ptr).equals(edge.end) &&
-                            (sourceBoundary.get((ptr + 1) % sourceLen).equals(currentVertex)
-                                    || sourceBoundary.get((ptr - 1 + sourceLen) % sourceLen).equals(currentVertex))) {
-                        ok = true;
-                        break;
-                    }
-                }
-                if (ok) {
-                    newMeetSource++;
-                }
-            }
-            if (meetSink == newMeetSink && meetSource == newMeetSource) {
-                if (isRight) {
-                    System.out.println("to right without modifications, vertex " + edge.end.name + " " + meetSource + " " + meetSink + " " + prevMeetSource + " " + prevMeetSink);
-                    rightNeighbors.add(edge.end);
-                } else {
-                    System.out.println("to left without modifications, vertex " + edge.end.name + " " + meetSource + " " + meetSink + " " + prevMeetSource + " " + prevMeetSink);
-                    leftNeighbors.add(edge.end);
-                }
-                prevMeetSink = meetSink;
-                prevMeetSource = meetSource;
-                continue;
-            }
-            isRight = !((newMeetSink == 2 && (newMeetSource < 2 || (prevMeetSource == 1 && prevMeetSink == 1)))
-                    || (newMeetSource == 2 && (newMeetSink < 2 || (prevMeetSink == 1 && prevMeetSource == 1)))
-                    || (newMeetSource == 2 && newMeetSink == 2 && meetSource == 1 && meetSink == 1));
-            prevMeetSink = meetSink;
-            prevMeetSource = meetSource;
-            meetSink = newMeetSink;
-            meetSource = newMeetSource;
-            if (isRight) {
-                System.out.println("to right with modifications, vertex " + edge.end.name + " " + meetSource + " " + meetSink + " " + prevMeetSource + " " + prevMeetSink);
-                rightNeighbors.add(edge.end);
-            } else {
-                System.out.println("to left with modifications, vertex " + edge.end.name + " " + meetSource + " " + meetSink + " " + prevMeetSource + " " + prevMeetSink);
-                leftNeighbors.add(edge.end);
-            }
-        }
-
-        return new NeighborSplit(currentVertex, List.of(), leftNeighbors, rightNeighbors);
-    }
-
-    private Map.Entry<Vertex, Vertex> splitVertex(Graph<Vertex> splitGraph, Vertex vertex,
-                                                  Map<Vertex, Vertex> splitToOriginalMap,
-                                                  Map<Long, NeighborSplit> neighborSplits) {
-        long originalName = vertex.getName();
-        Vertex splitVertex1 = new Vertex(originalName * 1000 + 1, vertex.x, vertex.y, vertex.getWeight());
-        Vertex splitVertex2 = new Vertex(originalName * 1000 + 2, vertex.x, vertex.y, vertex.getWeight());
-
-        splitToOriginalMap.put(splitVertex1, vertex);
-        splitToOriginalMap.put(splitVertex2, vertex);
-
-        splitGraph.addVertex(splitVertex1);
-        splitGraph.addVertex(splitVertex2);
-
-        Vertex vertexInGraph = null;
-        for (Vertex v : splitGraph.verticesArray()) {
-            if (v.getName() == originalName) {
-                vertexInGraph = v;
-                break;
-            }
-        }
-
-        if (vertexInGraph == null || splitGraph.getEdges().get(vertexInGraph) == null) {
-            return new AbstractMap.SimpleEntry<>(splitVertex1, splitVertex2);
-        }
-
-        List<Vertex> neighbors = new ArrayList<>(splitGraph.getEdges().get(vertexInGraph).keySet());
-
-        if (neighbors.isEmpty()) {
-            splitGraph.deleteVertex(vertexInGraph);
-            return new AbstractMap.SimpleEntry<>(splitVertex1, splitVertex2);
-        }
-
-        NeighborSplit split = neighborSplits.get(originalName);
-
-        if (split != null) {
-            for (Vertex neighbor : split.pathNeighbors) {
-                Vertex neighborInGraph = null;
-                for (Vertex v : splitGraph.verticesArray()) {
-                    if (v.getName() == neighbor.getName()) {
-                        neighborInGraph = v;
-                        break;
-                    }
-                }
-
-                if (neighborInGraph != null) {
-                    double edgeLength = splitGraph.getEdges().get(vertexInGraph).get(neighborInGraph).length;
-                    splitGraph.addEdge(splitVertex1, neighborInGraph, edgeLength);
-                    splitGraph.addEdge(splitVertex2, neighborInGraph, edgeLength);
-                }
-            }
-
-            for (Vertex neighbor : split.leftNeighbors) {
-                Vertex neighborInGraph = null;
-                for (Vertex v : splitGraph.verticesArray()) {
-                    if (v.getName() == neighbor.getName()) {
-                        neighborInGraph = v;
-                        break;
-                    }
-                }
-
-                if (neighborInGraph != null) {
-                    double edgeLength = splitGraph.getEdges().get(vertexInGraph).get(neighborInGraph).length;
-                    splitGraph.addEdge(splitVertex1, neighborInGraph, edgeLength);
-                }
-            }
-
-            for (Vertex neighbor : split.rightNeighbors) {
-                Vertex neighborInGraph = null;
-                for (Vertex v : splitGraph.verticesArray()) {
-                    if (v.getName() == neighbor.getName()) {
-                        neighborInGraph = v;
-                        break;
-                    }
-                }
-
-                if (neighborInGraph != null) {
-                    double edgeLength = splitGraph.getEdges().get(vertexInGraph).get(neighborInGraph).length;
-                    splitGraph.addEdge(splitVertex2, neighborInGraph, edgeLength);
-                }
-            }
-        } else {
-            System.out.println("No split found for vertex " + vertex.getName());
-        }
-
-        splitGraph.deleteVertex(vertexInGraph);
-
-        return new AbstractMap.SimpleEntry<>(splitVertex1, splitVertex2);
-    }
-
-
     private DijkstraResult dijkstraMultiSource(Graph<Vertex> graph, List<Vertex> sourceVertices, List<Vertex> targetBoundary) {
         Map<Vertex, Double> distances = new HashMap<>();
         Map<Vertex, Vertex> previous = new HashMap<>();
@@ -949,7 +336,47 @@ public class MaxFlowReif implements MaxFlow {
             current = previous.get(current);
         }
 
-        return new DijkstraResult(path, minDistance);
+        return new DijkstraResult(path, minDistance, previous, distances, new ArrayList<>());
+    }
+
+    private DijkstraResult dijkstraMultiSourceWithRegionWeights(
+            Graph<Vertex> graph,
+            List<Vertex> sourceVertices,
+            List<Vertex> targetBoundary,
+            Graph<VertexOfDualGraph> dualGraph,
+            List<Vertex> sourceCorners,
+            List<Vertex> sinkCorners,
+            boolean isSourceSide) {
+
+        DijkstraResult defaultResult = dijkstraMultiSource(graph, sourceVertices, targetBoundary);
+        if (defaultResult == null) {
+            return null;
+        }
+
+        Set<Long> boundaryNames = targetBoundary.stream()
+                .map(Vertex::getName)
+                .collect(Collectors.toSet());
+
+        List<Vertex> boundaryLeaves = new ArrayList<>();
+        for (Vertex v : graph.verticesArray()) {
+            if (boundaryNames.contains(v.getName()) && defaultResult.distances.get(v) < Double.MAX_VALUE) {
+                boundaryLeaves.add(v);
+            }
+        }
+
+        defaultResult.boundaryLeaves = boundaryLeaves;
+
+        Vertex singleSource = sourceVertices.size() == 1 ? sourceVertices.get(0) : null;
+        if (singleSource != null && dualGraph != null) {
+            SPTWithRegionWeights spt = buildSPTWithRegionWeights(
+                    graph, defaultResult.previous, singleSource, targetBoundary, dualGraph,
+                    sourceCorners, sinkCorners, isSourceSide);
+            defaultResult.leftRegionWeights = spt.leftRegionWeights;
+            defaultResult.boundaryLeaves = spt.boundaryLeaves;
+            defaultResult.totalRegionWeight = spt.totalRegionWeight;
+        }
+
+        return defaultResult;
     }
 
     private double fillFlowInDualGraph(List<Vertex> path, Graph<VertexOfDualGraph> dualGraph) {
@@ -957,6 +384,7 @@ public class MaxFlowReif implements MaxFlow {
             return 0.0;
         }
         double totalFlow = 0.0;
+        var edgeToDualVertexMap = initGraph.getEdgeToDualVertexMap();
 
         for (int i = 0; i < path.size() - 1; i++) {
             Vertex v1 = path.get(i);
@@ -1010,13 +438,332 @@ public class MaxFlowReif implements MaxFlow {
         }
     }
 
-    private static class DijkstraResult {
+    public static class DijkstraResult {
         List<Vertex> path;
         double distance;
+        public Map<Vertex, Vertex> previous;
+        public Map<Vertex, Double> distances;
+        public List<Vertex> boundaryLeaves;
+        public Map<Vertex, Double> leftRegionWeights;
+        public double totalRegionWeight;
 
-        DijkstraResult(List<Vertex> path, double distance) {
+        DijkstraResult(List<Vertex> path, double distance, Map<Vertex, Vertex> previous, 
+                       Map<Vertex, Double> distances, List<Vertex> boundaryLeaves) {
             this.path = path;
             this.distance = distance;
+            this.previous = previous;
+            this.distances = distances;
+            this.boundaryLeaves = boundaryLeaves;
+            this.leftRegionWeights = new HashMap<>();
+            this.totalRegionWeight = 0.0;
+        }
+    }
+
+    private static class SPTWithRegionWeights {
+        List<VertexOfDualGraph> faces;
+        List<Double> regionWeights;
+        Vertex root;
+        Map<Vertex, Vertex> previous;
+        Map<Vertex, List<Vertex>> children;
+        List<Vertex> boundaryLeaves;
+        Map<Vertex, Double> leftRegionWeights;
+        double totalRegionWeight;
+
+        SPTWithRegionWeights(Vertex root) {
+            this.root = root;
+            this.previous = new HashMap<>();
+            this.children = new HashMap<>();
+            this.boundaryLeaves = new ArrayList<>();
+            this.leftRegionWeights = new HashMap<>();
+            this.totalRegionWeight = 0.0;
+            this.faces = new ArrayList<>();
+            this.regionWeights = new ArrayList<>();
+        }
+    }
+
+    private SPTWithRegionWeights buildSPTWithRegionWeights(
+            Graph<Vertex> graph,
+            Map<Vertex, Vertex> previous,
+            Vertex sourceVertex,
+            List<Vertex> externalBoundary,
+            Graph<VertexOfDualGraph> dualGraph,
+            List<Vertex> sourceCorners,
+            List<Vertex> sinkCorners,
+            boolean isSourceSide) {
+
+        SPTWithRegionWeights spt = new SPTWithRegionWeights(sourceVertex);
+        spt.previous = new HashMap<>(previous);
+
+        for (Vertex v : graph.verticesArray()) {
+            spt.children.put(v, new ArrayList<>());
+        }
+        
+        for (Map.Entry<Vertex, Vertex> entry : previous.entrySet()) {
+            Vertex child = entry.getKey();
+            Vertex parent = entry.getValue();
+            if (parent != null) {
+                spt.children.get(parent).add(child);
+            }
+        }
+        
+        var orderedEdges = graph.arrangeByAngle();
+        for (Vertex v : spt.children.keySet()) {
+            List<Vertex> childrenList = spt.children.get(v);
+            if (childrenList.size() > 1 && orderedEdges.containsKey(v)) {
+                var angleOrderedEdges = orderedEdges.get(v).stream().toList();
+                
+                Map<Long, Integer> vertexToAngleIndex = new HashMap<>();
+                for (int i = 0; i < angleOrderedEdges.size(); i++) {
+                    vertexToAngleIndex.put(angleOrderedEdges.get(i).end.getName(), i);
+                }
+                
+                childrenList.sort((a, b) -> {
+                    int idxA = vertexToAngleIndex.getOrDefault(a.getName(), 0);
+                    int idxB = vertexToAngleIndex.getOrDefault(b.getName(), 0);
+                    return Integer.compare(idxA, idxB);
+                });
+            }
+        }
+        
+        Set<Long> boundaryNames = externalBoundary.stream()
+                .map(Vertex::getName)
+                .collect(Collectors.toSet());
+        
+        List<Vertex> boundaryVerticesInSPT = new ArrayList<>();
+        for (Vertex v : graph.verticesArray()) {
+            if (boundaryNames.contains(v.getName()) && previous.containsKey(v)) {
+                boundaryVerticesInSPT.add(v);
+            }
+        }
+        
+        Map<Long, Integer> boundaryOrderMap = new HashMap<>();
+        for (int i = 0; i < externalBoundary.size(); i++) {
+            boundaryOrderMap.put(externalBoundary.get(i).getName(), i);
+        }
+
+        List<Vertex> relevantCorners = isSourceSide ? sourceCorners : sinkCorners;
+        
+        int boundarySegmentStart = 0;
+        int boundarySegmentEnd = externalBoundary.size();
+        int n = externalBoundary.size();
+        
+        if (relevantCorners.size() >= 2) {
+            List<Integer> cornerPositions = new ArrayList<>();
+            for (Vertex corner : relevantCorners) {
+                Integer pos = boundaryOrderMap.get(corner.getName());
+                if (pos != null) {
+                    cornerPositions.add(pos);
+                }
+            }
+            
+            if (cornerPositions.size() >= 2) {
+                Collections.sort(cornerPositions);
+                int firstCornerPos = cornerPositions.get(0);
+                int lastCornerPos = cornerPositions.get(cornerPositions.size() - 1);
+                
+                int countBetween = 0;
+                int countOutside = 0;
+                
+                for (Vertex leaf : boundaryVerticesInSPT) {
+                    int pos = boundaryOrderMap.getOrDefault(leaf.getName(), 0);
+                    if (pos >= firstCornerPos && pos <= lastCornerPos) {
+                        countBetween++;
+                    } else {
+                        countOutside++;
+                    }
+                }
+                
+                if (countBetween >= countOutside) {
+                    boundarySegmentStart = firstCornerPos;
+                    boundarySegmentEnd = lastCornerPos;
+                    } else {
+                    boundarySegmentStart = lastCornerPos;
+                    boundarySegmentEnd = firstCornerPos + n;
+                }
+                
+                System.out.println("Boundary segment: corners at " + firstCornerPos + ", " + lastCornerPos + 
+                        " -> using [" + boundarySegmentStart + ", " + boundarySegmentEnd + ") (isSourceSide=" + isSourceSide + ")");
+            }
+        }
+        
+        final int finalBoundarySegmentStart = boundarySegmentStart;
+        boundaryVerticesInSPT.sort((a, b) -> {
+            int posA = boundaryOrderMap.getOrDefault(a.getName(), 0);
+            int posB = boundaryOrderMap.getOrDefault(b.getName(), 0);
+            
+            int adjA = (posA - finalBoundarySegmentStart + n) % n;
+            int adjB = (posB - finalBoundarySegmentStart + n) % n;
+            
+            return Integer.compare(adjA, adjB);
+        });
+        
+        System.out.println("Boundary leaves ordering: segmentStart=" + boundarySegmentStart + 
+                ", segmentEnd=" + boundarySegmentEnd + ", numLeaves=" + boundaryVerticesInSPT.size());
+        
+        spt.boundaryLeaves = boundaryVerticesInSPT;
+        
+        computeRegionWeightsByEulerTour(spt, graph, dualGraph);
+        
+        return spt;
+    }
+
+    private void computeRegionWeightsByEulerTour(
+            SPTWithRegionWeights spt,
+            Graph<Vertex> graph,
+            Graph<VertexOfDualGraph> dualGraph) {
+
+        if (spt.boundaryLeaves.isEmpty()) {
+            return;
+        }
+
+        Set<String> sptEdges = new HashSet<>();
+        for (Map.Entry<Vertex, Vertex> entry : spt.previous.entrySet()) {
+            Vertex child = entry.getKey();
+            Vertex parent = entry.getValue();
+            if (parent != null) {
+                sptEdges.add(child.getName() + "_" + parent.getName());
+                sptEdges.add(parent.getName() + "_" + child.getName());
+            }
+        }
+
+        Map<String, VertexOfDualGraph> edgeToLeftFace = new HashMap<>();
+        for (VertexOfDualGraph face : dualGraph.verticesArray()) {
+            List<Vertex> faceVertices = face.getVerticesOfFace();
+            if (faceVertices == null || faceVertices.isEmpty()) continue;
+
+            for (int i = 0; i < faceVertices.size(); i++) {
+                Vertex v1 = faceVertices.get(i);
+                Vertex v2 = faceVertices.get((i + 1) % faceVertices.size());
+                String edgeKey = v1.getName() + "_" + v2.getName();
+                edgeToLeftFace.put(edgeKey, face);
+            }
+        }
+
+        var sortedEdgesByVertex = graph.arrangeByAngle();
+
+        Set<Long> sptVertexNames = new HashSet<>();
+        sptVertexNames.add(spt.root.getName());
+        for (Vertex v : spt.previous.keySet()) {
+            sptVertexNames.add(v.getName());
+        }
+
+        Set<Long> boundaryLeafNames = spt.boundaryLeaves.stream()
+                .map(Vertex::getName)
+                .collect(Collectors.toSet());
+
+        Set<Long> visitedFaces = new HashSet<>();
+
+        int[] currentLeafIndex = {0};
+        double[] cumulativeWeight = {0.0};
+
+        System.out.println("SPT Region weights computation (Euler tour):");
+        System.out.println("  SPT has " + sptEdges.size() / 2 + " edges");
+        System.out.println("  SPT has " + sptVertexNames.size() + " vertices");
+
+        eulerTourDFS(
+                spt.root,
+                null,
+                spt,
+                sortedEdgesByVertex,
+                sptEdges,
+                sptVertexNames,
+                boundaryLeafNames,
+                edgeToLeftFace,
+                visitedFaces,
+                cumulativeWeight,
+                currentLeafIndex
+        );
+
+        spt.totalRegionWeight = cumulativeWeight[0];
+
+        System.out.println("  Total region weight: " + spt.totalRegionWeight);
+        System.out.println("  Visited faces: " + visitedFaces.size());
+    }
+
+    private void eulerTourDFS(
+            Vertex current,
+            Vertex parent,
+            SPTWithRegionWeights spt,
+            Map<Vertex, TreeSet<EdgeOfGraph<Vertex>>> sortedEdgesByVertex,
+            Set<String> sptEdges,
+            Set<Long> sptVertexNames,
+            Set<Long> boundaryLeafNames,
+            Map<String, VertexOfDualGraph> edgeToLeftFace,
+            Set<Long> visitedFaces,
+            double[] cumulativeWeight,
+            int[] currentLeafIndex) {
+
+        TreeSet<EdgeOfGraph<Vertex>> edgesFromCurrent = sortedEdgesByVertex.get(current);
+        if (edgesFromCurrent == null || edgesFromCurrent.isEmpty()) {
+            return;
+        }
+
+        EdgeOfGraph<Vertex> startEdge = null;
+        if (parent != null) {
+            for (EdgeOfGraph<Vertex> edge : edgesFromCurrent) {
+                if (edge.end.getName() == parent.getName()) {
+                    startEdge = edge;
+                    break;
+                }
+            }
+        }
+
+        List<EdgeOfGraph<Vertex>> edgesList = new ArrayList<>(edgesFromCurrent);
+        int startIdx = 0;
+        if (startEdge != null) {
+            for (int i = 0; i < edgesList.size(); i++) {
+                if (edgesList.get(i).end.getName() == parent.getName()) {
+                    startIdx = (i + 1) % edgesList.size();
+                    break;
+                }
+            }
+        }
+
+        for (int i = 0; i < edgesList.size(); i++) {
+            int idx = (startIdx + i) % edgesList.size();
+            EdgeOfGraph<Vertex> edge = edgesList.get(idx);
+            Vertex neighbor = edge.end;
+
+            if (parent != null && neighbor.getName() == parent.getName()) {
+                continue;
+            }
+
+            String edgeKey = current.getName() + "_" + neighbor.getName();
+            boolean isTreeEdge = sptEdges.contains(edgeKey);
+            boolean neighborInSPT = sptVertexNames.contains(neighbor.getName());
+
+            if (isTreeEdge && neighborInSPT) {
+                eulerTourDFS(
+                        neighbor,
+                        current,
+                        spt,
+                        sortedEdgesByVertex,
+                        sptEdges,
+                        sptVertexNames,
+                        boundaryLeafNames,
+                        edgeToLeftFace,
+                        visitedFaces,
+                        cumulativeWeight,
+                        currentLeafIndex
+                );
+            } else if (!isTreeEdge) {
+                String reverseEdgeKey = neighbor.getName() + "_" + current.getName();
+                VertexOfDualGraph rightFace = edgeToLeftFace.get(reverseEdgeKey);
+
+                if (rightFace != null && !visitedFaces.contains(rightFace.getName())) {
+                    visitedFaces.add(rightFace.getName());
+
+                    cumulativeWeight[0] += rightFace.getWeight();
+
+                }
+            }
+        }
+
+        if (boundaryLeafNames.contains(current.getName())) {
+            spt.leftRegionWeights.put(current, cumulativeWeight[0]);
+            System.out.println("  Leaf " + currentLeafIndex[0] + " (vertex " + current.getName() +
+                    "): cumulative=" + cumulativeWeight[0]);
+            currentLeafIndex[0]++;
         }
     }
 }

@@ -176,6 +176,7 @@ public class Main {
 		GraphWriter gw = new GraphWriter(cc);
 
 		String pathToResultDirectory = args[5];
+        graph.buildEdgeToDualVertexMap(preparedGraph);
 
 		long startTime = System.currentTimeMillis();
 		

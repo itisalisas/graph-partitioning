@@ -7,6 +7,7 @@ public class Graph<T extends Vertex> {
      * vertices - keys for HashMap
      */
     private HashMap<T, HashMap<T, Edge>> edges;
+    private HashMap<Vertex, HashMap<Vertex, VertexOfDualGraph>> edgeToDualVertex = new HashMap<>();
 
     public Graph() {
         this.edges = new HashMap<T, HashMap<T, Edge>>();
@@ -487,6 +488,25 @@ public class Graph<T extends Vertex> {
                 addEdge(v, neighbor, v.getLength(neighbor));
             }
         }
+    }
+
+    public void buildEdgeToDualVertexMap(Graph<VertexOfDualGraph> dualGraph) {
+        for (var v: dualGraph.verticesArray()) {
+            List<Vertex> faceVertices = v.getVerticesOfFace();
+            for (int i = 0; i < faceVertices.size(); i++) {
+                var cur = faceVertices.get(i);
+                var next = faceVertices.get((i + 1) % faceVertices.size());
+                if (!edgeToDualVertex.containsKey(cur)) {
+                    edgeToDualVertex.put(cur, new HashMap<>());
+                }
+                HashMap<Vertex, VertexOfDualGraph> map = edgeToDualVertex.get(cur);
+                map.put(next, v);
+            }
+        }
+    }
+
+    public HashMap<Vertex, HashMap<Vertex, VertexOfDualGraph>> getEdgeToDualVertexMap() {
+        return edgeToDualVertex;
     }
 
 }
