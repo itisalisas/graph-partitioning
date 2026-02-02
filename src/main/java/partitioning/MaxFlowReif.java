@@ -28,34 +28,13 @@ public class MaxFlowReif implements MaxFlow {
 
     @Override
     public FlowResult findFlow() {
-        HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph = new HashMap<>();
+        HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph = buildComparisonMap();
         List<VertexOfDualGraph> allDualVertices = dualGraph.verticesArray();
 
-        for (VertexOfDualGraph dualVertex : allDualVertices) {
-            if (!dualVertex.equals(source) && !dualVertex.equals(sink)) {
-                comparisonForDualGraph.put(dualVertex, dualVertex);
-            }
-        }
-
-        HashSet<VertexOfDualGraph> sourceNeighbors = new HashSet<>();
-        HashSet<VertexOfDualGraph> sinkNeighbors = new HashSet<>();
+        HashSet<VertexOfDualGraph> sourceNeighbors = collectNeighbors(source);
+        HashSet<VertexOfDualGraph> sinkNeighbors = collectNeighbors(sink);
+        
         long time00 = System.currentTimeMillis();
-
-        for (VertexOfDualGraph neighbor : dualGraph.getEdges().get(source).keySet()) {
-            if (neighbor.equals(sink) || neighbor.equals(source)) {
-                continue;
-            }
-
-            sourceNeighbors.add(neighbor);
-        }
-
-        for (VertexOfDualGraph neighbor : dualGraph.getEdges().get(sink).keySet()) {
-            if (neighbor.equals(source) || neighbor.equals(sink)) {
-                continue;
-            }
-
-            sinkNeighbors.add(neighbor);
-        }
 
         long time01 = System.currentTimeMillis();
 
@@ -79,23 +58,12 @@ public class MaxFlowReif implements MaxFlow {
 
         Graph<Vertex> modifiedGraph = new Graph<>();
         createModifiedSubgraph(modifiedGraph, sourceBoundary, sinkBoundary, sourceNeighbors, sinkNeighbors, externalBoundary, dualGraph);
+        modifiedGraph.setEdgeToDualVertexMap(initGraph.getEdgeToDualVertexMap());
 
         long time1 = System.currentTimeMillis();
 
-        Set<Long> sourceBoundaryNames = sourceBoundary.stream().map(Vertex::getName).collect(Collectors.toSet());
-        Set<Long> sinkBoundaryNames = sinkBoundary.stream().map(Vertex::getName).collect(Collectors.toSet());
-        
-        List<Vertex> sourceCorners = new ArrayList<>();
-        List<Vertex> sinkCorners = new ArrayList<>();
-        
-        for (Vertex v : externalBoundary) {
-            if (sourceBoundaryNames.contains(v.getName())) {
-                sourceCorners.add(v);
-            }
-            if (sinkBoundaryNames.contains(v.getName())) {
-                sinkCorners.add(v);
-            }
-        }
+        List<Vertex> sourceCorners = findCorners(externalBoundary, sourceBoundary);
+        List<Vertex> sinkCorners = findCorners(externalBoundary, sinkBoundary);
 
         System.out.println("Found " + sourceCorners.size() + " source corners and " + sinkCorners.size() + " sink corners on external boundary");
 
@@ -161,11 +129,42 @@ public class MaxFlowReif implements MaxFlow {
                     sourceCorners, sinkCorners, false);
 
             if (path1ToBoundary == null || path2ToBoundary == null) {
+                System.out.println("====================================");
                 System.out.println("ERROR: Path to external boundary not found!");
-                System.out.println("  Split vertex original ID: " + splitToOriginalMap.get(splitVertex1).getName());
-                System.out.println("  Path1ToBoundary: " + (path1ToBoundary != null ? "found" : "NULL"));
-                System.out.println("  Path2ToBoundary: " + (path2ToBoundary != null ? "found" : "NULL"));
+                System.out.println("  Original vertex on shortest path: " + splitToOriginalMap.get(splitVertex1).getName());
+                System.out.println("  Split vertex 1 ID: " + splitVertex1.getName());
+                System.out.println("  Split vertex 2 ID: " + splitVertex2.getName());
+                System.out.println("  Path1ToBoundary (left): " + (path1ToBoundary != null ? "FOUND" : "NULL"));
+                System.out.println("  Path2ToBoundary (right): " + (path2ToBoundary != null ? "FOUND" : "NULL"));
                 System.out.println("  External boundary size: " + externalBoundary.size());
+                
+                // Проверяем, есть ли split vertices в modifiedGraph
+                boolean sv1InGraph = modifiedGraph.getEdges().containsKey(splitVertex1);
+                boolean sv2InGraph = modifiedGraph.getEdges().containsKey(splitVertex2);
+                System.out.println("  Split vertex 1 in graph: " + sv1InGraph);
+                System.out.println("  Split vertex 2 in graph: " + sv2InGraph);
+                
+                if (sv1InGraph) {
+                    int neighborsCount1 = modifiedGraph.getEdges().get(splitVertex1).size();
+                    System.out.println("  Split vertex 1 neighbors: " + neighborsCount1);
+                    if (neighborsCount1 > 0) {
+                        System.out.println("    First 5 neighbors: " + 
+                                modifiedGraph.getEdges().get(splitVertex1).keySet().stream()
+                                        .limit(5).map(Vertex::getName).collect(Collectors.toList()));
+                    }
+                }
+                
+                if (sv2InGraph) {
+                    int neighborsCount2 = modifiedGraph.getEdges().get(splitVertex2).size();
+                    System.out.println("  Split vertex 2 neighbors: " + neighborsCount2);
+                    if (neighborsCount2 > 0) {
+                        System.out.println("    First 5 neighbors: " + 
+                                modifiedGraph.getEdges().get(splitVertex2).keySet().stream()
+                                        .limit(5).map(Vertex::getName).collect(Collectors.toList()));
+                    }
+                }
+                
+                System.out.println("====================================");
                 continue;
             }
 
@@ -279,6 +278,24 @@ public class MaxFlowReif implements MaxFlow {
     }
 
     private DijkstraResult dijkstraMultiSource(Graph<Vertex> graph, List<Vertex> sourceVertices, List<Vertex> targetBoundary) {
+        System.out.println("=== Dijkstra Multi-Source Debug ===");
+        System.out.println("  Graph vertices: " + graph.verticesArray().size());
+        System.out.println("  Source vertices: " + sourceVertices.size() + " " + 
+                sourceVertices.stream().map(Vertex::getName).limit(5).collect(Collectors.toList()));
+        System.out.println("  Target boundary: " + targetBoundary.size() + " vertices");
+        
+        // Проверяем соседей у source vertices
+        for (Vertex src : sourceVertices) {
+            if (graph.getEdges().containsKey(src)) {
+                System.out.println("  Source vertex " + src.getName() + " has " + 
+                        graph.getEdges().get(src).size() + " neighbors: " + 
+                        graph.getEdges().get(src).keySet().stream()
+                                .limit(10).map(Vertex::getName).collect(Collectors.toList()));
+            } else {
+                System.out.println("  Source vertex " + src.getName() + " NOT IN GRAPH!");
+            }
+        }
+        
         Map<Vertex, Double> distances = new HashMap<>();
         Map<Vertex, Vertex> previous = new HashMap<>();
         PriorityQueue<VertexDistance> queue = new PriorityQueue<>(Comparator.comparingDouble(vd -> vd.distance));
@@ -294,13 +311,18 @@ public class MaxFlowReif implements MaxFlow {
 
         Vertex targetVertex = null;
         double minDistance = Double.MAX_VALUE;
+        int visitedVertices = 0;
+        Set<Long> processedVertices = new HashSet<>();
 
         while (!queue.isEmpty()) {
+            visitedVertices++;
             VertexDistance current = queue.poll();
 
             if (current.distance > distances.get(current.vertex)) {
                 continue;
             }
+
+            processedVertices.add(current.vertex.getName());
 
             if (targetBoundary.contains(current.vertex)) {
                 if (current.distance < minDistance) {
@@ -428,6 +450,180 @@ public class MaxFlowReif implements MaxFlow {
         return null;
     }
 
+    private HashMap<Vertex, VertexOfDualGraph> buildComparisonMap() {
+        HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph = new HashMap<>();
+        for (VertexOfDualGraph dualVertex : dualGraph.verticesArray()) {
+            if (!dualVertex.equals(source) && !dualVertex.equals(sink)) {
+                comparisonForDualGraph.put(dualVertex, dualVertex);
+            }
+        }
+        return comparisonForDualGraph;
+    }
+
+    private HashSet<VertexOfDualGraph> collectNeighbors(VertexOfDualGraph vertex) {
+        HashSet<VertexOfDualGraph> neighbors = new HashSet<>();
+        for (VertexOfDualGraph neighbor : dualGraph.getEdges().get(vertex).keySet()) {
+            if (!neighbor.equals(sink) && !neighbor.equals(source)) {
+                neighbors.add(neighbor);
+            }
+        }
+        return neighbors;
+    }
+
+    private List<Vertex> findCorners(List<Vertex> externalBoundary, List<Vertex> targetBoundary) {
+        Set<Long> targetBoundaryNames = targetBoundary.stream()
+                .map(Vertex::getName)
+                .collect(Collectors.toSet());
+        
+        List<Vertex> corners = new ArrayList<>();
+        for (Vertex v : externalBoundary) {
+            if (targetBoundaryNames.contains(v.getName())) {
+                corners.add(v);
+            }
+        }
+        return corners;
+    }
+
+    private void buildAndSortChildrenMap(SPTWithRegionWeights spt, Graph<Vertex> graph, Map<Vertex, Vertex> previous) {
+        for (Vertex v : graph.verticesArray()) {
+            spt.children.put(v, new ArrayList<>());
+        }
+        
+        for (Map.Entry<Vertex, Vertex> entry : previous.entrySet()) {
+            Vertex child = entry.getKey();
+            Vertex parent = entry.getValue();
+            if (parent != null) {
+                spt.children.get(parent).add(child);
+            }
+        }
+        
+        var orderedEdges = graph.arrangeByAngle();
+        for (Vertex v : spt.children.keySet()) {
+            List<Vertex> childrenList = spt.children.get(v);
+            if (childrenList.size() > 1 && orderedEdges.containsKey(v)) {
+                var angleOrderedEdges = orderedEdges.get(v).stream().toList();
+                
+                Map<Long, Integer> vertexToAngleIndex = new HashMap<>();
+                for (int i = 0; i < angleOrderedEdges.size(); i++) {
+                    vertexToAngleIndex.put(angleOrderedEdges.get(i).end.getName(), i);
+                }
+                
+                childrenList.sort((a, b) -> {
+                    int idxA = vertexToAngleIndex.getOrDefault(a.getName(), 0);
+                    int idxB = vertexToAngleIndex.getOrDefault(b.getName(), 0);
+                    return Integer.compare(idxA, idxB);
+                });
+            }
+        }
+    }
+
+    private Map<Long, Integer> buildBoundaryOrderMap(List<Vertex> externalBoundary) {
+        Map<Long, Integer> boundaryOrderMap = new HashMap<>();
+        for (int i = 0; i < externalBoundary.size(); i++) {
+            boundaryOrderMap.put(externalBoundary.get(i).getName(), i);
+        }
+        return boundaryOrderMap;
+    }
+
+    private int determineBoundarySegment(
+            List<Vertex> externalBoundary,
+            List<Vertex> boundaryVerticesInSPT,
+            List<Vertex> relevantCorners,
+            Map<Long, Integer> boundaryOrderMap,
+            boolean isSourceSide) {
+        
+        int boundarySegmentStart = 0;
+        int n = externalBoundary.size();
+        
+        if (relevantCorners.size() >= 2) {
+            List<Integer> cornerPositions = new ArrayList<>();
+            for (Vertex corner : relevantCorners) {
+                Integer pos = boundaryOrderMap.get(corner.getName());
+                if (pos != null) {
+                    cornerPositions.add(pos);
+                }
+            }
+            
+            if (cornerPositions.size() >= 2) {
+                Collections.sort(cornerPositions);
+                int firstCornerPos = cornerPositions.get(0);
+                int lastCornerPos = cornerPositions.get(cornerPositions.size() - 1);
+                
+                int countBetween = 0;
+                int countOutside = 0;
+                
+                for (Vertex leaf : boundaryVerticesInSPT) {
+                    int pos = boundaryOrderMap.getOrDefault(leaf.getName(), 0);
+                    if (pos >= firstCornerPos && pos <= lastCornerPos) {
+                        countBetween++;
+                    } else {
+                        countOutside++;
+                    }
+                }
+                
+                if (countBetween >= countOutside) {
+                    boundarySegmentStart = firstCornerPos;
+                } else {
+                    boundarySegmentStart = lastCornerPos;
+                }
+                
+                System.out.println("Boundary segment: corners at " + firstCornerPos + ", " + lastCornerPos + 
+                        " -> using start=" + boundarySegmentStart + " (isSourceSide=" + isSourceSide + ")");
+            }
+        }
+        
+        return boundarySegmentStart;
+    }
+
+    private void sortBoundaryLeavesBySegment(
+            List<Vertex> boundaryVerticesInSPT,
+            Map<Long, Integer> boundaryOrderMap,
+            int boundarySegmentStart,
+            int n) {
+        
+        boundaryVerticesInSPT.sort((a, b) -> {
+            int posA = boundaryOrderMap.getOrDefault(a.getName(), 0);
+            int posB = boundaryOrderMap.getOrDefault(b.getName(), 0);
+            
+            int adjA = (posA - boundarySegmentStart + n) % n;
+            int adjB = (posB - boundarySegmentStart + n) % n;
+            
+            return Integer.compare(adjA, adjB);
+        });
+        
+        System.out.println("Boundary leaves ordering: segmentStart=" + boundarySegmentStart + 
+                ", numLeaves=" + boundaryVerticesInSPT.size());
+    }
+
+    private Set<String> buildSPTEdgesSet(Map<Vertex, Vertex> previous) {
+        Set<String> sptEdges = new HashSet<>();
+        for (Map.Entry<Vertex, Vertex> entry : previous.entrySet()) {
+            Vertex child = entry.getKey();
+            Vertex parent = entry.getValue();
+            if (parent != null) {
+                sptEdges.add(child.getName() + "_" + parent.getName());
+                sptEdges.add(parent.getName() + "_" + child.getName());
+            }
+        }
+        return sptEdges;
+    }
+
+    private Map<String, VertexOfDualGraph> buildEdgeToLeftFaceMap(Graph<VertexOfDualGraph> dualGraph) {
+        Map<String, VertexOfDualGraph> edgeToLeftFace = new HashMap<>();
+        for (VertexOfDualGraph face : dualGraph.verticesArray()) {
+            List<Vertex> faceVertices = face.getVerticesOfFace();
+            if (faceVertices == null || faceVertices.isEmpty()) continue;
+
+                for (int i = 0; i < faceVertices.size(); i++) {
+                Vertex v1 = faceVertices.get(i);
+                Vertex v2 = faceVertices.get((i + 1) % faceVertices.size());
+                String edgeKey = v1.getName() + "_" + v2.getName();
+                edgeToLeftFace.put(edgeKey, face);
+            }
+        }
+        return edgeToLeftFace;
+    }
+
     private static class VertexDistance {
         Vertex vertex;
         double distance;
@@ -494,36 +690,7 @@ public class MaxFlowReif implements MaxFlow {
         SPTWithRegionWeights spt = new SPTWithRegionWeights(sourceVertex);
         spt.previous = new HashMap<>(previous);
 
-        for (Vertex v : graph.verticesArray()) {
-            spt.children.put(v, new ArrayList<>());
-        }
-        
-        for (Map.Entry<Vertex, Vertex> entry : previous.entrySet()) {
-            Vertex child = entry.getKey();
-            Vertex parent = entry.getValue();
-            if (parent != null) {
-                spt.children.get(parent).add(child);
-            }
-        }
-        
-        var orderedEdges = graph.arrangeByAngle();
-        for (Vertex v : spt.children.keySet()) {
-            List<Vertex> childrenList = spt.children.get(v);
-            if (childrenList.size() > 1 && orderedEdges.containsKey(v)) {
-                var angleOrderedEdges = orderedEdges.get(v).stream().toList();
-                
-                Map<Long, Integer> vertexToAngleIndex = new HashMap<>();
-                for (int i = 0; i < angleOrderedEdges.size(); i++) {
-                    vertexToAngleIndex.put(angleOrderedEdges.get(i).end.getName(), i);
-                }
-                
-                childrenList.sort((a, b) -> {
-                    int idxA = vertexToAngleIndex.getOrDefault(a.getName(), 0);
-                    int idxB = vertexToAngleIndex.getOrDefault(b.getName(), 0);
-                    return Integer.compare(idxA, idxB);
-                });
-            }
-        }
+        buildAndSortChildrenMap(spt, graph, previous);
         
         Set<Long> boundaryNames = externalBoundary.stream()
                 .map(Vertex::getName)
@@ -536,69 +703,15 @@ public class MaxFlowReif implements MaxFlow {
             }
         }
         
-        Map<Long, Integer> boundaryOrderMap = new HashMap<>();
-        for (int i = 0; i < externalBoundary.size(); i++) {
-            boundaryOrderMap.put(externalBoundary.get(i).getName(), i);
-        }
-
+        Map<Long, Integer> boundaryOrderMap = buildBoundaryOrderMap(externalBoundary);
+        
         List<Vertex> relevantCorners = isSourceSide ? sourceCorners : sinkCorners;
+        int boundarySegmentStart = determineBoundarySegment(
+                externalBoundary, boundaryVerticesInSPT, relevantCorners, 
+                boundaryOrderMap, isSourceSide);
         
-        int boundarySegmentStart = 0;
-        int boundarySegmentEnd = externalBoundary.size();
-        int n = externalBoundary.size();
-        
-        if (relevantCorners.size() >= 2) {
-            List<Integer> cornerPositions = new ArrayList<>();
-            for (Vertex corner : relevantCorners) {
-                Integer pos = boundaryOrderMap.get(corner.getName());
-                if (pos != null) {
-                    cornerPositions.add(pos);
-                }
-            }
-            
-            if (cornerPositions.size() >= 2) {
-                Collections.sort(cornerPositions);
-                int firstCornerPos = cornerPositions.get(0);
-                int lastCornerPos = cornerPositions.get(cornerPositions.size() - 1);
-                
-                int countBetween = 0;
-                int countOutside = 0;
-                
-                for (Vertex leaf : boundaryVerticesInSPT) {
-                    int pos = boundaryOrderMap.getOrDefault(leaf.getName(), 0);
-                    if (pos >= firstCornerPos && pos <= lastCornerPos) {
-                        countBetween++;
-                    } else {
-                        countOutside++;
-                    }
-                }
-                
-                if (countBetween >= countOutside) {
-                    boundarySegmentStart = firstCornerPos;
-                    boundarySegmentEnd = lastCornerPos;
-                    } else {
-                    boundarySegmentStart = lastCornerPos;
-                    boundarySegmentEnd = firstCornerPos + n;
-                }
-                
-                System.out.println("Boundary segment: corners at " + firstCornerPos + ", " + lastCornerPos + 
-                        " -> using [" + boundarySegmentStart + ", " + boundarySegmentEnd + ") (isSourceSide=" + isSourceSide + ")");
-            }
-        }
-        
-        final int finalBoundarySegmentStart = boundarySegmentStart;
-        boundaryVerticesInSPT.sort((a, b) -> {
-            int posA = boundaryOrderMap.getOrDefault(a.getName(), 0);
-            int posB = boundaryOrderMap.getOrDefault(b.getName(), 0);
-            
-            int adjA = (posA - finalBoundarySegmentStart + n) % n;
-            int adjB = (posB - finalBoundarySegmentStart + n) % n;
-            
-            return Integer.compare(adjA, adjB);
-        });
-        
-        System.out.println("Boundary leaves ordering: segmentStart=" + boundarySegmentStart + 
-                ", segmentEnd=" + boundarySegmentEnd + ", numLeaves=" + boundaryVerticesInSPT.size());
+        sortBoundaryLeavesBySegment(boundaryVerticesInSPT, boundaryOrderMap, 
+                boundarySegmentStart, externalBoundary.size());
         
         spt.boundaryLeaves = boundaryVerticesInSPT;
         
@@ -616,28 +729,8 @@ public class MaxFlowReif implements MaxFlow {
             return;
         }
 
-        Set<String> sptEdges = new HashSet<>();
-        for (Map.Entry<Vertex, Vertex> entry : spt.previous.entrySet()) {
-            Vertex child = entry.getKey();
-            Vertex parent = entry.getValue();
-            if (parent != null) {
-                sptEdges.add(child.getName() + "_" + parent.getName());
-                sptEdges.add(parent.getName() + "_" + child.getName());
-            }
-        }
-
-        Map<String, VertexOfDualGraph> edgeToLeftFace = new HashMap<>();
-        for (VertexOfDualGraph face : dualGraph.verticesArray()) {
-            List<Vertex> faceVertices = face.getVerticesOfFace();
-            if (faceVertices == null || faceVertices.isEmpty()) continue;
-
-            for (int i = 0; i < faceVertices.size(); i++) {
-                Vertex v1 = faceVertices.get(i);
-                Vertex v2 = faceVertices.get((i + 1) % faceVertices.size());
-                String edgeKey = v1.getName() + "_" + v2.getName();
-                edgeToLeftFace.put(edgeKey, face);
-            }
-        }
+        Set<String> sptEdges = buildSPTEdgesSet(spt.previous);
+        Map<String, VertexOfDualGraph> edgeToLeftFace = buildEdgeToLeftFaceMap(dualGraph);
 
         var sortedEdgesByVertex = graph.arrangeByAngle();
 

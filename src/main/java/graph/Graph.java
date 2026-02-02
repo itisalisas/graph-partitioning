@@ -509,4 +509,8 @@ public class Graph<T extends Vertex> {
         return edgeToDualVertex;
     }
 
+    public void setEdgeToDualVertexMap(HashMap<Vertex, HashMap<Vertex, VertexOfDualGraph>> map) {
+        edgeToDualVertex = map;
+    }
+
 }
