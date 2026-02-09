@@ -1,4 +1,4 @@
-package partitioning;
+package partitioning.maxflow;
 
 import java.util.Comparator;
 import java.util.HashMap;
@@ -11,6 +11,7 @@ import graph.Edge;
 import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
+import partitioning.models.FlowResult;
 
 public class MaxFlowDinic implements MaxFlow {
     Graph<VertexOfDualGraph> graph;

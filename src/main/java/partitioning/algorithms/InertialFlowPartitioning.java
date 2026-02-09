@@ -1,7 +1,5 @@
-package partitioning;
+package partitioning.algorithms;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.Function;
@@ -9,7 +7,10 @@ import java.util.stream.Collectors;
 
 import graph.*;
 import org.junit.jupiter.api.Assertions;
-import readWrite.PartitionWriter;
+import partitioning.models.FlowResult;
+import partitioning.maxflow.MaxFlow;
+import partitioning.maxflow.MaxFlowDinic;
+import partitioning.maxflow.MaxFlowReif;
 
 public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs {
 
@@ -23,12 +24,6 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
     public InertialFlowPartitioning(double parameter) {
         this.PARAMETER_SOURCE = parameter;
         this.PARAMETER_SINK = parameter; 
-    }
-
-
-    public InertialFlowPartitioning(double parameterSource, double parameterSink) {
-        this.PARAMETER_SOURCE = parameterSource;
-        this.PARAMETER_SINK = parameterSink; 
     }
 
     private static class Vector2D {
@@ -102,8 +97,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
             for (Vector2D line : lines) {
                 vertices.sort(Comparator.comparing(v -> {
-                    Point p = v;
-                    Point projected = line.projectPoint(p);
+                    Point projected = line.projectPoint(v);
                     return line.isVertical ? projected.y : projected.x;
                 }));
 
@@ -124,8 +118,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
             Vector2D finalBestLine = bestLine;
             vertices.sort(Comparator.comparing(v -> {
-                Point p = v;
-                Point projected = finalBestLine.projectPoint(p);
+                Point projected = finalBestLine.projectPoint(v);
                 return finalBestLine.isVertical ? projected.y : projected.x;
             }));
 
@@ -214,7 +207,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                 maxFlow = new MaxFlowDinic(copyGraph, source, sink);
             }
             FlowResult flowResult = maxFlow.findFlow();
-            System.out.println("\n\nFLOW SIZE: " + flowResult.flowSize + "\n\n");
+            System.out.println("\n\nFLOW SIZE: " + flowResult.flowSize() + "\n\n");
 
             List<Graph<VertexOfDualGraph>> subpartition;
             if (useReif) {
@@ -258,15 +251,15 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
     }
 
     private List<Graph<VertexOfDualGraph>> partitionGraph(FlowResult flow) {
-        Graph<VertexOfDualGraph> graphWithFlow = flow.graphWithFlow;
+        Graph<VertexOfDualGraph> graphWithFlow = flow.graphWithFlow();
         List<Graph<VertexOfDualGraph>> subpartition = new ArrayList<>();
         List<VertexOfDualGraph> vertices = graphWithFlow.verticesArray();
         Map<VertexOfDualGraph, Boolean> isConnectedWithSource = vertices.stream().collect(Collectors.toMap(Function.identity(), v -> Boolean.FALSE));
 
-        markComponent(graphWithFlow, flow.source, isConnectedWithSource, flow.sink);
+        markComponent(graphWithFlow, flow.source(), isConnectedWithSource);
 
-        graphWithFlow.deleteVertex(flow.source);
-        graphWithFlow.deleteVertex(flow.sink);
+        graphWithFlow.deleteVertex(flow.source());
+        graphWithFlow.deleteVertex(flow.sink());
 
         for (int i = 0; i < 2; i++) {
             subpartition.add(graphWithFlow.createSubgraph(i == 0 ?
@@ -280,7 +273,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
     }
 
 
-    void markComponent(Graph<VertexOfDualGraph> graph, VertexOfDualGraph source, Map<VertexOfDualGraph, Boolean> isConnectedWithSource, VertexOfDualGraph sink) {
+    void markComponent(Graph<VertexOfDualGraph> graph, VertexOfDualGraph source, Map<VertexOfDualGraph, Boolean> isConnectedWithSource) {
         LinkedList<VertexOfDualGraph> queue = new LinkedList<>();
         queue.add(source);
         isConnectedWithSource.put(source, true);
@@ -323,10 +316,10 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
     }
 
     private List<Graph<VertexOfDualGraph>> partitionGraphReif(FlowResult flow) {
-        Graph<VertexOfDualGraph> graph = flow.graphWithFlow.clone();
+        Graph<VertexOfDualGraph> graph = flow.graphWithFlow().clone();
         
-        VertexOfDualGraph source = flow.source;
-        VertexOfDualGraph sink = flow.sink;
+        VertexOfDualGraph source = flow.source();
+        VertexOfDualGraph sink = flow.sink();
         
         List<VertexOfDualGraph> allVertices = new ArrayList<>(graph.verticesArray());
         
@@ -355,25 +348,24 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             subpartition.add(new Graph<>());
         } else if (components.size() == 1) {
             System.out.println("Only one component, graph not separated");
-            subpartition.add(flow.graphWithFlow.createSubgraph(components.get(0)));
+            subpartition.add(flow.graphWithFlow().createSubgraph(components.get(0)));
             subpartition.add(new Graph<>());
         } else {
             components.sort((a, b) -> Integer.compare(b.size(), a.size()));
 
-            subpartition.add(flow.graphWithFlow.createSubgraph(components.get(0)));
-            subpartition.add(flow.graphWithFlow.createSubgraph(components.get(1)));
+            subpartition.add(flow.graphWithFlow().createSubgraph(components.get(0)));
+            subpartition.add(flow.graphWithFlow().createSubgraph(components.get(1)));
             
             for (int i = 2; i < components.size(); i++) {
-                Graph<VertexOfDualGraph> smallComponent = flow.graphWithFlow.createSubgraph(components.get(i));
+                Graph<VertexOfDualGraph> smallComponent = flow.graphWithFlow().createSubgraph(components.get(i));
                 for (VertexOfDualGraph v : smallComponent.verticesArray()) {
                     components.get(0).add(v);
                 }
             }
             
-            subpartition.set(0, flow.graphWithFlow.createSubgraph(components.get(0)));
+            subpartition.set(0, flow.graphWithFlow().createSubgraph(components.get(0)));
         }
         
         return subpartition;
     }
-
 }

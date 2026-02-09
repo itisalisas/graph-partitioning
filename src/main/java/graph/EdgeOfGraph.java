@@ -147,11 +147,11 @@ public class EdgeOfGraph<T extends Vertex> extends Edge {
 	}
 	
 	/**
-	 * @param vert
+	 * @param vertex
 	 * @return	(vert.y between begin.y and end.y)
 	 */
-	public boolean includeForY(Vertex vert) {
-		return (vert.y - this.begin.y) * (vert.y - this.end.y) < 0;
+	public boolean includeForY(Vertex vertex) {
+		return (vertex.y - this.begin.y) * (vertex.y - this.end.y) < 0;
 	}
 	
 	
@@ -160,11 +160,11 @@ public class EdgeOfGraph<T extends Vertex> extends Edge {
 	}
 	
 	/**
-	 * @param vert
+	 * @param vertex
 	 * @return	(vert.x between begin.x and end.x)
 	 */
-	public boolean includeForX(Vertex vert) {
-		return (vert.x - this.begin.x) * (vert.x - this.end.x) < 0;
+	public boolean includeForX(Vertex vertex) {
+		return (vertex.x - this.begin.x) * (vertex.x - this.end.x) < 0;
 	}
 	
 	/**

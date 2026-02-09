@@ -9,6 +9,7 @@ import java.util.Set;
 
 import graph.*;
 import org.junit.jupiter.api.Assertions;
+import partitioning.algorithms.BalancedPartitioningOfPlanarGraphs;
 
 public class BalancedPartitioning {
 	public BalancedPartitioningOfPlanarGraphs bp;

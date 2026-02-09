@@ -1,4 +1,4 @@
-package partitioning;
+package partitioning.models;
 
 import java.util.HashSet;
 
@@ -6,10 +6,10 @@ import graph.Graph;
 import graph.VertexOfDualGraph;
 
 public class Bubble {
-    HashSet<VertexOfDualGraph> vertexSet;
-    Double weight;
-    Double borderLength;
-    VertexOfDualGraph center;
+    public HashSet<VertexOfDualGraph> vertexSet;
+    public Double weight;
+    public Double borderLength;
+    public VertexOfDualGraph center;
     Boolean completed;
     Double area;
 

@@ -66,9 +66,4 @@ public class Edge {
 		return road;
 	}
 	
-	
-	public void notRoad() {
-		this.road = false;
-	}
-
 }

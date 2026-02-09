@@ -1,4 +1,4 @@
-package partitioning;
+package partitioning.algorithms;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,7 +12,7 @@ import graph.VertexOfDualGraph;
 
 public abstract class BalancedPartitioningOfPlanarGraphs {
 
-	ArrayList<HashSet<VertexOfDualGraph>> partition;
+	public ArrayList<HashSet<VertexOfDualGraph>> partition;
 
 	public Graph<VertexOfDualGraph> graph;
 

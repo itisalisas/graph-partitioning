@@ -8,6 +8,8 @@ import java.util.HashMap;
 import java.util.Objects;
 import java.util.Random;
 
+import jakarta.validation.constraints.Size;
+
 
 public class Vertex extends Point {
 
@@ -15,6 +17,7 @@ public class Vertex extends Point {
 
 	public long name;
 	protected double weight;
+    private boolean isOnBoundary = true; // по умолчанию хотим останавливаться в этих вершинах
 	
 	public Vertex() {
 		super();
@@ -54,12 +57,6 @@ public class Vertex extends Point {
 		this.name = name;
 		this.weight = weight;
 	}
-
-//	public Vertex(Vertex src) {
-//		super(src);
-//		this.name = src.name;
-//		this.weight = src.weight;
-//	}
 	
 	public <T extends Vertex> Vertex(T v) {
 		super(v.x, v.y);
@@ -67,8 +64,15 @@ public class Vertex extends Point {
 		this.weight = v.getWeight();
 	}
 
-	
-	public long getName() {
+    public boolean getIsOnBoundary() {
+        return isOnBoundary;
+    }
+
+    public void setIsOnBoundary(boolean isOnBoundary) {
+        this.isOnBoundary = isOnBoundary;
+    }
+
+    public long getName() {
 		return name;
 	}
 	
@@ -118,76 +122,9 @@ public class Vertex extends Point {
 	 * @param vertexIn the sequence of vertices of polygon
 	 * @return Vertex distant from the middle of the longest edge by 0.000001
 	 */
-	public static <T extends Vertex> Point findCenter(ArrayList<T> vertexIn) {
-		Point center = new Point();
-		
-		
-//		double minLengthSum = 0;
-//		double lengthSum = 0;
-//		for (Vertex begin : vertexIn) {
-//			lengthSum = 0;
-//			for (Vertex end : vertexIn) {
-//				lengthSum = lengthSum + begin.getLength(end);
-//			}
-//			if (minLengthSum == 0) {
-//				center = begin;
-//				minLengthSum = lengthSum;
-//			}
-//			if (minLengthSum > lengthSum) {
-//				center = begin;
-//				minLengthSum = lengthSum;
-//			}
-//		}
-		
-		
-		
-//		if (vertexIn.size() <= 0) {
-//			return null;
-//		} else if (vertexIn.size() == 1) {
-//			return vertexIn.get(0);
-//		} else if (vertexIn.size() == 2) {
-//			center = new Point(	vertexIn.get(0).x + vertexIn.get(0).coordinateDistance(vertexIn.get(1)).x / 2,
-//								vertexIn.get(0).y + vertexIn.get(0).coordinateDistance(vertexIn.get(1)).y / 2);
-//		} else {
-//			//change to func find longest edge
-//			Point begin = vertexIn.get(0);
-//			Vertex end = vertexIn.get(1);
-//			double maxLength = begin.getLength(end);
-//			for (int i = 1; i < vertexIn.size(); i++) {
-//				if (maxLength < vertexIn.get(i - 1).getLength(vertexIn.get(i))) {
-//					maxLength = vertexIn.get(i - 1).getLength(vertexIn.get(i));
-//					begin = vertexIn.get(i - 1);
-//					end = vertexIn.get(i);
-//				}
-//			}
-//			Point edgeCenter = new Point(begin.x + begin.coordinateDistance(end).x / 2,
-//										begin.y + begin.coordinateDistance(end).y / 2);
-//			Point coordinateLength = begin.coordinateDistance(end);
-//			double normalDir = 0;
-//			if (coordinateLength.y == 0) {
-//				normalDir = 1;
-//				center = new Point(edgeCenter.x, edgeCenter.y + 0.000001);
-//			} else if (coordinateLength.x == 0) {
-//				normalDir = 0;
-//				center = new Point(edgeCenter.x + 0.000001, edgeCenter.y);
-//			} else {
-//				normalDir = -1 / Math.atan2(coordinateLength.y, coordinateLength.x);
-//				center = new Point(edgeCenter.x + 0.000001 / Math.sqrt(1 + normalDir * normalDir),
-//									edgeCenter.y + 0.000001 * normalDir / Math.sqrt(1 + normalDir * normalDir));
-//			}
-//
-//			if (center.inFaceGeom(vertexIn)) {
-//				return center;
-//			} else {
-//				Point diff = center.coordinateDistance(edgeCenter);
-//				center.addCoordinateDistance(diff);
-//				center.addCoordinateDistance(diff);
-//			}
-//		}
-		
-		if (vertexIn.size() <= 0) {
-			return null;
-		} 
+	public static <T extends Vertex> Point findCenter(@Size(min = 1) ArrayList<T> vertexIn) {
+		Point center;
+
 		if (vertexIn.size() == 1) {
 			return vertexIn.get(0);
 		}

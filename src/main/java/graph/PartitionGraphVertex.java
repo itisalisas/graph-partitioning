@@ -10,11 +10,6 @@ import java.util.stream.Collectors;
 public class PartitionGraphVertex extends Vertex {
     public ArrayList<VertexOfDualGraph> vertices;
 
-    public PartitionGraphVertex(long partitionId) {
-        super(partitionId, 0, 0, 0);
-        this.vertices = new ArrayList<>();
-    }
-
     public PartitionGraphVertex(long partitionId, ArrayList<VertexOfDualGraph> vertices) {
         super(partitionId);
         this.vertices = vertices;
@@ -98,7 +93,7 @@ public class PartitionGraphVertex extends Vertex {
                 .collect(Collectors.toList());
     }
 
-    public static List<PartitionGraphVertex> smallestVertex(Graph<PartitionGraphVertex> graph, double maxWeight) {
+    public static List<PartitionGraphVertex> smallestVertex(Graph<PartitionGraphVertex> graph) {
         return graph.verticesArray().stream()
                 .sorted(Comparator.comparingDouble(
                         v -> v.weight

@@ -9,14 +9,14 @@ import graph.Edge;
 import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
-import partitioning.MaxFlowReif;
-import partitioning.VertexSplitter;
+import partitioning.models.DijkstraResult;
+import partitioning.models.NeighborSplit;
 
 public class FlowWriter {
 
     public static void dumpVisualizationData(List<Vertex> externalBoundary, List<Vertex> sourceBoundary,
                                                   List<Vertex> sinkBoundary, List<Vertex> stPath, List<Vertex> bestPath,
-                                                  Map<Long, VertexSplitter.NeighborSplit> neighborSplits,
+                                                  Map<Long, NeighborSplit> neighborSplits,
                                                   HashSet<VertexOfDualGraph> sourceNeighbors,
                                                   HashSet<VertexOfDualGraph> sinkNeighbors,
                                                   double size,
@@ -64,32 +64,31 @@ public class FlowWriter {
         }
     }
 
-    private static void writeNeighborSplitsToFile(String filename, Map<Long, VertexSplitter.NeighborSplit> neighborSplits, CoordinateConversion coordConversion) throws java.io.IOException {
+    private static void writeNeighborSplitsToFile(String filename, Map<Long, NeighborSplit> neighborSplits, CoordinateConversion coordConversion) throws java.io.IOException {
         System.out.println("Writing neighbor splits, total: " + neighborSplits.size());
         try (java.io.FileWriter writer = new java.io.FileWriter(filename)) {
 
-            for (Map.Entry<Long, VertexSplitter.NeighborSplit> entry : neighborSplits.entrySet()) {
-                long vertexId = entry.getKey();
-                VertexSplitter.NeighborSplit split = entry.getValue();
+            for (Map.Entry<Long, NeighborSplit> entry : neighborSplits.entrySet()) {
+                NeighborSplit split = entry.getValue();
 
                 // Используем сохраненную в NeighborSplit вершину
-                Vertex vertex = split.vertex;
+                Vertex vertex = split.vertex();
                 Vertex geoVertex = coordConversion.fromEuclidean(vertex);
                 writer.write(String.format("%d %.10f %.10f\n", geoVertex.getName(), geoVertex.x, geoVertex.y));
 
-                for (Vertex neighbor : split.pathNeighbors) {
+                for (Vertex neighbor : split.pathNeighbors()) {
                     Vertex geoNeighbor = coordConversion.fromEuclidean(neighbor);
                     writer.write(String.format("PATH %d %.10f %.10f\n",
                             geoNeighbor.getName(), geoNeighbor.x, geoNeighbor.y));
                 }
 
-                for (Vertex neighbor : split.leftNeighbors) {
+                for (Vertex neighbor : split.leftNeighbors()) {
                     Vertex geoNeighbor = coordConversion.fromEuclidean(neighbor);
                     writer.write(String.format("LEFT %d %.10f %.10f\n",
                             geoNeighbor.getName(), geoNeighbor.x, geoNeighbor.y));
                 }
 
-                for (Vertex neighbor : split.rightNeighbors) {
+                for (Vertex neighbor : split.rightNeighbors()) {
                     Vertex geoNeighbor = coordConversion.fromEuclidean(neighbor);
                     writer.write(String.format("RIGHT %d %.10f %.10f\n",
                             geoNeighbor.getName(), geoNeighbor.x, geoNeighbor.y));
@@ -268,7 +267,7 @@ public class FlowWriter {
         }
     }
     public static void dumpSPTVisualizationData(
-            MaxFlowReif.DijkstraResult spt1, MaxFlowReif.DijkstraResult spt2,
+            DijkstraResult spt1, DijkstraResult spt2,
             Vertex root1, Vertex root2,
             Map<Vertex, Vertex> splitToOriginalMap,
             HashSet<VertexOfDualGraph> sourceNeighbors,
@@ -298,7 +297,7 @@ public class FlowWriter {
         }
     }
 
-    private static void writeSPTToFile(String filename, MaxFlowReif.DijkstraResult spt, Vertex root,
+    private static void writeSPTToFile(String filename, DijkstraResult spt, Vertex root,
                                 Map<Vertex, Vertex> splitToOriginalMap, String sptName, CoordinateConversion coordConversion) throws java.io.IOException {
         try (java.io.FileWriter writer = new java.io.FileWriter(filename)) {
             // Header with metadata
@@ -316,24 +315,24 @@ public class FlowWriter {
 
             // Write total region weight
             writer.write("TOTAL_REGION_WEIGHT\n");
-            writer.write(String.format("%.6f\n", spt.totalRegionWeight));
+            writer.write(String.format("%.6f\n", spt.totalRegionWeight()));
             writer.write("\n");
 
             // Write boundary leaves with their cumulative region weights
             writer.write("BOUNDARY_LEAVES\n");
             writer.write("# vertex_id longitude latitude cumulative_left_weight boundary_index\n");
 
-            System.out.println("Writing " + spt.boundaryLeaves.size() + " boundary leaves for " + sptName);
-            System.out.println("  leftRegionWeights map has " + spt.leftRegionWeights.size() + " entries");
+            System.out.println("Writing " + spt.boundaryLeaves().size() + " boundary leaves for " + sptName);
+            System.out.println("  leftRegionWeights map has " + spt.leftRegionWeights().size() + " entries");
 
-            for (int leafIdx = 0; leafIdx < spt.boundaryLeaves.size(); leafIdx++) {
-                Vertex leaf = spt.boundaryLeaves.get(leafIdx);
+            for (int leafIdx = 0; leafIdx < spt.boundaryLeaves().size(); leafIdx++) {
+                Vertex leaf = spt.boundaryLeaves().get(leafIdx);
                 Vertex originalLeaf = splitToOriginalMap.getOrDefault(leaf, leaf);
                 Vertex geoLeaf = coordConversion.fromEuclidean(originalLeaf);
-                double leftWeight = spt.leftRegionWeights.getOrDefault(leaf, -1.0);
+                double leftWeight = spt.leftRegionWeights().getOrDefault(leaf, -1.0);
 
                 // Debug: check if leaf is in the map
-                boolean foundInMap = spt.leftRegionWeights.containsKey(leaf);
+                boolean foundInMap = spt.leftRegionWeights().containsKey(leaf);
                 System.out.println("  Leaf " + leafIdx + ": vertex " + leaf.getName() +
                         ", inMap=" + foundInMap + ", leftWeight=" + leftWeight);
 
@@ -347,7 +346,7 @@ public class FlowWriter {
             writer.write("# from_id from_lon from_lat to_id to_lon to_lat distance\n");
 
             Set<String> writtenEdges = new HashSet<>();
-                for (Map.Entry<Vertex, Vertex> entry : spt.previous.entrySet()) {
+                for (Map.Entry<Vertex, Vertex> entry : spt.previous().entrySet()) {
                 Vertex child = entry.getKey();
                 Vertex parent = entry.getValue();
 
@@ -368,7 +367,7 @@ public class FlowWriter {
                 Vertex geoChild = coordConversion.fromEuclidean(originalChild);
                 Vertex geoParent = coordConversion.fromEuclidean(originalParent);
 
-                double distance = spt.distances.getOrDefault(child, 0.0);
+                double distance = spt.distances().getOrDefault(child, 0.0);
 
                 writer.write(String.format("%d %.10f %.10f %d %.10f %.10f %.6f\n",
                         geoParent.getName(), geoParent.x, geoParent.y,
@@ -380,7 +379,7 @@ public class FlowWriter {
             // Write all vertices in the SPT with their distances
                 writer.write("VERTICES\n");
                 writer.write("# vertex_id longitude latitude distance_from_root\n");
-                for (Map.Entry<Vertex, Double> entry : spt.distances.entrySet()) {
+                for (Map.Entry<Vertex, Double> entry : spt.distances().entrySet()) {
                 Vertex v = entry.getKey();
                 Double dist = entry.getValue();
 
