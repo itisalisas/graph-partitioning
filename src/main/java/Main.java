@@ -16,10 +16,10 @@ import com.google.gson.Gson;
 import addingPoints.LocalizationPoints;
 import graphPreparation.GraphPreparation;
 import partitioning.BalancedPartitioning;
-import partitioning.Balancer;
-import partitioning.BubblePartitioning;
-import partitioning.BubblePartitioningSequentially;
-import partitioning.InertialFlowPartitioning;
+import partitioning.balancing.Balancer;
+import partitioning.algorithms.BubblePartitioning;
+import partitioning.algorithms.BubblePartitioningSequentially;
+import partitioning.algorithms.InertialFlowPartitioning;
 import readWrite.CoordinateConversion;
 import readWrite.GraphReader;
 import readWrite.GraphWriter;
@@ -141,6 +141,8 @@ public class Main {
 		GraphPreparation preparation = new GraphPreparation(false, false);
 
 		Graph<VertexOfDualGraph> preparedGraph = preparation.prepareGraph(graph, 1, outputDirectory, cc);
+        GraphWriter grWr = new GraphWriter(cc);
+        grWr.printGraphToFile(graph, outputDirectory, "my_graph.txt", true);
 
 		for (VertexOfDualGraph v : preparedGraph.verticesArray()) {
 			Assertions.assertNotNull(v.getVerticesOfFace());
@@ -174,6 +176,7 @@ public class Main {
 		GraphWriter gw = new GraphWriter(cc);
 
 		String pathToResultDirectory = args[5];
+        graph.buildEdgeToDualVertexMap(preparedGraph);
 
 		long startTime = System.currentTimeMillis();
 		

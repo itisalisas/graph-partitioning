@@ -20,7 +20,7 @@ import graph.Point;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
 import partitioning.BalancedPartitioning;
-import partitioning.BalancedPartitioningOfPlanarGraphs;
+import partitioning.algorithms.BalancedPartitioningOfPlanarGraphs;
 
 public class PartitionWriter {
 

@@ -1,4 +1,4 @@
-package partitioning;
+package partitioning.maxflow;
 
 import java.util.Comparator;
 import java.util.HashMap;
@@ -9,27 +9,11 @@ import java.util.Queue;
 
 import graph.Edge;
 import graph.Graph;
+import graph.Vertex;
 import graph.VertexOfDualGraph;
+import partitioning.models.FlowResult;
 
-class FlowResult {
-    double flowSize;
-    Graph<VertexOfDualGraph> graphWithFlow;
-    VertexOfDualGraph source;
-    VertexOfDualGraph sink;
-
-    public FlowResult(double flow, Graph<VertexOfDualGraph> graph, VertexOfDualGraph source, VertexOfDualGraph sink) {
-        this.flowSize = flow;
-        this.graphWithFlow = graph;
-        this.source = source;
-        this.sink = sink;
-    }
-
-    public double getFlowSize() {
-        return flowSize;
-    }
-}
-
-public class MaxFlow {
+public class MaxFlowDinic implements MaxFlow {
     Graph<VertexOfDualGraph> graph;
     HashMap<VertexOfDualGraph, Integer> lastNeighbourIndex;
     VertexOfDualGraph source;
@@ -39,7 +23,7 @@ public class MaxFlow {
     Queue<VertexOfDualGraph> queue;
 
 
-    public MaxFlow(Graph<VertexOfDualGraph> graph, VertexOfDualGraph source, VertexOfDualGraph sink) {
+    public MaxFlowDinic(Graph<VertexOfDualGraph> graph, VertexOfDualGraph source, VertexOfDualGraph sink) {
         this.graph = graph;
         this.source = source;
         this.sink = sink;
@@ -53,15 +37,18 @@ public class MaxFlow {
     }
 
 
-    FlowResult dinic() {
+    @Override
+    public FlowResult findFlow() {
+        int countIterations = 0;
         while (bfs()) {
+            countIterations++;
             lastNeighbourIndex.replaceAll((vertex, integer) -> 0);
             double pushed;
             while ((pushed = dfs(source, Integer.MAX_VALUE)) != 0) {
                 flow += pushed;
             }
         }
-
+        System.out.println("Number of bfs iterations in dinic: " + countIterations + ", vertices: " + graph.verticesNumber() + ", edges: " + graph.edgesNumber());
         return new FlowResult(flow, graph, source, sink);
     }
 
@@ -72,7 +59,7 @@ public class MaxFlow {
         level.put(source, 0);
         queue.add(source);
         while (!queue.isEmpty()) {
-            VertexOfDualGraph u = queue.peek();
+            Vertex u = queue.peek();
             queue.remove();
             for (Map.Entry<VertexOfDualGraph, Edge> edge : graph.getEdges().get(u).entrySet()) {
                 if (edge.getValue().flow < edge.getValue().getBandwidth() && level.get(edge.getKey()) == Integer.MAX_VALUE) {

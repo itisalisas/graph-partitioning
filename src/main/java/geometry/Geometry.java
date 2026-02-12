@@ -1,6 +1,5 @@
 package geometry;
 
-import java.util.Iterator;
 import java.util.List;
 
 import graph.Point;
@@ -25,9 +24,9 @@ public class Geometry {
         var base = boundaryIterator.next();
         var curr = boundaryIterator.next().coordinateDistance(base);
         while (boundaryIterator.hasNext()){
-            var nxt = boundaryIterator.next().coordinateDistance(base);
-            ans += area(curr, nxt);
-            nxt = curr;
+            var next = boundaryIterator.next().coordinateDistance(base);
+            ans += area(curr, next);
+            curr = next;
         }
 
         return ans;       

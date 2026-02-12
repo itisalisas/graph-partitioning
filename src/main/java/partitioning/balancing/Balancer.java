@@ -1,14 +1,14 @@
-package partitioning;
+package partitioning.balancing;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import graph.*;
+import jakarta.validation.constraints.NotNull;
 import org.junit.jupiter.api.Assertions;
 
-import readWrite.PartitionWriter;
+import partitioning.BalancedPartitioning;
+import partitioning.algorithms.InertialFlowPartitioning;
 
 public class Balancer {
 
@@ -32,7 +32,7 @@ public class Balancer {
     }
 
     private boolean rebalanceSmallestRegion() {
-        List<PartitionGraphVertex> ver = PartitionGraphVertex.smallestVertex(partitionGraph, maxWeight);
+        List<PartitionGraphVertex> ver = PartitionGraphVertex.smallestVertex(partitionGraph);
         for (PartitionGraphVertex sm : ver) {
             PartitionGraphVertex smallestVertex = sm.copy();
 
@@ -62,7 +62,7 @@ public class Balancer {
 
                 Assertions.assertEquals(balancingVerticesSet.size(), regionsSubgraph.verticesNumber());
                 Assertions.assertTrue(regionsSubgraph.isConnected());
-                double coefficient = 1 - (double) maxWeight / (balancingVerticesSet.stream().mapToDouble(v -> v.getWeight()).sum());
+                double coefficient = 1 - (double) maxWeight / (balancingVerticesSet.stream().mapToDouble(Vertex::getWeight).sum());
                 BalancedPartitioning bp = new BalancedPartitioning(new InertialFlowPartitioning(coefficient));
                 ArrayList<HashSet<VertexOfDualGraph>> newPartition = bp.partition(startGraph, comparisonForDualGraph, regionsSubgraph, maxWeight);
                 if (newPartition.size() > 2) {
@@ -166,8 +166,10 @@ public class Balancer {
         return false;
     }
 
-    public ArrayList<HashSet<VertexOfDualGraph>> rebalancing() throws IOException {
-        while (removeSmallestRegion()) { }
+    public ArrayList<HashSet<VertexOfDualGraph>> rebalancing() {
+        while (removeSmallestRegion()) {
+            // сontinue removing until no more regions can be removed
+        }
         double threshold = partitionGraph.verticesWeight() * 0.1;
         double variance = calculateVariance();
 
@@ -214,7 +216,7 @@ public class Balancer {
         return goodNeighbors;
     }
     
-    private boolean removeSmallestRegion() throws IOException {
+    private boolean removeSmallestRegion() {
         List<PartitionGraphVertex> ver = PartitionGraphVertex.bestVertex(partitionGraph, maxWeight);
         for (PartitionGraphVertex sm : ver) {
             PartitionGraphVertex smallestVertex = sm.copy();
@@ -234,9 +236,7 @@ public class Balancer {
             Map<VertexOfDualGraph, VertexOfDualGraph> vertexToBestNeighbor = new HashMap<>();
 
             PriorityQueue<Comp> priorityQueue = new PriorityQueue<>(
-                Comparator.comparingDouble((Comp comp) -> {
-                    return - comp.ratio;
-                })
+                Comparator.comparingDouble((Comp comp) -> - comp.ratio)
             );
 
             // TODO - не добавлять пары, которые не смежны
@@ -245,7 +245,6 @@ public class Balancer {
                     priorityQueue.add(new Comp(vertex, smallestVertex, neighbor));
                 }
             }
-
 
             while (!priorityQueue.isEmpty()) {
                 Comp comp = priorityQueue.poll();
@@ -298,10 +297,7 @@ public class Balancer {
                 }
             }
 
-
-            Graph<PartitionGraphVertex> newPartitionGraph = PartitionGraphVertex.buildPartitionGraph(dualGraph, newParts, dualVertexToPartNumber);
-
-            this.partitionGraph = newPartitionGraph;
+            this.partitionGraph = PartitionGraphVertex.buildPartitionGraph(dualGraph, newParts, dualVertexToPartNumber);
 
             return true;
         }
@@ -314,9 +310,7 @@ public class Balancer {
         VertexOfDualGraph bestNeighborVertex;
         double ratio;
 
-        public Comp() {}
-
-        public Comp(VertexOfDualGraph vertex, PartitionGraphVertex part, PartitionGraphVertex neighbor) { 
+        public Comp(VertexOfDualGraph vertex, PartitionGraphVertex part, PartitionGraphVertex neighbor) {
             this.vertex = vertex;
             this.neighbor = neighbor;
             double countInnerEdges = 0;
@@ -324,13 +318,13 @@ public class Balancer {
             double bestEdgeLength = 0;
             for (VertexOfDualGraph neighborVertex : dualGraph.getEdges().get(vertex).keySet()) {
                 Edge edge = dualGraph.getEdges().get(vertex).get(neighborVertex);
-                if (neighbor.vertices.stream().collect(Collectors.toSet()).contains(neighborVertex)) {
+                if (new HashSet<>(neighbor.vertices).contains(neighborVertex)) {
                     countOuterEdges += edge.length;
                     if (edge.length > bestEdgeLength) {
                         bestEdgeLength = edge.length;
                         bestNeighborVertex = neighborVertex;
                     }
-                } else if (part.vertices.stream().collect(Collectors.toSet()).contains(neighborVertex)) {
+                } else if (new HashSet<>(part.vertices).contains(neighborVertex)) {
                     countInnerEdges += edge.length;
                 }
             }
@@ -344,7 +338,7 @@ public class Balancer {
         }
     }
 
-    private HashMap<HashSet<VertexOfDualGraph>, Double> calculateCutWeights(Graph<VertexOfDualGraph> graph, List<HashSet<VertexOfDualGraph>> partitions) {
+    private HashMap<HashSet<VertexOfDualGraph>, Double> calculateCutWeights(@NotNull Graph<VertexOfDualGraph> graph, List<HashSet<VertexOfDualGraph>> partitions) {
         HashMap<HashSet<VertexOfDualGraph>, Double> cutEdgesMap = new HashMap<>();
         if (graph == null) {
             System.out.println("graph - null1");

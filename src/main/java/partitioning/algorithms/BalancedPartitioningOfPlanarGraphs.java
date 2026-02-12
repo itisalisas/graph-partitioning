@@ -1,18 +1,18 @@
-package partitioning;
+package partitioning.algorithms;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 
+import graph.Vertex;
 import org.junit.jupiter.api.Assertions;
 
 import graph.Graph;
-import graph.Vertex;
 import graph.VertexOfDualGraph;
 
 public abstract class BalancedPartitioningOfPlanarGraphs {
 
-	ArrayList<HashSet<VertexOfDualGraph>> partition;
+	public ArrayList<HashSet<VertexOfDualGraph>> partition;
 
 	public Graph<VertexOfDualGraph> graph;
 
