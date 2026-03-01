@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 
 import graph.*;
 import org.junit.jupiter.api.Assertions;
-import partitioning.models.FlowResult;
+import partitioning.entities.FlowResult;
 import partitioning.maxflow.MaxFlow;
 import partitioning.maxflow.MaxFlowDinic;
 import partitioning.maxflow.MaxFlowReif;
@@ -202,7 +202,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             MaxFlow maxFlow;
             boolean useReif = true;
             if (useReif) {
-                maxFlow = new MaxFlowReif(simpleGraph, copyGraph, source, sink);
+                maxFlow = new MaxFlowReif(simpleGraph, copyGraph, source, sink, comparisonForDualGraph);
             } else {
                 maxFlow = new MaxFlowDinic(copyGraph, source, sink);
             }
@@ -316,6 +316,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
     }
 
     private List<Graph<VertexOfDualGraph>> partitionGraphReif(FlowResult flow) {
+        List<Vertex> path = flow.pathInOriginalGraph();
         Graph<VertexOfDualGraph> graph = flow.graphWithFlow().clone();
         
         VertexOfDualGraph source = flow.source();

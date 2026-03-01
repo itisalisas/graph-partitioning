@@ -118,7 +118,6 @@ public class PartitionWriter {
 			out.write(String.valueOf(centerList.size() + "\n"));
 			out.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		gw.printVerticesToFile(centerList, centerFile, true, refPoint);

@@ -1,6 +1,5 @@
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,8 +9,6 @@ import java.util.Map;
 
 import graph.*;
 import org.junit.jupiter.api.Assertions;
-
-import com.google.gson.Gson;
 
 import addingPoints.LocalizationPoints;
 import graphPreparation.GraphPreparation;
@@ -28,36 +25,6 @@ import readWrite.PointsReader;
 
 
 public class Main {
-
-		public static void saveFacesToJson(HashMap<VertexOfDualGraph, ArrayList<Vertex>> faceToVertices, String filename, boolean geodetic, CoordinateConversion cc) throws Exception {
-		List<Map<String, Object>> facesData = new ArrayList<>();
-		Gson gson = new Gson();
-
-		for (Map.Entry<VertexOfDualGraph, ArrayList<Vertex>> entry : faceToVertices.entrySet()) {
-			VertexOfDualGraph face = entry.getKey();
-			ArrayList<Vertex> vertices = entry.getValue();
-
-			List<Map<String, Double>> points = new ArrayList<>();
-			for (Vertex vertex : vertices) {
-				if (geodetic) {
-					vertex = cc.fromEuclidean(vertex);
-				}
-				Map<String, Double> point = new HashMap<>();
-				point.put("x", vertex.x);
-				point.put("y", vertex.y);
-				points.add(point);
-			}
-
-			Map<String, Object> faceEntry = new HashMap<>();
-			faceEntry.put("faceId", face.name);
-			faceEntry.put("vertices", points);
-			facesData.add(faceEntry);
-		}
-
-		try (FileWriter writer = new FileWriter(filename)) {
-			gson.toJson(facesData, writer);
-		}
-	}
 
 	public static void main(String[] args) throws RuntimeException, IOException {
 
@@ -141,8 +108,6 @@ public class Main {
 		GraphPreparation preparation = new GraphPreparation(false, false);
 
 		Graph<VertexOfDualGraph> preparedGraph = preparation.prepareGraph(graph, 1, outputDirectory, cc);
-        GraphWriter grWr = new GraphWriter(cc);
-        grWr.printGraphToFile(graph, outputDirectory, "my_graph.txt", true);
 
 		for (VertexOfDualGraph v : preparedGraph.verticesArray()) {
 			Assertions.assertNotNull(v.getVerticesOfFace());
@@ -159,10 +124,6 @@ public class Main {
 
 		LocalizationPoints lp = new LocalizationPoints(new HashSet<>(weightedVertices));
 		HashMap<VertexOfDualGraph, ArrayList<Vertex>> faceToVertices = lp.findFacesForPoints(preparedGraph);
-		try {
-			saveFacesToJson(faceToVertices, "faces.json", true, cc);
-		} catch (Exception ignored) {
-		}
 
 		for (VertexOfDualGraph v: preparedGraph.verticesArray()) {
 			v.setWeight(0);
@@ -174,9 +135,7 @@ public class Main {
 		partitioning.bp.extractBigVertices(preparedGraph, maxSumVerticesWeight);
     
 		GraphWriter gw = new GraphWriter(cc);
-
 		String pathToResultDirectory = args[5];
-        graph.buildEdgeToDualVertexMap(preparedGraph);
 
 		long startTime = System.currentTimeMillis();
 		

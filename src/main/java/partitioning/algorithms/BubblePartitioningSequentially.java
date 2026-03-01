@@ -12,7 +12,7 @@ import graph.BoundSearcher;
 import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
-import partitioning.models.Bubble;
+import partitioning.entities.Bubble;
 
 public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanarGraphs {
 
@@ -245,7 +245,6 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
             // try {
             //     pw.printBound(bounds, str , true);
             // } catch (IOException e) {
-            //     // TODO Auto-generated catch block
             //     e.printStackTrace();
             // }
             // pw.printCenter(centerToFile, str, true);

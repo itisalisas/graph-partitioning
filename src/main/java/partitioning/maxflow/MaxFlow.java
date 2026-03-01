@@ -1,8 +1,7 @@
 package partitioning.maxflow;
 
-import partitioning.models.FlowResult;
+import partitioning.entities.FlowResult;
 
 public interface MaxFlow {
-
     FlowResult findFlow();
 }

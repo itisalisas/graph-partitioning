@@ -1,4 +1,4 @@
-package partitioning.models;
+package partitioning.entities;
 
 import java.util.HashSet;
 

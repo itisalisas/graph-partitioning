@@ -11,7 +11,7 @@ import graph.Edge;
 import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
-import partitioning.models.FlowResult;
+import partitioning.entities.FlowResult;
 
 public class MaxFlowDinic implements MaxFlow {
     Graph<VertexOfDualGraph> graph;

@@ -1,16 +1,19 @@
-package partitioning.models;
+package partitioning.entities;
 
 import java.util.List;
 import java.util.Map;
 
 import graph.Vertex;
+import graph.VertexOfDualGraph;
 
 public record DijkstraResult(
         List<Vertex> path,
         double distance,
         Map<Vertex, Vertex>previous,
-        Map<Vertex, Double> distances,
+        Map<Vertex, Double> dijkstraDistances,
         List<Vertex> boundaryLeaves,
-        Map<Vertex, Double> leftRegionWeights,
+        List<VertexOfDualGraph> regions,
+        List<Double> weights,
+        List<Double> distances,
         double totalRegionWeight
 ) { }

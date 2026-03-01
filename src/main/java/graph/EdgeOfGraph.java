@@ -135,7 +135,7 @@ public class EdgeOfGraph<T extends Vertex> extends Edge {
 				* (x - this.begin.x) / (this.end.x - this.begin.x) ;
 	}
 
-	public double getCorner() {
+	public double getAngle() {
 		double deltaX = this.end.x - this.begin.x;
 		double deltaY = this.end.y - this.begin.y;
 		double angle = Math.atan2(deltaY, deltaX); // Угол в диапазоне [-pi, pi]

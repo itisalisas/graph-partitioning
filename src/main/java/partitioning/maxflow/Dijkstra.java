@@ -11,8 +11,8 @@ import java.util.PriorityQueue;
 import graph.Edge;
 import graph.Graph;
 import graph.Vertex;
-import partitioning.models.DijkstraResult;
-import partitioning.models.VertexDistance;
+import partitioning.entities.DijkstraResult;
+import partitioning.entities.VertexDistance;
 
 public class Dijkstra {
 
@@ -89,9 +89,12 @@ public class Dijkstra {
                         .map(Vertex::getName)
                         .toList();
 
+                /*
                 System.out.println("  Source vertex " + src.getName() +
+                                           " (isOnBoundary)= " + src.getIsOnBoundary() +
                                            " has " + graph.getEdges().get(src).size() +
                                            " neighbors: " + neighborIds);
+                 */
             } else {
                 System.out.println("  Source vertex " + src.getName() + " NOT IN GRAPH!");
             }
@@ -135,14 +138,23 @@ public class Dijkstra {
             }
 
             // Проверяем достигли ли целевой границы
-            if (targetBoundary.contains(current.vertex()) && current.vertex().getIsOnBoundary()) {
+            if (isBoundaryContainsVertex(targetBoundary, current.vertex()) && current.vertex().getIsOnBoundary()) {
                 updateTarget(state, current);
-                continue;
+                //continue;
             }
 
             // Обрабатываем соседей текущей вершины
             processNeighbors(state, graph, current);
         }
+    }
+
+    private static boolean isBoundaryContainsVertex(List<Vertex> boundary, Vertex vertex) {
+        if (boundary.contains(vertex)) {
+            return true;
+        }
+        // проверяем что основная вершина для разделенной вершины на границе
+        Vertex vertexMain = new Vertex(vertex.name / 1000, vertex.x, vertex.y);
+        return boundary.contains(vertexMain);
     }
 
     /**
@@ -217,13 +229,6 @@ public class Dijkstra {
             current = previous.get(current);
         }
 
-        System.out.println("  Reconstructed path length: " + path.size() +
-                                   " vertices: " + path.stream()
-                .limit(5)
-                .map(Vertex::getName)
-                .toList() +
-                                   (path.size() > 5 ? "..." : ""));
-
         return path;
     }
 
@@ -236,9 +241,11 @@ public class Dijkstra {
                 state.minDistance,
                 state.previous,
                 state.distances,
-                new ArrayList<>(),      // boundaryLeaves - заполняется позже
-                new HashMap<>(),        // leftRegionWeights - заполняется позже
-                0.0                     // totalRegionWeight - заполняется позже
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                0.0
         );
     }
 

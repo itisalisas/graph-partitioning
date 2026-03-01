@@ -9,8 +9,8 @@ import graph.Edge;
 import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
-import partitioning.models.DijkstraResult;
-import partitioning.models.NeighborSplit;
+import partitioning.entities.DijkstraResult;
+import partitioning.entities.NeighborSplit;
 
 public class FlowWriter {
 
@@ -323,18 +323,16 @@ public class FlowWriter {
             writer.write("# vertex_id longitude latitude cumulative_left_weight boundary_index\n");
 
             System.out.println("Writing " + spt.boundaryLeaves().size() + " boundary leaves for " + sptName);
-            System.out.println("  leftRegionWeights map has " + spt.leftRegionWeights().size() + " entries");
+            System.out.println("  leftRegionWeights map has " + spt.weights().size() + " entries");
 
             for (int leafIdx = 0; leafIdx < spt.boundaryLeaves().size(); leafIdx++) {
                 Vertex leaf = spt.boundaryLeaves().get(leafIdx);
                 Vertex originalLeaf = splitToOriginalMap.getOrDefault(leaf, leaf);
                 Vertex geoLeaf = coordConversion.fromEuclidean(originalLeaf);
-                double leftWeight = spt.leftRegionWeights().getOrDefault(leaf, -1.0);
+                double leftWeight = spt.weights().get(leafIdx);
 
                 // Debug: check if leaf is in the map
-                boolean foundInMap = spt.leftRegionWeights().containsKey(leaf);
-                System.out.println("  Leaf " + leafIdx + ": vertex " + leaf.getName() +
-                        ", inMap=" + foundInMap + ", leftWeight=" + leftWeight);
+                System.out.println("  Leaf " + leafIdx + ": vertex " + leaf.getName() + ", leftWeight=" + leftWeight);
 
                 writer.write(String.format("%d %.10f %.10f %.6f %d\n",
                         geoLeaf.getName(), geoLeaf.x, geoLeaf.y, leftWeight, leafIdx));
@@ -367,7 +365,7 @@ public class FlowWriter {
                 Vertex geoChild = coordConversion.fromEuclidean(originalChild);
                 Vertex geoParent = coordConversion.fromEuclidean(originalParent);
 
-                double distance = spt.distances().getOrDefault(child, 0.0);
+                double distance = spt.dijkstraDistances().getOrDefault(child, 0.0);
 
                 writer.write(String.format("%d %.10f %.10f %d %.10f %.10f %.6f\n",
                         geoParent.getName(), geoParent.x, geoParent.y,
@@ -379,7 +377,7 @@ public class FlowWriter {
             // Write all vertices in the SPT with their distances
                 writer.write("VERTICES\n");
                 writer.write("# vertex_id longitude latitude distance_from_root\n");
-                for (Map.Entry<Vertex, Double> entry : spt.distances().entrySet()) {
+                for (Map.Entry<Vertex, Double> entry : spt.dijkstraDistances().entrySet()) {
                 Vertex v = entry.getKey();
                 Double dist = entry.getValue();
 

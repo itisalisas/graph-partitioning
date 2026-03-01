@@ -2,6 +2,8 @@ package partitioning;
 
 import graph.*;
 import org.junit.jupiter.api.Test;
+import partitioning.entities.FlowResult;
+import partitioning.maxflow.MaxFlowReif;
 
 import java.util.*;
 
@@ -155,11 +157,11 @@ class MaxFlowReifTest {
         assertNotNull(source, "Source should exist in dual graph");
         assertNotNull(sink, "Sink should exist in dual graph");
         
-        MaxFlowReif maxFlow = new MaxFlowReif(primalGraph, dualGraph, source, sink);
+        MaxFlowReif maxFlow = new MaxFlowReif(primalGraph, dualGraph, source, sink, null);
         FlowResult result = maxFlow.findFlow();
         
         assertNotNull(result, "Flow result should not be null");
-        assertTrue(result.getFlowSize() > 0, "Flow size should be positive");
+        assertTrue(result.flowSize() > 0, "Flow size should be positive");
         
         // Check that some edges are saturated
         int saturatedEdges = 0;
@@ -190,7 +192,7 @@ class MaxFlowReifTest {
             if (v.getName() == -2) sink = v;
         }
         
-        MaxFlowReif maxFlow = new MaxFlowReif(primalGraph, dualGraph, source, sink);
+        MaxFlowReif maxFlow = new MaxFlowReif(primalGraph, dualGraph, source, sink, null);
         FlowResult result = maxFlow.findFlow();
         
         // For intermediate nodes (not source or sink), flow in = flow out

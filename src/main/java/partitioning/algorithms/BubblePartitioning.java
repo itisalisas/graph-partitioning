@@ -61,7 +61,6 @@ public class BubblePartitioning extends BalancedPartitioningOfPlanarGraphs {
             // try {
             //     pw.printBound(bounds, str , true);
             // } catch (IOException e) {
-            //     // TODO Auto-generated catch block
             //     e.printStackTrace();
             // }
             // pw.printCenter(bubbles.keySet(), str, true);            

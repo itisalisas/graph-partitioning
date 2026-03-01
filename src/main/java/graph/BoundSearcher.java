@@ -121,8 +121,8 @@ public class BoundSearcher {
 
         EdgeOfGraph<Vertex> startEdge = findMaxEdgeLessThanPiOver2(arrangedEdges.get(start));
 
-        Assertions.assertTrue((0 <= startEdge.getCorner() && startEdge.getCorner() < Math.PI / 2.0) ||
-                (3.0 * Math.PI / 2.0) <= startEdge.getCorner() && startEdge.getCorner() < 2 * Math.PI);
+        Assertions.assertTrue((0 <= startEdge.getAngle() && startEdge.getAngle() < Math.PI / 2.0) ||
+                (3.0 * Math.PI / 2.0) <= startEdge.getAngle() && startEdge.getAngle() < 2 * Math.PI);
 
         EdgeOfGraph<Vertex> prevEdge = new EdgeOfGraph<>(startEdge.end, startEdge.begin, 0);
         Vertex current = startEdge.end;
@@ -200,7 +200,7 @@ public class BoundSearcher {
         double bestAngle = -1;
 
         for (EdgeOfGraph<Vertex> edge : sortedEdges) {
-            double angle = edge.getCorner();
+            double angle = edge.getAngle();
 
             if (angle < Math.PI / 2 && angle > bestAngle) {
                 bestAngle = angle;
