@@ -24,5 +24,4 @@ public record FlowResult(
     public FlowResult(List<Vertex> pathInOriginalGraph) {
         this(0, null, null, null, pathInOriginalGraph);
     }
-
 }

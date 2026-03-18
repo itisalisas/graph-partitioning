@@ -322,7 +322,7 @@ public class ShortestPathTreeSearcher {
             context.regions.add(rightFace);
             
             // Инкрементально обновляем длину границы
-            double boundaryLength = updateBoundaryLengthIncremental(rightFace, context);
+            double boundaryLength = updateBoundaryLength(rightFace, context);
             context.distances.add(boundaryLength);
             
             // Добавляем регион в множество (ВАЖНО: после вычисления!)
@@ -579,20 +579,10 @@ public class ShortestPathTreeSearcher {
         return 0;
     }
 
-    /**
-     * Инкрементально обновляет длину границы при добавлении нового региона.
-     * 
-     * Когда добавляется регион newRegion:
-     * - Рёбра к УЖЕ добавленным соседям УДАЛЯЮТСЯ из границы (вычитаем длину)
-     * - Рёбра к ЕЩЁ НЕ добавленным соседям ДОБАВЛЯЮТСЯ в границу (прибавляем длину)
-     * 
-     * @return новая длина границы после добавления региона
-     */
-    private static double updateBoundaryLengthIncremental(
+    private static double updateBoundaryLength(
             VertexOfDualGraph newRegion,
             EulerTourContext context) {
 
-        // Получаем соседей нового региона в двойственном графе
         Map<VertexOfDualGraph, Edge> neighbors = context.dualGraph.getEdges().get(newRegion);
 
         if (neighbors == null) {
@@ -607,10 +597,8 @@ public class ShortestPathTreeSearcher {
             double edgeLength = edge.length;
 
             if (context.addedRegions.contains(neighborFace)) {
-                // Сосед УЖЕ добавлен -> ребро УБИРАЕТСЯ из границы
                 delta -= edgeLength;
             } else {
-                // Сосед ещё НЕ добавлен -> ребро ДОБАВЛЯЕТСЯ в границу
                 delta += edgeLength;
             }
         }

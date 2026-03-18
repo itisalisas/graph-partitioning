@@ -74,7 +74,7 @@ public class MaxFlowReif implements MaxFlow {
 
         // Поиск кратчайшего пути
         Optional<DijkstraResult> shortestPathResultOpt = dijkstraMultiSource(
-                modifiedGraph, boundaries.sourceBoundary(), boundaries.sinkBoundary()
+                modifiedGraph, boundaries.sourceBoundary(), boundaries.sinkBoundary(), CornerConstraints.empty()
         );
 
         if (shortestPathResultOpt.isEmpty()) {
@@ -599,8 +599,20 @@ public class MaxFlowReif implements MaxFlow {
             List<Vertex> sinkIntersections,
             boolean isFirstSide) {
 
+        // Находим две ключевые угловые вершины для этой стороны
+        Map<Long, Integer> boundaryOrderMap = buildBoundaryOrderMap(targetBoundary);
+        TwoKeyVertices keyVertices = findTwoKeyVerticesForConstraints(
+                sourceIntersections, sinkIntersections,
+                boundaryOrderMap, targetBoundary.size(), isFirstSide
+        );
+
+        // Создаем ограничения только для этих двух ключевых вершин
+        CornerConstraints cornerConstraints = buildCornerConstraintsForKeyVertices(
+                graph, keyVertices, targetBoundary, sourceVertex, isFirstSide
+        );
+
         Optional<DijkstraResult> defaultResultOpt = dijkstraSingleSource(
-                graph, sourceVertex, targetBoundary
+                graph, sourceVertex, targetBoundary, cornerConstraints
         );
 
         if (defaultResultOpt.isEmpty()) {
@@ -625,6 +637,15 @@ public class MaxFlowReif implements MaxFlow {
                 spt.distances(),
                 spt.totalRegionWeight()
         ));
+    }
+
+    private record TwoKeyVertices(
+            Vertex sourceVertex,   // на стороне source
+            Vertex sinkVertex      // на стороне sink
+    ) {
+        boolean isValid() {
+            return sourceVertex != null && sinkVertex != null;
+        }
     }
 
     /**
@@ -767,5 +788,215 @@ public class MaxFlowReif implements MaxFlow {
                 !sourceBoundarySet.contains(v) &&
                 !sinkBoundarySet.contains(v) &&
                 !externalBoundarySet.contains(v);
+    }
+
+    /**
+     * Создает ограничения только для двух ключевых угловых вершин
+     */
+    private CornerConstraints buildCornerConstraintsForKeyVertices(
+            Graph<Vertex> graph,
+            TwoKeyVertices keyVertices,
+            List<Vertex> targetBoundary,
+            Vertex sourceVertex,
+            boolean isFirstSide) {
+
+        if (!keyVertices.isValid()) {
+            System.out.println("WARNING: Invalid key vertices, no constraints");
+            return CornerConstraints.empty();
+        }
+
+        Set<Long> cornerVertices = new HashSet<>();
+        Map<Long, List<EdgeOfGraph<Vertex>>> allowedEdgesForCorner = new HashMap<>();
+
+        Map<Vertex, TreeSet<EdgeOfGraph<Vertex>>> sortedEdgesByVertex = graph.arrangeByAngle();
+        Set<Long> targetBoundarySet = targetBoundary.stream()
+                .map(Vertex::getName)
+                .collect(Collectors.toSet());
+
+        // Обрабатываем source corner (ключевая вершина на source стороне)
+        Vertex sourceCorner = keyVertices.sourceVertex();
+        cornerVertices.add(sourceCorner.getName());
+        List<EdgeOfGraph<Vertex>> allowedEdgesForSource = findAllowedEdgesForCorner(
+                sourceCorner, sortedEdgesByVertex, targetBoundarySet,
+                sourceVertex, isFirstSide, true  // true = это source corner
+        );
+        allowedEdgesForCorner.put(sourceCorner.getName(), allowedEdgesForSource);
+
+        // Обрабатываем sink corner (ключевая вершина на sink стороне)
+        Vertex sinkCorner = keyVertices.sinkVertex();
+        cornerVertices.add(sinkCorner.getName());
+        List<EdgeOfGraph<Vertex>> allowedEdgesForSink = findAllowedEdgesForCorner(
+                sinkCorner, sortedEdgesByVertex, targetBoundarySet,
+                sourceVertex, isFirstSide, false  // false = это sink corner
+        );
+        allowedEdgesForCorner.put(sinkCorner.getName(), allowedEdgesForSink);
+
+        return new CornerConstraints(cornerVertices, allowedEdgesForCorner);
+    }
+
+    private List<EdgeOfGraph<Vertex>> findAllowedEdgesForCorner(
+            Vertex corner,
+            Map<Vertex, TreeSet<EdgeOfGraph<Vertex>>> sortedEdgesByVertex,
+            Set<Long> targetBoundarySet,
+            Vertex sourceVertex,
+            boolean isFirstSide,
+            boolean isSourceCorner) {
+
+        TreeSet<EdgeOfGraph<Vertex>> allEdges = sortedEdgesByVertex.get(corner);
+        if (allEdges == null || allEdges.isEmpty()) {
+            return List.of();
+        }
+
+        List<EdgeOfGraph<Vertex>> edgesList = new ArrayList<>(allEdges);
+
+        // Находим индексы ключевых рёбер
+        int externalBoundaryEdgeIdx = -1;
+        int sourceSinkEdgeIdx = -1;
+
+        for (int i = 0; i < edgesList.size(); i++) {
+            EdgeOfGraph<Vertex> edge = edgesList.get(i);
+
+            // Ребро внешней границы (к другой boundary вершине)
+            if (corner.getIsOnBoundary() && edge.end.getIsOnBoundary()) {
+                externalBoundaryEdgeIdx = i;
+            }
+
+            // Ребро к source/sink boundary или к source vertex
+            if (targetBoundarySet.contains(edge.end.getName()) ||
+                    edge.end.getName() == sourceVertex.getName()) {
+                sourceSinkEdgeIdx = i;
+            }
+        }
+
+        if (externalBoundaryEdgeIdx == -1 || sourceSinkEdgeIdx == -1) {
+            System.out.println("WARNING: Corner " + corner.getName() +
+                    " - не найдены граничные рёбра, разрешаем все");
+            return edgesList;
+        }
+
+        // КЛЮЧЕВАЯ ЛОГИКА: определяем какой сектор брать
+        // TreeSet упорядочен ПРОТИВ часовой стрелки (по возрастанию угла)
+
+        int startIdx, endIdx;
+
+        if (isSourceCorner) {
+            // Source corner: по часовой = source edge → плохие → external edge → хорошие
+            // Против часовой = хорошие → external edge → плохие → source edge
+            if (isFirstSide) {
+                // Нужны хорошие: от external к source (ПРОТИВ часовой)
+                startIdx = externalBoundaryEdgeIdx;
+                endIdx = sourceSinkEdgeIdx;
+            } else {
+                // Нужны плохие: от source к external (ПРОТИВ часовой)
+                startIdx = sourceSinkEdgeIdx;
+                endIdx = externalBoundaryEdgeIdx;
+            }
+        } else {
+            // Sink corner: по часовой = sink edge → хорошие → external edge → плохие
+            // Против часовой = плохие → external edge → хорошие → sink edge
+            if (isFirstSide) {
+                // Нужны хорошие: от sink к external (ПРОТИВ часовой)
+                startIdx = sourceSinkEdgeIdx;
+                endIdx = externalBoundaryEdgeIdx;
+            } else {
+                // Нужны плохие: от external к sink (ПРОТИВ часовой)
+                startIdx = externalBoundaryEdgeIdx;
+                endIdx = sourceSinkEdgeIdx;
+            }
+        }
+
+        // Собираем рёбра от start к end (по кругу, против часовой)
+        List<EdgeOfGraph<Vertex>> allowedEdges = new ArrayList<>();
+        int currentIdx = startIdx;
+
+        for (int iter = 0; iter <= edgesList.size(); iter++) {
+            allowedEdges.add(edgesList.get(currentIdx));
+
+            if (currentIdx == endIdx) {
+                break;
+            }
+
+            currentIdx = (currentIdx + 1) % edgesList.size();
+        }
+
+        System.out.println("Corner " + corner.getName() +
+                " (type=" + (isSourceCorner ? "SOURCE" : "SINK") +
+                ", isFirstSide=" + isFirstSide + "): " +
+                "allowed " + allowedEdges.size() + "/" + edgesList.size() + " edges " +
+                "(from idx " + startIdx + " to " + endIdx + ")");
+
+        return allowedEdges;
+    }
+
+    /**
+     * Находит два ключевых угла (source и sink), ограничивающих нужный сегмент external boundary
+     */
+    /**
+     * Находит два ключевых угла (source и sink), ограничивающих нужный сегмент external boundary
+     * Использует ТУ ЖЕ логику что extractBoundarySegment
+     */
+    private TwoKeyVertices findTwoKeyVerticesForConstraints(
+            List<Vertex> sourceIntersections,
+            List<Vertex> sinkIntersections,
+            Map<Long, Integer> boundaryOrderMap,
+            int boundarySize,
+            boolean isFirstSide) {
+
+        if (sourceIntersections.isEmpty() || sinkIntersections.isEmpty()) {
+            return new TwoKeyVertices(null, null);
+        }
+
+        // Находим пару с минимальным расстоянием по часовой от source к sink
+        Vertex bestSourceCorner = null;
+        Vertex bestSinkCorner = null;
+        int minDistance = boundarySize;
+
+        for (Vertex sCorner : sourceIntersections) {
+            int sPos = boundaryOrderMap.getOrDefault(sCorner.getName(), -1);
+            if (sPos < 0) continue;
+
+            for (Vertex tCorner : sinkIntersections) {
+                int tPos = boundaryOrderMap.getOrDefault(tCorner.getName(), -1);
+                if (tPos < 0) continue;
+
+                // Расстояние по часовой стрелке от source к sink
+                int distance = (tPos - sPos + boundarySize) % boundarySize;
+
+                if (distance > 0 && distance < minDistance) {
+                    minDistance = distance;
+                    bestSourceCorner = sCorner;
+                    bestSinkCorner = tCorner;
+                }
+            }
+        }
+
+        if (bestSourceCorner == null || bestSinkCorner == null) {
+            return new TwoKeyVertices(null, null);
+        }
+
+        // Для другой стороны (isFirstSide=false) меняем местами
+        // ТА ЖЕ логика что в extractBoundarySegment!
+        if (!isFirstSide) {
+            Vertex temp = bestSourceCorner;
+            bestSourceCorner = bestSinkCorner;
+            bestSinkCorner = temp;
+        }
+
+        System.out.println("Key vertices for constraints: source=" +
+                bestSourceCorner.getName() + ", sink=" + bestSinkCorner.getName() +
+                " (isFirstSide=" + isFirstSide + ")");
+
+        return new TwoKeyVertices(bestSourceCorner, bestSinkCorner);
+    }
+
+    /**
+     * Строит map: позиция на границе для каждой вершины
+     */
+    private Map<Long, Integer> buildBoundaryOrderMap(List<Vertex> boundary) {
+        Map<Long, Integer> map = new HashMap<>();
+        for (int i = 0; i < boundary.size(); i++) {
+            map.put(boundary.get(i).getName(), i);
+        }
+        return map;
     }
 }

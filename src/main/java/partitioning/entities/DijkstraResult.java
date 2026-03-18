@@ -9,7 +9,7 @@ import graph.VertexOfDualGraph;
 public record DijkstraResult(
         List<Vertex> path,
         double distance,
-        Map<Vertex, Vertex>previous,
+        Map<Vertex, Vertex> previous,
         Map<Vertex, Double> dijkstraDistances,
         List<Vertex> boundaryLeaves,
         List<VertexOfDualGraph> regions,

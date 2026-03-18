@@ -120,5 +120,4 @@ public class Bubble {
             System.out.println("Bubble weight > maxBubbleWeight!");
         }
     }
-
 }

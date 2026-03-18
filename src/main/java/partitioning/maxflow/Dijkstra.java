@@ -42,14 +42,15 @@ public class Dijkstra {
     public static Optional<DijkstraResult> dijkstraMultiSource(
             Graph<Vertex> graph,
             List<Vertex> sourceVertices,
-            List<Vertex> targetBoundary) {
+            List<Vertex> targetBoundary,
+            CornerConstraints cornerConstraints) {
 
         logDebugInfo(graph, sourceVertices, targetBoundary);
 
         DijkstraState state = new DijkstraState();
         initializeDistances(state, graph, sourceVertices);
 
-        processGraph(state, graph, targetBoundary);
+        processGraph(state, graph, targetBoundary, cornerConstraints);
 
         if (state.targetVertex == null) {
             System.out.println("  No target vertex found!");
@@ -127,7 +128,8 @@ public class Dijkstra {
     private static void processGraph(
             DijkstraState state,
             Graph<Vertex> graph,
-            List<Vertex> targetBoundary) {
+            List<Vertex> targetBoundary,
+            CornerConstraints cornerConstraints) {
 
         while (!state.queue.isEmpty()) {
             VertexDistance current = state.queue.poll();
@@ -140,11 +142,11 @@ public class Dijkstra {
             // Проверяем достигли ли целевой границы
             if (isBoundaryContainsVertex(targetBoundary, current.vertex()) && current.vertex().getIsOnBoundary()) {
                 updateTarget(state, current);
-                continue;
+                // continue;
             }
 
             // Обрабатываем соседей текущей вершины
-            processNeighbors(state, graph, current);
+            processNeighbors(state, graph, current, cornerConstraints);
         }
     }
 
@@ -182,7 +184,8 @@ public class Dijkstra {
     private static void processNeighbors(
             DijkstraState state,
             Graph<Vertex> graph,
-            VertexDistance current) {
+            VertexDistance current,
+            CornerConstraints cornerConstraints) {
 
         Map<Vertex, Edge> neighbors = graph.getEdges().get(current.vertex());
         if (neighbors == null) {
@@ -190,6 +193,11 @@ public class Dijkstra {
         }
 
         for (Map.Entry<Vertex, Edge> entry : neighbors.entrySet()) {
+            Vertex neighbor = entry.getKey();
+
+            if (!cornerConstraints.isNeighborAllowed(current.vertex(), neighbor)) {
+                continue;
+            }
             processNeighbor(state, current.vertex(), entry.getKey(), entry.getValue());
         }
     }
@@ -255,8 +263,9 @@ public class Dijkstra {
     public static Optional<DijkstraResult> dijkstraSingleSource(
             Graph<Vertex> graph,
             Vertex sourceVertex,
-            List<Vertex> targetBoundary) {
-        return dijkstraMultiSource(graph, List.of(sourceVertex), targetBoundary);
+            List<Vertex> targetBoundary,
+            CornerConstraints cornerConstraints) {
+        return dijkstraMultiSource(graph, List.of(sourceVertex), targetBoundary, cornerConstraints);
     }
 
 }
