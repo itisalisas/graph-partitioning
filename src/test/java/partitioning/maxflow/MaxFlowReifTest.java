@@ -1,9 +1,8 @@
-package partitioning;
+package partitioning.maxflow;
 
 import graph.*;
 import org.junit.jupiter.api.Test;
 import partitioning.entities.FlowResult;
-import partitioning.maxflow.MaxFlowReif;
 
 import java.util.*;
 

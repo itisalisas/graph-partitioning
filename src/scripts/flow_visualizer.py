@@ -195,9 +195,10 @@ def load_spt(file_path):
     spt_data = {
         'root': None,
         'total_region_weight': 0.0,
-        'boundary_leaves': [],  # list of (id, lat, lon, cumulative_weight)
+        'boundary_leaves': [],  # list of (id, lat, lon, cumulative_weight, boundary_index)
         'tree_edges': [],       # list of (from_id, from_lat, from_lon, to_id, to_lat, to_lon, distance)
-        'vertices': {}          # id -> (lat, lon, distance)
+        'vertices': {},         # id -> (lat, lon, distance)
+        'region_weights': []    # list of (region_idx, from_leaf_idx, to_leaf_idx, weight, centroid_lon, centroid_lat)
     }
     
     if not os.path.exists(file_path):
@@ -219,6 +220,9 @@ def load_spt(file_path):
                 continue
             elif line == 'BOUNDARY_LEAVES':
                 mode = 'BOUNDARY_LEAVES'
+                continue
+            elif line == 'REGION_WEIGHTS':
+                mode = 'REGION_WEIGHTS'
                 continue
             elif line == 'TREE_EDGES':
                 mode = 'TREE_EDGES'
@@ -248,6 +252,30 @@ def load_spt(file_path):
                     # boundary_index is optional (for backwards compatibility)
                     boundary_index = int(parts[4]) if len(parts) >= 5 else -1
                     spt_data['boundary_leaves'].append((vertex_id, latitude, longitude, cumulative_weight, boundary_index))
+            
+            elif mode == 'REGION_WEIGHTS':
+                parts = line.split()
+                if len(parts) >= 7:
+                    # New format with region_vertex_id
+                    region_idx = int(parts[0])
+                    region_vertex_id = int(parts[1])
+                    from_leaf_idx = int(parts[2])
+                    to_leaf_idx = int(parts[3])
+                    weight = float(parts[4])
+                    centroid_lon = float(parts[5])
+                    centroid_lat = float(parts[6])
+                    spt_data['region_weights'].append((region_idx, region_vertex_id, from_leaf_idx, to_leaf_idx, 
+                                                       weight, centroid_lat, centroid_lon))
+                elif len(parts) >= 6:
+                    # Old format without region_vertex_id (backwards compatibility)
+                    region_idx = int(parts[0])
+                    from_leaf_idx = int(parts[1])
+                    to_leaf_idx = int(parts[2])
+                    weight = float(parts[3])
+                    centroid_lon = float(parts[4])
+                    centroid_lat = float(parts[5])
+                    spt_data['region_weights'].append((region_idx, -1, from_leaf_idx, to_leaf_idx, 
+                                                       weight, centroid_lat, centroid_lon))
             
             elif mode == 'TREE_EDGES':
                 parts = line.split()
@@ -279,7 +307,8 @@ def load_spt(file_path):
                     spt_data['vertices'][vertex_id] = (latitude, longitude, distance)
     
     print(f"Loaded SPT: root={spt_data['root']}, {len(spt_data['boundary_leaves'])} boundary leaves, "
-          f"{len(spt_data['tree_edges'])} tree edges, total_weight={spt_data['total_region_weight']:.2f}")
+          f"{len(spt_data['tree_edges'])} tree edges, {len(spt_data['region_weights'])} regions, "
+          f"total_weight={spt_data['total_region_weight']:.2f}")
     
     return spt_data
 
@@ -782,6 +811,7 @@ def visualize_reif_flow(directory_name, output_file):
         root_color = color_scheme['root']
         leaf_color = color_scheme['leaf']
         vertex_color = color_scheme['vertex']
+        region_label_color = color_scheme['region_label']
         
         # Draw tree edges
         for edge in spt_data['tree_edges']:
@@ -810,7 +840,7 @@ def visualize_reif_flow(directory_name, output_file):
                 tooltip=f"ROOT ({spt_name}): Vertex {root_id}<br>Total region weight: {spt_data['total_region_weight']:.2f}"
             ).add_to(layer)
         
-        # Draw boundary leaves with region weights
+        # Draw boundary leaves (without labels - labels only on regions)
         total_weight = spt_data['total_region_weight']
         num_leaves = len(spt_data['boundary_leaves'])
         
@@ -839,7 +869,7 @@ def visualize_reif_flow(directory_name, output_file):
                 f"Total: {total_weight:.2f}"
             )
             
-            # Draw leaf marker
+            # Draw leaf marker (no label - labels only on regions)
             folium.CircleMarker(
                 location=(leaf_lat, leaf_lon),
                 radius=7,
@@ -850,23 +880,45 @@ def visualize_reif_flow(directory_name, output_file):
                 weight=2,
                 tooltip=tooltip_text
             ).add_to(layer)
-            
-            # Add label showing both position and weight percentage
-            # Use position-based label to show ordering is correct
-            label_text = f"L{i}"
-            if total_weight > 0 and cumulative_weight >= 0:
-                label_text = f"{weight_percentage:.0f}%"
-            
-            folium.Marker(
-                location=(leaf_lat, leaf_lon),
-                icon=folium.DivIcon(
-                    html=f'<div style="font-size: 9px; color: {leaf_color}; font-weight: bold; '
-                         f'text-shadow: 1px 1px white, -1px -1px white, 1px -1px white, -1px 1px white;">'
-                         f'{label_text}</div>',
-                    icon_size=(30, 15),
-                    icon_anchor=(15, 0)
+        
+        # Draw region weights as labels in the center of each region
+        if spt_data['region_weights']:
+            for region_data in spt_data['region_weights']:
+                # Handle both old (6 fields) and new (7 fields) format
+                if len(region_data) == 7:
+                    region_idx, region_vertex_id, from_leaf_idx, to_leaf_idx, weight, centroid_lat, centroid_lon = region_data
+                else:
+                    region_idx, from_leaf_idx, to_leaf_idx, weight, centroid_lat, centroid_lon = region_data
+                    region_vertex_id = -1
+                
+                # Calculate percentage of total weight
+                weight_percentage = (weight / total_weight * 100) if total_weight > 0 else 0
+                
+                # Create tooltip
+                tooltip_text = (
+                    f"<b>Region {region_idx}</b> ({spt_name})<br>"
+                    f"Dual vertex ID: {region_vertex_id}<br>"
+                    f"Between leaves L{from_leaf_idx} and L{to_leaf_idx}<br>"
+                    f"Weight: {weight:.2f} ({weight_percentage:.1f}%)<br>"
+                    f"Total: {total_weight:.2f}"
                 )
-            ).add_to(layer)
+                
+                # Add label with region index and weight
+                label_text = f"[{region_idx}]: {weight:.1f}"
+                
+                folium.Marker(
+                    location=(centroid_lat, centroid_lon),
+                    icon=folium.DivIcon(
+                        html=f'<div style="font-size: 12px; color: {region_label_color}; font-weight: bold; '
+                             f'background-color: rgba(255, 255, 255, 0.9); padding: 3px 6px; '
+                             f'border: 2px solid {region_label_color}; border-radius: 4px; '
+                             f'white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.3);" '
+                             f'title="{tooltip_text}">'
+                             f'{label_text}</div>',
+                        icon_size=(80, 25),
+                        icon_anchor=(40, 12)
+                    )
+                ).add_to(layer)
         
         # Draw intermediate vertices (smaller, less prominent)
         for vertex_id, (lat, lon, distance) in spt_data['vertices'].items():
@@ -894,7 +946,8 @@ def visualize_reif_flow(directory_name, output_file):
             'edge': '#9932CC',      # Dark orchid
             'root': '#8B008B',      # Dark magenta
             'leaf': '#DA70D6',      # Orchid
-            'vertex': '#DDA0DD'     # Plum
+            'vertex': '#DDA0DD',    # Plum
+            'region_label': '#8B008B'  # Dark magenta for region labels
         }, 'SPT1')
     
     # Visualize SPT 2 (teal/cyan scheme)
@@ -903,7 +956,8 @@ def visualize_reif_flow(directory_name, output_file):
             'edge': '#008B8B',      # Dark cyan
             'root': '#006666',      # Darker teal
             'leaf': '#20B2AA',      # Light sea green
-            'vertex': '#66CDAA'     # Medium aquamarine
+            'vertex': '#66CDAA',    # Medium aquamarine
+            'region_label': '#006666'  # Darker teal for region labels
         }, 'SPT2')
     
     # 8. Лучший найденный путь (оранжевый/желтый - самый важный, рисуем последним)
@@ -984,7 +1038,7 @@ def visualize_reif_flow(directory_name, output_file):
     # Добавляем легенду
     legend_html = '''
     <div style="position: fixed; 
-                bottom: 50px; right: 50px; width: 380px; height: 680px; 
+                bottom: 50px; right: 50px; width: 380px; height: 720px; 
                 background-color: white; border:2px solid grey; z-index:9999; 
                 font-size:11px; padding: 10px; overflow-y: auto;">
     <p><b>MaxFlowReif Visualization</b></p>
@@ -1006,14 +1060,16 @@ def visualize_reif_flow(directory_name, output_file):
     <p style="margin-bottom: 6px; margin-top: 6px; font-size: 10px;"><b>SPT 1 - Left Split (toggle):</b></p>
     <p style="margin-left: 15px;"><span style="color:#9932CC;">━</span> Tree edges</p>
     <p style="margin-left: 15px;"><span style="color:#8B008B;">⬤</span> Root vertex</p>
-    <p style="margin-left: 15px;"><span style="color:#DA70D6;">⬤</span> Boundary leaves (% = left weight)</p>
+    <p style="margin-left: 15px;"><span style="color:#DA70D6;">⬤</span> Boundary leaves</p>
+    <p style="margin-left: 15px;"><span style="color:#8B008B; background: rgba(255,255,255,0.9); border: 2px solid; padding: 2px 4px;">[i]: X.X</span> Region weights</p>
     <p style="margin-bottom: 6px; margin-top: 6px; font-size: 10px;"><b>SPT 2 - Right Split (toggle):</b></p>
     <p style="margin-left: 15px;"><span style="color:#008B8B;">━</span> Tree edges</p>
     <p style="margin-left: 15px;"><span style="color:#006666;">⬤</span> Root vertex</p>
-    <p style="margin-left: 15px;"><span style="color:#20B2AA;">⬤</span> Boundary leaves (% = left weight)</p>
+    <p style="margin-left: 15px;"><span style="color:#20B2AA;">⬤</span> Boundary leaves</p>
+    <p style="margin-left: 15px;"><span style="color:#006666; background: rgba(255,255,255,0.9); border: 2px solid; padding: 2px 4px;">[i]: X.X</span> Region weights</p>
     <p style="margin-left: 15px; font-size: 9px; font-style: italic;">
-    Li → weight(R0+...+Ri) / total<br>
-    Shows cumulative region weight split
+    [i]: weight → region index and its weight<br>
+    Regions are between consecutive boundary leaves
     </p>
     <p><span style="color:orange;">━ ⬤</span> <b>Best Path</b></p>
     </div>

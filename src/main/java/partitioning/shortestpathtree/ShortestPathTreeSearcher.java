@@ -1,13 +1,13 @@
-package partitioning.maxflow.shortestpathtree;
+package partitioning.shortestpathtree;
 
 import java.util.*;
 
+import graph.Edge;
 import graph.EdgeOfGraph;
 import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
 import partitioning.entities.SPTWithRegionWeights;
-import readWrite.CoordinateConversion;
 
 public class ShortestPathTreeSearcher {
 
@@ -91,13 +91,18 @@ public class ShortestPathTreeSearcher {
 
         double cumulativeWeight;
         int currentLeafIndex;
+        final Set<Map.Entry<Vertex, Vertex>> processedNonTreeEdges;
+        final Set<VertexOfDualGraph> addedRegions;
+        final Graph<VertexOfDualGraph> dualGraph;
+        double currentBoundaryLength;
 
         EulerTourContext(
                 Map<Vertex, TreeSet<EdgeOfGraph<Vertex>>> sortedEdgesByVertex,
                 Set<Map.Entry<Vertex, Vertex>> sptEdges,
                 Set<Vertex> sptVertices,
                 Set<Vertex> boundaryLeaves,
-                Map<Vertex, HashMap<Vertex, VertexOfDualGraph>> edgeToLeftFace) {
+                Map<Vertex, HashMap<Vertex, VertexOfDualGraph>> edgeToLeftFace,
+                Graph<VertexOfDualGraph> dualGraph) {
 
             this.sortedEdgesByVertex = sortedEdgesByVertex;
             this.sptEdges = sptEdges;
@@ -109,6 +114,10 @@ public class ShortestPathTreeSearcher {
             this.distances = new ArrayList<>();
             this.cumulativeWeight = 0.0;
             this.currentLeafIndex = 0;
+            this.processedNonTreeEdges = new HashSet<>();
+            this.addedRegions = new HashSet<>();
+            this.dualGraph = dualGraph;
+            this.currentBoundaryLength = 0.0;
         }
     }
 
@@ -169,7 +178,7 @@ public class ShortestPathTreeSearcher {
 
         return new EulerTourContext(
                 sortedEdgesByVertex, sptEdges, sptVertices,
-                new HashSet<>(boundaryLeaves), edgeToLeftFace);
+                new HashSet<>(boundaryLeaves), edgeToLeftFace, dualGraph);
     }
 
     /**
@@ -181,6 +190,8 @@ public class ShortestPathTreeSearcher {
 
         while (!stack.isEmpty()) {
             EulerTourFrame frame = stack.pop();
+            //System.out.println("Processing vertex: " + frame.vertex().getName());
+            //System.out.println("Parent: " + (frame.parent() != null ? frame.parent().getName() : "null"));
 
             if (frame.isReturning()) {
                 // Возврат из рекурсии - обрабатываем boundary leaf
@@ -191,11 +202,6 @@ public class ShortestPathTreeSearcher {
             TreeSet<EdgeOfGraph<Vertex>> edgesFromCurrent =
                     context.sortedEdgesByVertex.get(frame.vertex());
 
-            if (edgesFromCurrent == null || edgesFromCurrent.isEmpty()) {
-                System.out.println("LEAF");
-                handleBoundaryLeaf(frame.vertex(), context);
-                continue;
-            }
 
             // Добавляем фрейм для обработки после обхода детей
             stack.push(new EulerTourFrame(frame.vertex(), frame.parent(), 0, true));
@@ -221,10 +227,12 @@ public class ShortestPathTreeSearcher {
             EulerTourContext context) {
 
         Vertex neighbor = edge.end;
+        //System.out.println("Processing edge: " + edge.begin.getName() + " - " + edge.end.getName());
 
         // Пропускаем parent
         if (currentFrame.parent() != null &&
                 neighbor.getName() == currentFrame.parent().getName()) {
+            //System.out.println("Skipping parent: " + currentFrame.parent().getName());
             return;
         }
 
@@ -232,10 +240,25 @@ public class ShortestPathTreeSearcher {
 
         if (isTreeEdge) {
             // Добавляем child в стек для обхода
+            //System.out.println("Pushing child: " + neighbor.getName());
             stack.push(new EulerTourFrame(neighbor, currentFrame.vertex(), 0, false));
         } else {
-            // Обрабатываем non-tree ребро
-            processRightFace(currentFrame.vertex(), neighbor, context);
+            // Проверяем, не обработали ли мы это ребро уже
+            Map.Entry<Vertex, Vertex> edgeKey1 = Map.entry(currentFrame.vertex(), neighbor);
+            Map.Entry<Vertex, Vertex> edgeKey2 = Map.entry(neighbor, currentFrame.vertex());
+
+            if (!context.processedNonTreeEdges.contains(edgeKey1) &&
+                    !context.processedNonTreeEdges.contains(edgeKey2)) {
+
+                //System.out.println("Processing non-tree edge: " + edge.begin.getName() + " - " + edge.end.getName());
+                // Обрабатываем non-tree ребро
+                processRightFace(currentFrame.vertex(), neighbor, context);
+
+                // Отмечаем ребро как обработанное
+                context.processedNonTreeEdges.add(edgeKey1);
+            } else {
+                //System.out.println("Skipping already processed non-tree edge: " + edge.begin.getName() + " - " + edge.end.getName());
+            }
         }
         // TODO переход на другое ребро внешней границы
     }
@@ -278,7 +301,7 @@ public class ShortestPathTreeSearcher {
             EulerTourContext context) {
 
         VertexOfDualGraph rightFace = null;
-        /*
+
         if (context.edgeToLeftFace.containsKey(neighbor)) {
             rightFace = context.edgeToLeftFace.get(neighbor).get(current);
         }
@@ -293,26 +316,21 @@ public class ShortestPathTreeSearcher {
         else if (rightFace == null && context.edgeToLeftFace.containsKey(newNeighbor)) {
             rightFace = context.edgeToLeftFace.get(newNeighbor).get(newCurrent);
         }
-        */
-        if (context.edgeToLeftFace.containsKey(current)) {
-            rightFace = context.edgeToLeftFace.get(current).get(neighbor);
-        }
-        Vertex newNeighbor = new Vertex(neighbor.name / 1000, neighbor.x, neighbor.y);
-        Vertex newCurrent = new Vertex(current.name / 1000, current.x, current.y);
-        if (rightFace == null && context.edgeToLeftFace.containsKey(newCurrent)) {
-            rightFace = context.edgeToLeftFace.get(newCurrent).get(neighbor);
-        }
-        else if (rightFace == null && context.edgeToLeftFace.containsKey(current)) {
-            rightFace = context.edgeToLeftFace.get(current).get(newNeighbor);
-        }
-        else if (rightFace == null && context.edgeToLeftFace.containsKey(newCurrent)) {
-            rightFace = context.edgeToLeftFace.get(newCurrent).get(newNeighbor);
-        }
         if (rightFace != null) {
             context.cumulativeWeight += rightFace.getWeight();
             context.weights.add(context.cumulativeWeight);
             context.regions.add(rightFace);
-            // TODO context.distances.add - надо как-то посчитать длину
+            
+            // Инкрементально обновляем длину границы
+            double boundaryLength = updateBoundaryLengthIncremental(rightFace, context);
+            context.distances.add(boundaryLength);
+            
+            // Добавляем регион в множество (ВАЖНО: после вычисления!)
+            context.addedRegions.add(rightFace);
+            
+            System.out.println("    Region " + rightFace.getName() + 
+                               " added: weight=" + rightFace.getWeight() + 
+                               ", boundary_length=" + String.format("%.2f", boundaryLength));
         } else {
             //var c = new CoordinateConversion();
             //var cc = c.fromEuclidean(current);
@@ -559,5 +577,45 @@ public class ShortestPathTreeSearcher {
         }
 
         return 0;
+    }
+
+    /**
+     * Инкрементально обновляет длину границы при добавлении нового региона.
+     * 
+     * Когда добавляется регион newRegion:
+     * - Рёбра к УЖЕ добавленным соседям УДАЛЯЮТСЯ из границы (вычитаем длину)
+     * - Рёбра к ЕЩЁ НЕ добавленным соседям ДОБАВЛЯЮТСЯ в границу (прибавляем длину)
+     * 
+     * @return новая длина границы после добавления региона
+     */
+    private static double updateBoundaryLengthIncremental(
+            VertexOfDualGraph newRegion,
+            EulerTourContext context) {
+
+        // Получаем соседей нового региона в двойственном графе
+        Map<VertexOfDualGraph, Edge> neighbors = context.dualGraph.getEdges().get(newRegion);
+
+        if (neighbors == null) {
+            return context.currentBoundaryLength;
+        }
+
+        double delta = 0.0;
+
+        for (Map.Entry<VertexOfDualGraph, Edge> entry : neighbors.entrySet()) {
+            VertexOfDualGraph neighborFace = entry.getKey();
+            Edge edge = entry.getValue();
+            double edgeLength = edge.length;
+
+            if (context.addedRegions.contains(neighborFace)) {
+                // Сосед УЖЕ добавлен -> ребро УБИРАЕТСЯ из границы
+                delta -= edgeLength;
+            } else {
+                // Сосед ещё НЕ добавлен -> ребро ДОБАВЛЯЕТСЯ в границу
+                delta += edgeLength;
+            }
+        }
+
+        context.currentBoundaryLength += delta;
+        return context.currentBoundaryLength;
     }
 }

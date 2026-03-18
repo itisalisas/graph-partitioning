@@ -140,7 +140,7 @@ public class Dijkstra {
             // Проверяем достигли ли целевой границы
             if (isBoundaryContainsVertex(targetBoundary, current.vertex()) && current.vertex().getIsOnBoundary()) {
                 updateTarget(state, current);
-                //continue;
+                continue;
             }
 
             // Обрабатываем соседей текущей вершины

@@ -5,8 +5,9 @@ import java.util.stream.Collectors;
 
 import graph.*;
 import jakarta.validation.constraints.NotNull;
+import org.junit.jupiter.api.Assertions;
 import partitioning.entities.SPTWithRegionWeights;
-import partitioning.maxflow.shortestpathtree.ShortestPathTreeSearcher;
+import partitioning.shortestpathtree.ShortestPathTreeSearcher;
 import partitioning.entities.FlowResult;
 import partitioning.entities.NeighborSplit;
 import partitioning.entities.DijkstraResult;
@@ -121,7 +122,12 @@ public class MaxFlowReif implements MaxFlow {
 
         // Заполнение потока
         PathCandidate best = bestCandidate.get();
-        System.out.println("WEIGHTS:" + best.path1ToBoundary.weights().stream().toList());
+        System.out.println("CHECK REGIONS SIZES: " + best.path1ToBoundary.regions().size() + " " + best.path2ToBoundary.regions().size());
+
+        System.out.println("WEIGHTS 1:" + best.path1ToBoundary.weights().stream().toList());
+        System.out.println("REGIONS 1:" + best.path1ToBoundary.regions().stream().map(VertexOfDualGraph::getName).toList());
+        System.out.println("WEIGHTS 2:" + best.path2ToBoundary.weights().stream().toList());
+        System.out.println("REGIONS 2:" + best.path2ToBoundary.regions().stream().map(VertexOfDualGraph::getName).toList());
         flow = fillFlowInDualGraph(best.pathInOriginalGraph(), dualGraph);
 
         // Визуализация
@@ -131,7 +137,6 @@ public class MaxFlowReif implements MaxFlow {
                           best, splitData.splitToOriginalMap());
 
         return new FlowResult(flow, dualGraph, source, sink, best.pathInOriginalGraph);
-                //FlowResult(flow, dualGraph, source, sink);
     }
 
     private record BoundariesData(

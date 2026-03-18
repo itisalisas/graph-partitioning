@@ -325,7 +325,18 @@ public class FlowWriter {
             System.out.println("Writing " + spt.boundaryLeaves().size() + " boundary leaves for " + sptName);
             System.out.println("  leftRegionWeights map has " + spt.weights().size() + " entries");
 
-            for (int leafIdx = 0; leafIdx < spt.boundaryLeaves().size(); leafIdx++) {
+            int numLeaves = spt.boundaryLeaves().size();
+            int numWeights = spt.weights().size();
+            
+            // Use the minimum of the two sizes to avoid IndexOutOfBoundsException
+            int actualSize = Math.min(numLeaves, numWeights);
+            
+            if (numLeaves != numWeights) {
+                System.err.println("WARNING: Mismatch between boundary leaves (" + numLeaves + 
+                                   ") and weights (" + numWeights + ") for " + sptName);
+            }
+
+            for (int leafIdx = 0; leafIdx < actualSize; leafIdx++) {
                 Vertex leaf = spt.boundaryLeaves().get(leafIdx);
                 Vertex originalLeaf = splitToOriginalMap.getOrDefault(leaf, leaf);
                 Vertex geoLeaf = coordConversion.fromEuclidean(originalLeaf);
@@ -336,6 +347,64 @@ public class FlowWriter {
 
                 writer.write(String.format("%d %.10f %.10f %.6f %d\n",
                         geoLeaf.getName(), geoLeaf.x, geoLeaf.y, leftWeight, leafIdx));
+            }
+            writer.write("\n");
+            
+            // Write region weights (weight between consecutive leaves)
+            writer.write("REGION_WEIGHTS\n");
+            writer.write("# region_index region_vertex_id from_leaf_index to_leaf_index weight centroid_lon centroid_lat\n");
+            
+            int numRegions = spt.regions() != null ? spt.regions().size() : 0;
+            System.out.println("Writing " + numRegions + " regions for " + sptName);
+            
+            for (int regionIdx = 0; regionIdx < actualSize; regionIdx++) {
+                int fromLeafIdx = regionIdx;
+                int toLeafIdx = (regionIdx + 1) % actualSize;
+                
+                double fromWeight = spt.weights().get(fromLeafIdx);
+                double toWeight = (toLeafIdx < actualSize && toLeafIdx < numWeights) ? 
+                                  spt.weights().get(toLeafIdx) : spt.totalRegionWeight();
+                
+                // Handle wrap-around: last region weight
+                double regionWeight;
+                if (toLeafIdx == 0) {
+                    // Last region: from last leaf to first leaf (wrapping around)
+                    regionWeight = spt.totalRegionWeight() - fromWeight;
+                } else {
+                    regionWeight = toWeight - fromWeight;
+                }
+                
+                // Use actual dual graph vertex coordinates (centroid of face)
+                double centroidLon, centroidLat;
+                long regionVertexId = -1;
+                
+                if (spt.regions() != null && regionIdx < spt.regions().size()) {
+                    VertexOfDualGraph regionVertex = spt.regions().get(regionIdx);
+                    regionVertexId = regionVertex.getName();
+                    
+                    // Convert from Euclidean to geographic coordinates
+                    Vertex geoRegion = coordConversion.fromEuclidean(regionVertex);
+                    centroidLon = geoRegion.x;
+                    centroidLat = geoRegion.y;
+                    
+                    System.out.println("  Region " + regionIdx + ": vertex " + regionVertexId + 
+                                       " at (" + centroidLon + ", " + centroidLat + "), weight=" + regionWeight);
+                } else {
+                    // Fallback: calculate centroid between the two leaves if regions list is not available
+                    System.err.println("WARNING: Region " + regionIdx + " not found in regions list, using fallback");
+                    Vertex fromLeaf = spt.boundaryLeaves().get(fromLeafIdx);
+                    Vertex toLeaf = spt.boundaryLeaves().get(toLeafIdx);
+                    Vertex originalFromLeaf = splitToOriginalMap.getOrDefault(fromLeaf, fromLeaf);
+                    Vertex originalToLeaf = splitToOriginalMap.getOrDefault(toLeaf, toLeaf);
+                    Vertex geoFromLeaf = coordConversion.fromEuclidean(originalFromLeaf);
+                    Vertex geoToLeaf = coordConversion.fromEuclidean(originalToLeaf);
+                    
+                    centroidLon = (geoFromLeaf.x + geoToLeaf.x) / 2.0;
+                    centroidLat = (geoFromLeaf.y + geoToLeaf.y) / 2.0;
+                }
+                
+                writer.write(String.format("%d %d %d %d %.6f %.10f %.10f\n",
+                        regionIdx, regionVertexId, fromLeafIdx, toLeafIdx, regionWeight, centroidLon, centroidLat));
             }
             writer.write("\n");
 
