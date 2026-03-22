@@ -5,6 +5,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 
@@ -90,9 +92,8 @@ public class Vertex extends Point {
 	@Override
 	public boolean equals(Object obj) {
 		if (obj == this) return true;
-		if (! (obj instanceof Vertex)) return false;
-		Vertex v = (Vertex) obj;
-		return v.x == this.x
+		if (! (obj instanceof Vertex v)) return false;
+        return v.x == this.x
 				&& v.y == this.y && v.getName() == this.getName();
 	}
 	
@@ -118,11 +119,10 @@ public class Vertex extends Point {
 
 	/**
 	 * 
-	 * @param <T extends Vertex>
 	 * @param vertexIn the sequence of vertices of polygon
 	 * @return Vertex distant from the middle of the longest edge by 0.000001
 	 */
-	public static <T extends Vertex> Point findCenter(@Size(min = 1) ArrayList<T> vertexIn) {
+	public static <T extends Vertex> Point findCenter(@Size(min = 1) List<T> vertexIn) {
 		Point center;
 
 		if (vertexIn.size() == 1) {
@@ -133,16 +133,15 @@ public class Vertex extends Point {
 					vertexIn.get(0).y + vertexIn.get(0).coordinateDistance(vertexIn.get(1)).y / 2);
 		}
 		
-		HashMap<T, Double> edgeWeight = countEdgeWeightForVertices(vertexIn);
-//		System.out.println(edgeWeight);
+		Map<T, Double> edgeWeight = countEdgeWeightForVertices(vertexIn);
 		center = countVerticesEdgeWeightCenter(vertexIn, edgeWeight);
 		
 		return center;
 	}
 
 
-	private static <T extends Vertex> HashMap<T, Double> countEdgeWeightForVertices(ArrayList<T> vertexIn) {
-		HashMap<T, Double> edgeWeight = new HashMap<>();
+	private static <T extends Vertex> Map<T, Double> countEdgeWeightForVertices(List<T> vertexIn) {
+		Map<T, Double> edgeWeight = new HashMap<>();
 		T vertex = vertexIn.get(0);
 		T prev = vertexIn.get(vertexIn.size() - 1);
 		T next = vertexIn.get(1);
@@ -160,15 +159,15 @@ public class Vertex extends Point {
 	}
 
 
-	private static <T extends Vertex> Point countVerticesEdgeWeightCenter(ArrayList<T> vertexIn, HashMap<T, Double> edgeWeight) {
-		Double xSum = 0.0;
-		Double ySum = 0.0;
-		Double fullLengthSum2 = 0.0;
-		for (int i = 0; i < vertexIn.size(); i++) {
-			xSum = xSum + vertexIn.get(i).x * edgeWeight.get(vertexIn.get(i));
-			ySum = ySum + vertexIn.get(i).y * edgeWeight.get(vertexIn.get(i));
-			fullLengthSum2 = fullLengthSum2 + edgeWeight.get(vertexIn.get(i));
-		}
+	private static <T extends Vertex> Point countVerticesEdgeWeightCenter(List<T> vertexIn, Map<T, Double> edgeWeight) {
+		double xSum = 0.0;
+		double ySum = 0.0;
+		double fullLengthSum2 = 0.0;
+        for (T t : vertexIn) {
+            xSum = xSum + t.x * edgeWeight.get(t);
+            ySum = ySum + t.y * edgeWeight.get(t);
+            fullLengthSum2 = fullLengthSum2 + edgeWeight.get(t);
+        }
 		return new Point(xSum / fullLengthSum2, ySum / fullLengthSum2);
 	}
 

@@ -58,7 +58,7 @@ public class EdgeOfGraph<T extends Vertex> extends Edge {
 	
 	
 	private boolean intersectForOneCoordinate(double begin1x, double end1x, double begin2x, double end2x) {
-		double tmp = 0;
+		double tmp;
 		if (begin1x > end1x) {
 			tmp = begin1x;
 			begin1x = end1x;

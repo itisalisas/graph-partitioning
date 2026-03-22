@@ -22,17 +22,14 @@ public class ShortestPathTreeSearcher {
             Graph<VertexOfDualGraph> dualGraph,
             List<Vertex> sourceCorners,
             List<Vertex> sinkCorners,
-            boolean isFirstSide) {
+            boolean isFirstSide
+    ) {
 
         Set<Vertex> externalBoundarySet = new HashSet<>(externalBoundary);
         List<Vertex> boundaryVerticesInSPT = findBoundaryVerticesInSPT(
                 graph, externalBoundarySet, previous);
 
         System.out.println("leaves: " + boundaryVerticesInSPT.size());
-        for (Vertex v: boundaryVerticesInSPT) {
-            System.out.print(v.name + " ");
-        }
-        System.out.println();
 
         Map<Long, Integer> boundaryOrderMap = buildBoundaryOrderMap(externalBoundary);
         TwoKeyVertices keyVertices = findTwoKeyVertices(
@@ -285,9 +282,9 @@ public class ShortestPathTreeSearcher {
      */
     private static void handleBoundaryLeaf(Vertex vertex, EulerTourContext context) {
         if (context.boundaryLeaves.contains(vertex)) {
-            System.out.println("  Leaf " + context.currentLeafIndex +
-                                       " (vertex " + vertex.getName() +
-                                       "): cumulative=" + context.cumulativeWeight);
+            //System.out.println("  Leaf " + context.currentLeafIndex +
+            //                           " (vertex " + vertex.getName() +
+            //                           "): cumulative=" + context.cumulativeWeight);
             context.currentLeafIndex++;
         }
     }
@@ -328,9 +325,9 @@ public class ShortestPathTreeSearcher {
             // Добавляем регион в множество (ВАЖНО: после вычисления!)
             context.addedRegions.add(rightFace);
             
-            System.out.println("    Region " + rightFace.getName() + 
-                               " added: weight=" + rightFace.getWeight() + 
-                               ", boundary_length=" + String.format("%.2f", boundaryLength));
+            //System.out.println("    Region " + rightFace.getName() +
+            //                   " added: weight=" + rightFace.getWeight() +
+            //                   ", boundary_length=" + String.format("%.2f", boundaryLength));
         } else {
             //var c = new CoordinateConversion();
             //var cc = c.fromEuclidean(current);

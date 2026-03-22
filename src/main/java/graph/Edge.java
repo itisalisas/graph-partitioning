@@ -4,7 +4,7 @@ public class Edge {
 	public double length;
 	private double bandwidth;
 	public double flow;
-	private boolean road;
+	private final boolean road;
 	
 
 	public Edge() {

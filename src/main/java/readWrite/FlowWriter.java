@@ -343,7 +343,7 @@ public class FlowWriter {
                 double leftWeight = spt.weights().get(leafIdx);
 
                 // Debug: check if leaf is in the map
-                System.out.println("  Leaf " + leafIdx + ": vertex " + leaf.getName() + ", leftWeight=" + leftWeight);
+                // System.out.println("  Leaf " + leafIdx + ": vertex " + leaf.getName() + ", leftWeight=" + leftWeight);
 
                 writer.write(String.format("%d %.10f %.10f %.6f %d\n",
                         geoLeaf.getName(), geoLeaf.x, geoLeaf.y, leftWeight, leafIdx));
@@ -387,8 +387,8 @@ public class FlowWriter {
                     centroidLon = geoRegion.x;
                     centroidLat = geoRegion.y;
                     
-                    System.out.println("  Region " + regionIdx + ": vertex " + regionVertexId + 
-                                       " at (" + centroidLon + ", " + centroidLat + "), weight=" + regionWeight);
+                    //System.out.println("  Region " + regionIdx + ": vertex " + regionVertexId +
+                    //                   " at (" + centroidLon + ", " + centroidLat + "), weight=" + regionWeight);
                 } else {
                     // Fallback: calculate centroid between the two leaves if regions list is not available
                     System.err.println("WARNING: Region " + regionIdx + " not found in regions list, using fallback");

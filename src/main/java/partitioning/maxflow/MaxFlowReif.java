@@ -5,7 +5,6 @@ import java.util.stream.Collectors;
 
 import graph.*;
 import jakarta.validation.constraints.NotNull;
-import org.junit.jupiter.api.Assertions;
 import partitioning.entities.SPTWithRegionWeights;
 import partitioning.shortestpathtree.ShortestPathTreeSearcher;
 import partitioning.entities.FlowResult;
@@ -26,7 +25,7 @@ public class MaxFlowReif implements MaxFlow {
     VertexOfDualGraph sink;
     double flow;
     CoordinateConversion conversion;
-    HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph;
+    Map<Vertex, VertexOfDualGraph> comparisonForDualGraph;
 
     private record PathCandidate(
             Vertex splitVertex1,
@@ -42,7 +41,7 @@ public class MaxFlowReif implements MaxFlow {
                        Graph<VertexOfDualGraph> dualGraph,
                        VertexOfDualGraph source,
                        VertexOfDualGraph sink,
-                       HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph
+                       Map<Vertex, VertexOfDualGraph> comparisonForDualGraph
     ) {
         this.initGraph = initGraph;
         this.dualGraph = dualGraph;
@@ -122,12 +121,12 @@ public class MaxFlowReif implements MaxFlow {
 
         // Заполнение потока
         PathCandidate best = bestCandidate.get();
-        System.out.println("CHECK REGIONS SIZES: " + best.path1ToBoundary.regions().size() + " " + best.path2ToBoundary.regions().size());
+        //System.out.println("CHECK REGIONS SIZES: " + best.path1ToBoundary.regions().size() + " " + best.path2ToBoundary.regions().size());
 
-        System.out.println("WEIGHTS 1:" + best.path1ToBoundary.weights().stream().toList());
-        System.out.println("REGIONS 1:" + best.path1ToBoundary.regions().stream().map(VertexOfDualGraph::getName).toList());
-        System.out.println("WEIGHTS 2:" + best.path2ToBoundary.weights().stream().toList());
-        System.out.println("REGIONS 2:" + best.path2ToBoundary.regions().stream().map(VertexOfDualGraph::getName).toList());
+        //System.out.println("WEIGHTS 1:" + best.path1ToBoundary.weights().stream().toList());
+        //System.out.println("REGIONS 1:" + best.path1ToBoundary.regions().stream().map(VertexOfDualGraph::getName).toList());
+        //System.out.println("WEIGHTS 2:" + best.path2ToBoundary.weights().stream().toList());
+        //System.out.println("REGIONS 2:" + best.path2ToBoundary.regions().stream().map(VertexOfDualGraph::getName).toList());
         flow = fillFlowInDualGraph(best.pathInOriginalGraph(), dualGraph);
 
         // Визуализация
@@ -159,9 +158,9 @@ public class MaxFlowReif implements MaxFlow {
      * Вычисляет все границы
      */
     private BoundariesData computeBoundaries(
-            HashSet<VertexOfDualGraph> sourceNeighbors,
-            HashSet<VertexOfDualGraph> sinkNeighbors,
-            HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph) {
+            Set<VertexOfDualGraph> sourceNeighbors,
+            Set<VertexOfDualGraph> sinkNeighbors,
+            Map<Vertex, VertexOfDualGraph> comparisonForDualGraph) {
 
         List<Vertex> sourceBoundary = BoundSearcher.findBound(
                 initGraph, sourceNeighbors, comparisonForDualGraph

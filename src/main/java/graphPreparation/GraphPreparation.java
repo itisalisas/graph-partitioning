@@ -19,18 +19,18 @@ import readWrite.GraphWriter;
 import org.junit.jupiter.api.Assertions;
 
 public class GraphPreparation {
-	private boolean isPlanar;
-	private boolean isDual;
-	private HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph;
+	private final boolean isPlanar;
+	private final boolean isDual;
+	private final HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph;
 	public GraphPreparation() {
 		this.isPlanar = false;
 		this.isDual = false;
-		comparisonForDualGraph = new HashMap<Vertex, VertexOfDualGraph>();
+		comparisonForDualGraph = new HashMap<>();
 	}
 	public GraphPreparation(boolean isPlanar, boolean isDual) {
 		this.isPlanar = isPlanar;
 		this.isDual = isDual;
-		comparisonForDualGraph = new HashMap<Vertex, VertexOfDualGraph>();
+		comparisonForDualGraph = new HashMap<>();
 	}
 	
 	public HashMap<Vertex, VertexOfDualGraph> getComparisonForDualGraph() {
@@ -56,7 +56,7 @@ public class GraphPreparation {
 		}
 		
         Assertions.assertTrue(gph.isConnected());
-		Graph<Vertex> graph = null;
+		Graph<Vertex> graph;
 		if (!isPlanar) {
 			SweepLine sl = new SweepLine(inaccuracy);
 			graph = sl.makePlanar(gph);
@@ -65,12 +65,8 @@ public class GraphPreparation {
 		}
 		
         Assertions.assertTrue(graph.isConnected());
-		// draw swepline
-		if (cc != null) {
-			// gw.printGraphToFile(graph, outputDirectory + "//SweepLine", "afterSweepLine.txt", true);
-		}
-	
-		ArrayList<Vertex> zeroWeight = new ArrayList<Vertex>();
+
+        ArrayList<Vertex> zeroWeight = new ArrayList<Vertex>();
 		for (Vertex v : graph.getEdges().keySet()) {
 			if (v.getWeight() == 0) {
 				zeroWeight.add(v);

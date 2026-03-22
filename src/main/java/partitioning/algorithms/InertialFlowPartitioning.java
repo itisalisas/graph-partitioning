@@ -73,7 +73,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
     @Override
     public void balancedPartitionAlgorithm(Graph<Vertex> simpleGraph, 
-										   HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph, 
+										   Map<Vertex, VertexOfDualGraph> comparisonForDualGraph,
 										   Graph<VertexOfDualGraph> graph, 
 										   int maxSumVerticesWeight) {
 

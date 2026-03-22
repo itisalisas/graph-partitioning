@@ -4,7 +4,7 @@ import shutil
 from pathlib import Path
 import traceback
 
-algorithm = "BUS"
+algorithm = "IF"
 max_sum_vertices_weight = ["5000", "10000"]
 
 max_region_radius_meters = "1000"

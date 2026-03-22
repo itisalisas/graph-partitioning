@@ -3,7 +3,7 @@ import subprocess
 from pathlib import Path
 import traceback
 
-project_root = Path(__file__).resolve().parent.parent
+project_root = Path(__file__).resolve().parent.parent.parent
 
 cities = {
     "novgorod": (58.52112, 31.27529),
@@ -27,8 +27,8 @@ error_log = data_root / "dataset_errors.log"
 with open(error_log, "w") as log:
     log.write("Dataset Generation Errors Log\n\n")
 
-for city, coords in cities.items():
-    lat, lon = coords
+for city, coordinates in cities.items():
+    lat, lon = coordinates
     for size in sizes:
         city_size_dir = data_root / city / str(size)
         city_size_dir.mkdir(parents=True, exist_ok=True)

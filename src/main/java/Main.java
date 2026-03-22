@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import graph.*;
 import org.junit.jupiter.api.Assertions;
@@ -121,14 +122,14 @@ public class Main implements Runnable {
         long startTime = System.currentTimeMillis();
 
         HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph = preparation.getComparisonForDualGraph();
-        ArrayList<HashSet<VertexOfDualGraph>> partitionResultForFaces = partitioning.partition(graph, comparisonForDualGraph, preparedGraph, maxSumVerticesWeight);
-        for (HashSet<VertexOfDualGraph> hs : partitionResultForFaces) {
+        List<Set<VertexOfDualGraph>> partitionResultForFaces = partitioning.partition(graph, comparisonForDualGraph, preparedGraph, maxSumVerticesWeight);
+        for (Set<VertexOfDualGraph> hs : partitionResultForFaces) {
             for (VertexOfDualGraph v : hs) {
                 Assertions.assertNotNull(v.getVerticesOfFace());
             }
         }
         HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber = partitioning.dualVertexToPartNumber();
-        for (HashSet<VertexOfDualGraph> hs : partitionResultForFaces) {
+        for (Set<VertexOfDualGraph> hs : partitionResultForFaces) {
             for (VertexOfDualGraph v : hs) {
                 Assertions.assertNotNull(v.getVerticesOfFace());
             }

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import org.junit.jupiter.api.Assertions;
@@ -21,10 +22,12 @@ public class BubblePartitioning extends BalancedPartitioningOfPlanarGraphs {
     };
 
     @Override
-    public void balancedPartitionAlgorithm(Graph<Vertex> simpleGraph, 
-										   HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph, 
-										   Graph<VertexOfDualGraph> graph, 
-										   int maxSumVerticesWeight) {
+    public void balancedPartitionAlgorithm(
+            Graph<Vertex> simpleGraph,
+            Map<Vertex, VertexOfDualGraph> comparisonForDualGraph,
+            Graph<VertexOfDualGraph> graph,
+            int maxSumVerticesWeight
+    ) {
         this.graph = graph;
         //find initial seeds
         int seedsNumber = findSeedsNumber(graph, maxSumVerticesWeight);

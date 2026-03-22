@@ -30,7 +30,13 @@ public class PartitionWriter {
 		this.cc = cc;
 	}
 	
-	public static <T extends Vertex> void writePartitionToFile(HashSet<T> part, Double cutWeight, File outFile, boolean geodetic, Point center) throws IOException {
+	public static <T extends Vertex> void writePartitionToFile(
+            Set<T> part,
+            Double cutWeight,
+            File outFile,
+            boolean geodetic,
+            Point center
+    ) throws IOException {
 		FileWriter out = new FileWriter(outFile, false);
 		out.write(String.format("%f\n", cutWeight));
 		out.write(String.format("%d\n", part.size()));
@@ -124,7 +130,16 @@ public class PartitionWriter {
 	}
 
 
-	public void savePartitionToDirectory(BalancedPartitioning balancedPartitioning, BalancedPartitioningOfPlanarGraphs bp, String outputDirectory, List<HashSet<VertexOfDualGraph>> partitionResult, boolean geodetic, double partitionTime, Point refPoint, long memory) {
+	public void savePartitionToDirectory(
+            BalancedPartitioning balancedPartitioning,
+            BalancedPartitioningOfPlanarGraphs bp,
+            String outputDirectory,
+            List<Set<VertexOfDualGraph>> partitionResult,
+            boolean geodetic,
+            double partitionTime,
+            Point refPoint,
+            long memory
+    ) {
 		createOutputDirectory(outputDirectory);
 		File outputDirectoryFile = new File(outputDirectory);
 		if (!outputDirectoryFile.exists()) {
@@ -134,7 +149,7 @@ public class PartitionWriter {
 		}
 
 		for (int i = 0; i < partitionResult.size(); i++) {
-			HashSet<VertexOfDualGraph> part = partitionResult.get(i);
+			Set<VertexOfDualGraph> part = partitionResult.get(i);
 			File outputFile = new File(outputDirectory + File.separator + "partition_" + i + ".txt");
 			try {
 				outputFile.createNewFile();
@@ -154,10 +169,17 @@ public class PartitionWriter {
 		System.out.println("Graph weight after: " + balancedPartitioning.countSumPartitioningWeight(partitionResult));
 	}
 
-	private void printStat(String outputDirectory, List<HashSet<VertexOfDualGraph>> partitionResult, BalancedPartitioning balancedPartitioning, BalancedPartitioningOfPlanarGraphs bp, double partitionTime, long memory) {
+	private void printStat(
+            String outputDirectory,
+            List<Set<VertexOfDualGraph>> partitionResult,
+            BalancedPartitioning balancedPartitioning,
+            BalancedPartitioningOfPlanarGraphs bp,
+            double partitionTime,
+            long memory
+    ) {
 		List<Double> weights = partitionResult.stream()
             .map(set -> set.stream().mapToDouble(Vertex::getWeight).sum())
-            .collect(Collectors.toList());
+            .toList();
 
 			List<Double> cutLengths = new ArrayList<>(balancedPartitioning.cutEdgesMap.values());
 			double totalGraphWeight = bp.graph.verticesArray().stream()

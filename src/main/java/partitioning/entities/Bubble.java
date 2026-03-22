@@ -98,7 +98,7 @@ public class Bubble {
     /**
      * @param toAdd
      * @param graph
-     * @return perimetr of bubble with VertexOfDualGraph toAdd
+     * @return perimeter of bubble with VertexOfDualGraph toAdd
      */
     public Double countNewPerimeter(VertexOfDualGraph toAdd, Graph<VertexOfDualGraph> graph) {
         Double ans = borderLength;
