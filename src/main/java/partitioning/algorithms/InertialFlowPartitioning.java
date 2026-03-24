@@ -131,11 +131,12 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
             VertexOfDualGraph source = new VertexOfDualGraph(maxIndex + 1);
             VertexOfDualGraph sink = new VertexOfDualGraph(maxIndex + 2);
+            List<VertexOfDualGraph> startVertices = selectSourceSink(bestLine, currentGraph);
 
             HashSet<VertexOfDualGraph> sourceSet = new HashSet<>();
             int index = 0;
             while (index < vertices.size() && sourceSet.stream().mapToDouble(VertexOfDualGraph::getWeight).sum() < targetWeightSource) {
-                sourceSet = selectVerticesForSet(vertices, index, targetWeightSource, new HashSet<>(), currentGraph);
+                sourceSet = selectVerticesForSet(vertices, index, targetWeightSource, new HashSet<>(), currentGraph, startVertices.get(0));
                 index++;
             }
 
@@ -155,7 +156,12 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                     continue;
                 }
 
-                sinkSet = selectVerticesForSet(vertices, currentIndex, targetWeightSink, sourceSet, currentGraph);
+                VertexOfDualGraph startVertex = null;
+                if (startVertices.size() > 1) {
+                    startVertex = startVertices.get(1);
+                }
+                System.out.println("graph size = " + currentGraph.verticesArray().size() + ", startVertices size = " + startVertices.size());
+                sinkSet = selectVerticesForSet(vertices, currentIndex, targetWeightSink, sourceSet, currentGraph, startVertex);
 
                 boolean isDisjoint = Collections.disjoint(sinkSet, sourceSet);
                 if (isDisjoint && sinkSet.stream().mapToDouble(Vertex::getWeight).sum() > maxSinkSet.stream().mapToDouble(Vertex::getWeight).sum()) {
@@ -227,11 +233,18 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
     }
 
-    public HashSet<VertexOfDualGraph> selectVerticesForSet(List<VertexOfDualGraph> vertices, int startIndex, double targetWeight, Set<VertexOfDualGraph> sourceSet, Graph<VertexOfDualGraph> currentGraph) {
+    public HashSet<VertexOfDualGraph> selectVerticesForSet(
+            List<VertexOfDualGraph> vertices,
+            int startIndex,
+            double targetWeight,
+            Set<VertexOfDualGraph> sourceSet,
+            Graph<VertexOfDualGraph> currentGraph,
+            VertexOfDualGraph initVertex
+    ) {
         HashSet<VertexOfDualGraph> vertexSet = new HashSet<>();
         double currentWeight = 0;
         Queue<VertexOfDualGraph> queue = new LinkedList<>();
-        VertexOfDualGraph startVertex = vertices.get(startIndex);
+        VertexOfDualGraph startVertex = initVertex != null ? initVertex : vertices.get(startIndex);
         queue.add(startVertex);
 
         while (!queue.isEmpty() && currentWeight < targetWeight) {
@@ -248,6 +261,61 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
         }
 
         return vertexSet;
+    }
+
+    public List<VertexOfDualGraph> selectSourceSink(Vector2D line, Graph<VertexOfDualGraph> currentGraph) {
+        List<VertexOfDualGraph> dualVertices = new ArrayList<>(currentGraph.verticesArray());
+
+        if (dualVertices.size() < 2) {
+            throw new RuntimeException("too few vertices in dual graph");
+        }
+
+        VertexOfDualGraph sourceVertex = null;
+        VertexOfDualGraph sinkVertex = null;
+        double minProjection = Double.MAX_VALUE;
+        double maxProjection = -Double.MAX_VALUE;
+
+        for (VertexOfDualGraph dualVertex : dualVertices) {
+            ArrayList<Vertex> faceVertices = dualVertex.getVerticesOfFace();
+
+            if (faceVertices.isEmpty()) {
+                Point projected = line.projectPoint(dualVertex);
+                double projValue = line.isVertical ? projected.y : projected.x;
+
+                if (projValue < minProjection && !dualVertex.equals(sinkVertex)) {
+                    minProjection = projValue;
+                    sourceVertex = dualVertex;
+                }
+                if (projValue > maxProjection && !dualVertex.equals(sourceVertex)) {
+                    maxProjection = projValue;
+                    sinkVertex = dualVertex;
+                }
+            } else {
+                for (Vertex v : faceVertices) {
+                    Point projected = line.projectPoint(v);
+                    double projValue = line.isVertical ? projected.y : projected.x;
+
+                    if (projValue < minProjection && !dualVertex.equals(sinkVertex)) {
+                        minProjection = projValue;
+                        sourceVertex = dualVertex;
+                    }
+                    if (projValue > maxProjection && !dualVertex.equals(sourceVertex)) {
+                        maxProjection = projValue;
+                        sinkVertex = dualVertex;
+                    }
+                }
+            }
+        }
+
+        List<VertexOfDualGraph> result = new ArrayList<>();
+        if (sourceVertex != null) {
+            result.add(sourceVertex);
+        }
+        if (sinkVertex != null && !sinkVertex.equals(sourceVertex)) {
+            result.add(sinkVertex);
+        }
+
+        return result;
     }
 
     private List<Graph<VertexOfDualGraph>> partitionGraph(FlowResult flow) {
