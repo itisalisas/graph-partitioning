@@ -5,7 +5,9 @@ import java.util.stream.Collectors;
 
 import graph.*;
 import jakarta.validation.constraints.NotNull;
+import partitioning.entities.SPTResult;
 import partitioning.entities.SPTWithRegionWeights;
+import partitioning.shortestpathtree.ShortestPathTreeProcessor;
 import partitioning.shortestpathtree.ShortestPathTreeSearcher;
 import partitioning.entities.FlowResult;
 import partitioning.entities.NeighborSplit;
@@ -34,7 +36,8 @@ public class MaxFlowReif implements MaxFlow {
             DijkstraResult path2ToBoundary,
             List<Vertex> combinedPath,
             List<Vertex> pathInOriginalGraph,
-            double totalDistance
+            double totalDistance,
+            double balanceWeight
     ) {}
 
     public MaxFlowReif(Graph<Vertex> initGraph,
@@ -285,32 +288,58 @@ public class MaxFlowReif implements MaxFlow {
             IntersectionsData intersections,
             Graph<VertexOfDualGraph> dualGraph) {
 
-        double minPathLength = Double.MAX_VALUE;
-        PathCandidate bestCandidate = null;
-        // TODO бинпоиск по весу, баланс между длиной и весом
-        // alpha * length + beta * |2p-1|
+        List<Map.Entry<Vertex, Vertex>> splits = splitData.splitVertices();
+        if (splits.isEmpty()) return Optional.empty();
 
-        for (Map.Entry<Vertex, Vertex> splitVertex : splitData.splitVertices()) {
-            Optional<PathCandidate> candidate = evaluateSplitVertex(
-                    splitVertex,
-                    modifiedGraph,
-                    boundaries,
-                    dualGraph,
-                    intersections.sourceIntersections(),
-                    intersections.sinkIntersections(),
-                    splitData.splitToOriginalMap()
-            );
+        int lo = 0, hi = splits.size() - 1;
 
-            if (candidate.isPresent() &&
-                    candidate.get().totalDistance() < minPathLength) {
-                minPathLength = candidate.get().totalDistance();
-                bestCandidate = candidate.get();
+        while (lo < hi) {
+            int mid = (lo + hi) / 2;
+            Optional<PathCandidate> midOpt = evalAt(mid, splits, splitData,
+                    modifiedGraph, boundaries, intersections, dualGraph);
+            if (midOpt.isEmpty()) {
+                lo = mid + 1;
+                continue;
+            }
+            double diff = midOpt.get().path1ToBoundary().totalRegionWeight()
+                    - midOpt.get().path2ToBoundary().totalRegionWeight();
+            if (diff < 0) {
+                lo = mid + 1;
+            } else {
+                hi = mid;
             }
         }
 
-        return Optional.ofNullable(bestCandidate);
+        Optional<PathCandidate> atLo = evalAt(lo, splits, splitData,
+                modifiedGraph, boundaries, intersections, dualGraph);
+        Optional<PathCandidate> atPrev = lo > 0
+                ? evalAt(lo - 1, splits, splitData, modifiedGraph, boundaries, intersections, dualGraph)
+                : Optional.empty();
+
+        if (atLo.isEmpty()) return atPrev;
+        if (atPrev.isEmpty()) return atLo;
+
+        return atLo.get().balanceWeight() <= atPrev.get().balanceWeight() ? atLo : atPrev;
     }
 
+    private Optional<PathCandidate> evalAt(
+            int idx,
+            List<Map.Entry<Vertex, Vertex>> splits,
+            SplitVerticesData splitData,
+            Graph<Vertex> modifiedGraph,
+            BoundariesData boundaries,
+            IntersectionsData intersections,
+            Graph<VertexOfDualGraph> dualGraph) {
+        return evaluateSplitVertex(
+                splits.get(idx),
+                modifiedGraph,
+                boundaries,
+                dualGraph,
+                intersections.sourceIntersections(),
+                intersections.sinkIntersections(),
+                splitData.splitToOriginalMap()
+        );
+    }
     /**
      * Оценивает одну split-вершину и возвращает кандидата на лучший путь
      */
@@ -366,23 +395,19 @@ public class MaxFlowReif implements MaxFlow {
         DijkstraResult path1ToBoundary = path1ToBoundaryOpt.get();
         DijkstraResult path2ToBoundary = path2ToBoundaryOpt.get();
 
-        double totalDistance = path1ToBoundary.distance() + path2ToBoundary.distance();
-
-        List<Vertex> combinedPath = combinePaths(
-                path1ToBoundary.path(),
-                path2ToBoundary.path()
-        );
+        ShortestPathTreeProcessor sptProcessor = new ShortestPathTreeProcessor();
+        SPTResult result = sptProcessor.findBestPath(path1ToBoundary, path2ToBoundary);
 
         List<Vertex> pathInOriginalGraph = mapToOriginalGraph(
-                combinedPath,
+                result.path(),
                 splitToOriginalMap
         );
 
         return Optional.of(new PathCandidate(
                 splitVertex1, splitVertex2,
                 path1ToBoundary, path2ToBoundary,
-                combinedPath, pathInOriginalGraph,
-                totalDistance
+                result.path(), pathInOriginalGraph,
+                result.totalDistance(), result.balanceWeight()
         ));
     }
 
@@ -477,22 +502,6 @@ public class MaxFlowReif implements MaxFlow {
                 ", sink=" + pair2.sinkVertex().getName());
 
         return !isFirstSide ? pair1 : pair2;
-    }
-
-    /**
-     * Объединяет два пути (первый в обратном порядке + второй)
-     */
-    private List<Vertex> combinePaths(List<Vertex> path1, List<Vertex> path2) {
-        List<Vertex> combined = new ArrayList<>();
-
-        for (int i = path1.size() - 1; i >= 0; i--) {
-            combined.add(path1.get(i));
-        }
-        for (int i = 1; i < path2.size(); i++) {
-            combined.add(path2.get(i));
-        }
-
-        return combined;
     }
 
     /**

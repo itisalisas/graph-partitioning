@@ -336,7 +336,7 @@ public class ShortestPathTreeSearcher {
         Set<Vertex> inTree = new HashSet<>(previous.values());
 
         for (Vertex v: externalBoundarySet) {
-            if (previous.containsKey(v) || inTree.contains(v)) {
+            if (!previous.containsKey(v) || inTree.contains(v)) {
                 result.add(v);
             }
         }

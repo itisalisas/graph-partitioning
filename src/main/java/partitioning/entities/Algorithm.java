@@ -15,7 +15,7 @@ public enum Algorithm {
             double partitionParameter) {
         return switch (algorithmName) {
             case IF -> new BalancedPartitioning(
-                    new InertialFlowPartitioning(partitionParameter));
+                    new InertialFlowPartitioning(partitionParameter, true));
             case BUP -> new BalancedPartitioning(
                     new BubblePartitioning());
             case BUS -> new BalancedPartitioning(
