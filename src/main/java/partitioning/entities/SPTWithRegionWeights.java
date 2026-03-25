@@ -14,5 +14,6 @@ public record SPTWithRegionWeights(
         Map<Vertex, Vertex> previous,
         Map<Vertex, List<Vertex>> children,
         List<Vertex> boundaryLeaves,
+        List<Integer> leafIndices,
         double totalRegionWeight
 ) { }

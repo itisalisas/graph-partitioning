@@ -323,24 +323,18 @@ public class FlowWriter {
             writer.write("# vertex_id longitude latitude cumulative_left_weight boundary_index\n");
 
             System.out.println("Writing " + spt.boundaryLeaves().size() + " boundary leaves for " + sptName);
+            System.out.println("IN LEAF INDICES " + spt.leafIndices().size());
             System.out.println("  leftRegionWeights map has " + spt.weights().size() + " entries");
 
-            int numLeaves = spt.boundaryLeaves().size();
+            int numLeaves = spt.leafIndices().size();
             int numWeights = spt.weights().size();
-            
-            // Use the minimum of the two sizes to avoid IndexOutOfBoundsException
-            int actualSize = Math.min(numLeaves, numWeights);
-            
-            if (numLeaves != numWeights) {
-                System.err.println("WARNING: Mismatch between boundary leaves (" + numLeaves + 
-                                   ") and weights (" + numWeights + ") for " + sptName);
-            }
 
-            for (int leafIdx = 0; leafIdx < actualSize; leafIdx++) {
+            for (int leafIdx = 0; leafIdx < numLeaves; leafIdx++) {
                 Vertex leaf = spt.boundaryLeaves().get(leafIdx);
                 Vertex originalLeaf = splitToOriginalMap.getOrDefault(leaf, leaf);
                 Vertex geoLeaf = coordConversion.fromEuclidean(originalLeaf);
-                double leftWeight = spt.weights().get(leafIdx);
+
+                double leftWeight = spt.leafIndices().get(leafIdx) < 0 ? 0 : spt.weights().get(spt.leafIndices().get(leafIdx));
 
                 // Debug: check if leaf is in the map
                 // System.out.println("  Leaf " + leafIdx + ": vertex " + leaf.getName() + ", leftWeight=" + leftWeight);
@@ -357,12 +351,12 @@ public class FlowWriter {
             int numRegions = spt.regions() != null ? spt.regions().size() : 0;
             System.out.println("Writing " + numRegions + " regions for " + sptName);
             
-            for (int regionIdx = 0; regionIdx < actualSize; regionIdx++) {
+            for (int regionIdx = 0; regionIdx < numWeights; regionIdx++) {
                 int fromLeafIdx = regionIdx;
-                int toLeafIdx = (regionIdx + 1) % actualSize;
+                int toLeafIdx = (regionIdx + 1) % numWeights;
                 
                 double fromWeight = spt.weights().get(fromLeafIdx);
-                double toWeight = (toLeafIdx < actualSize && toLeafIdx < numWeights) ? 
+                double toWeight = (toLeafIdx < numWeights) ?
                                   spt.weights().get(toLeafIdx) : spt.totalRegionWeight();
                 
                 // Handle wrap-around: last region weight
@@ -403,8 +397,8 @@ public class FlowWriter {
                     centroidLat = (geoFromLeaf.y + geoToLeaf.y) / 2.0;
                 }
                 
-                writer.write(String.format("%d %d %d %d %.6f %.10f %.10f\n",
-                        regionIdx, regionVertexId, fromLeafIdx, toLeafIdx, regionWeight, centroidLon, centroidLat));
+                //writer.write(String.format("%d %d %d %d %.6f %.10f %.10f\n",
+                //        regionIdx, regionVertexId, fromLeafIdx, toLeafIdx, regionWeight, centroidLon, centroidLat));
             }
             writer.write("\n");
 

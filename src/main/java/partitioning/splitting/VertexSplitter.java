@@ -132,7 +132,7 @@ public class VertexSplitter {
             );
 
             splits.put(context.current().getName(), split);
-            logSplitResult(context.current(), split);
+            //logSplitResult(context.current(), split);
         }
 
         System.out.println("Preprocessed " + splits.size() + " neighbor splits");

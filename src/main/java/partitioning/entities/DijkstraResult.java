@@ -15,5 +15,6 @@ public record DijkstraResult(
         List<VertexOfDualGraph> regions,
         List<Double> weights,
         List<Double> distances,
+        List<Integer> leafIndices,
         double totalRegionWeight
 ) { }

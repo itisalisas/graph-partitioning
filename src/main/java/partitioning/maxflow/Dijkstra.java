@@ -45,7 +45,7 @@ public class Dijkstra {
             List<Vertex> targetBoundary,
             CornerConstraints cornerConstraints) {
 
-        logDebugInfo(graph, sourceVertices, targetBoundary);
+        logDebugInfo(graph, sourceVertices, targetBoundary, cornerConstraints);
 
         DijkstraState state = new DijkstraState();
         initializeDistances(state, graph, sourceVertices);
@@ -68,15 +68,23 @@ public class Dijkstra {
     private static void logDebugInfo(
             Graph<Vertex> graph,
             List<Vertex> sourceVertices,
-            List<Vertex> targetBoundary) {
+            List<Vertex> targetBoundary,
+            CornerConstraints cornerConstraints) {
 
         System.out.println("=== Dijkstra Multi-Source Debug ===");
         System.out.println("  Graph vertices: " + graph.verticesArray().size());
         System.out.println("  Source vertices: " + sourceVertices.size() + " " +
                                    sourceVertices.stream().map(Vertex::getName).toList());
         System.out.println("  Target boundary: " + targetBoundary.size() + " vertices");
+        System.out.println("  Corner constraints: " + cornerConstraints.getCornerVertices().stream().toList());
+        for (var v: cornerConstraints.getCornerVertices()) {
+            var u = cornerConstraints.getAllowedEdgesForCorner();
+            for (var e: u.get(v)) {
+                System.out.println("    " + e.begin.name + " -> " + e.end.name);
+            }
+        }
 
-        logSourceVerticesInfo(graph, sourceVertices);
+        // logSourceVerticesInfo(graph, sourceVertices);
     }
 
     /**
@@ -90,12 +98,12 @@ public class Dijkstra {
                         .map(Vertex::getName)
                         .toList();
 
-                /*
+
                 System.out.println("  Source vertex " + src.getName() +
                                            " (isOnBoundary)= " + src.getIsOnBoundary() +
                                            " has " + graph.getEdges().get(src).size() +
                                            " neighbors: " + neighborIds);
-                 */
+
             } else {
                 System.out.println("  Source vertex " + src.getName() + " NOT IN GRAPH!");
             }
@@ -249,6 +257,7 @@ public class Dijkstra {
                 state.minDistance,
                 state.previous,
                 state.distances,
+                List.of(),
                 List.of(),
                 List.of(),
                 List.of(),

@@ -15,6 +15,14 @@ public class CornerConstraints {
         this.allowedEdgesForCorner = allowedEdgesForCorner;
     }
 
+    public Set<Long> getCornerVertices() {
+        return cornerVertices;
+    }
+
+    public Map<Long, List<EdgeOfGraph<Vertex>>> getAllowedEdgesForCorner() {
+        return allowedEdgesForCorner;
+    }
+
     public boolean isCornerVertex(Vertex v) {
         return cornerVertices.contains(v.getName());
     }
