@@ -71,7 +71,7 @@ public class Balancer {
                 }
                 Assertions.assertTrue(regionsSubgraph.isConnected());
                 double coefficient = 1 - (double) maxWeight / (balancingVerticesSet.stream().mapToDouble(Vertex::getWeight).sum());
-                BalancedPartitioning bp = new BalancedPartitioning(new InertialFlowPartitioning(coefficient, false));
+                BalancedPartitioning bp = new BalancedPartitioning(new InertialFlowPartitioning(coefficient, true));
                 List<Set<VertexOfDualGraph>> newPartition = bp.partition(startGraph, comparisonForDualGraph, regionsSubgraph, maxWeight);
                 if (newPartition.size() > 2) {
                     continue;

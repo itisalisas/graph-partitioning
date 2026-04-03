@@ -384,9 +384,9 @@ def visualize_reif_flow(directory_name, output_file):
             
             folium.PolyLine(
                 locations=[(from_lat, from_lon), (to_lat, to_lon)],
-                color='#4A90E2',  # Синий цвет для исходного графа
+                color='#144680',  # Синий цвет для исходного графа
                 weight=1.5,
-                opacity=0.4,
+                opacity=0.6,
                 tooltip=tooltip_text
             ).add_to(primal_graph_layer)
         
@@ -397,8 +397,8 @@ def visualize_reif_flow(directory_name, output_file):
                 radius=2,
                 color='#2E5C8A',
                 fill=True,
-                fill_color='#4A90E2',
-                fill_opacity=0.6,
+                fill_color='#144680',
+                fill_opacity=0.7,
                 tooltip=f"Vertex {vertex_id}"
             ).add_to(primal_graph_layer)
     
@@ -1036,7 +1036,8 @@ def visualize_reif_flow(directory_name, output_file):
     map_osm.fit_bounds([[min_lat, min_lon], [max_lat, max_lon]])
     
     # Добавляем легенду
-    legend_html = '''
+    '''
+    legend_html =
     <div style="position: fixed; 
                 bottom: 50px; right: 50px; width: 380px; height: 720px; 
                 background-color: white; border:2px solid grey; z-index:9999; 
@@ -1073,8 +1074,8 @@ def visualize_reif_flow(directory_name, output_file):
     </p>
     <p><span style="color:orange;">━ ⬤</span> <b>Best Path</b></p>
     </div>
-    '''
     map_osm.get_root().html.add_child(folium.Element(legend_html))
+    '''
     
     # Сохраняем карту
     output_path = os.path.join(directory_path, output_file)
@@ -1091,4 +1092,3 @@ if __name__ == "__main__":
     output_file = sys.argv[2]
     
     visualize_reif_flow(directory_name, output_file)
-

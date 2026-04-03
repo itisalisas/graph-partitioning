@@ -82,6 +82,7 @@ public class Main implements Runnable {
         }
 
         graph = graph.getLargestConnectedComponent();
+        System.out.println("Number of edges before preprocessing: " + graph.edgesNumber());
 
         GraphPreparation preparation = new GraphPreparation(false, false);
 
@@ -91,6 +92,7 @@ public class Main implements Runnable {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        System.out.println("Number of edges after preprocessing: " + graph.edgesNumber());
 
         for (VertexOfDualGraph v : preparedGraph.verticesArray()) {
             Assertions.assertNotNull(v.getVerticesOfFace());
@@ -190,7 +192,6 @@ public class Main implements Runnable {
             throw new RuntimeException(e);
         }
         pw.printPartCenters(centers, OUTPUT_DIRECTORY + pathToResultDirectory, "centers.txt", true, cc.referencePoint);
-
     }
 
     public static void main(String[] args) {

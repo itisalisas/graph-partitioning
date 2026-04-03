@@ -1,8 +1,6 @@
 package graphPreparation;
 
 
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -66,25 +64,14 @@ public class GraphPreparation {
 		
         Assertions.assertTrue(graph.isConnected());
 
-        ArrayList<Vertex> zeroWeight = new ArrayList<Vertex>();
+        ArrayList<Vertex> zeroWeight = new ArrayList<>();
 		for (Vertex v : graph.getEdges().keySet()) {
 			if (v.getWeight() == 0) {
 				zeroWeight.add(v);
-				//System.out.println(v.name);	 
 			}
 		}
 		
 		// draw swepline
-		File file = new File(outputDirectory + "SweepLine\\0vertex.txt");
-		file.delete();
-		file = new File(outputDirectory + "SweepLine\\0vertex.txt");
-		FileWriter out = new FileWriter(file, true);
-		out.write(zeroWeight.size() + "\n");
-		out.close();
-		if (cc != null) {
-			// gw.printVerticesToFile(zeroWeight, file, true);
-		}
-		
 		System.out.println("Number of 0 weight vertex, after sweepLine: " + gph.countZeroWeightVertices());
 		System.out.println("After sweepline graph weight: " + gph.verticesSumWeight());
 		
