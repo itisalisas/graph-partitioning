@@ -451,4 +451,16 @@ public class Graph<T extends Vertex> {
         }
         return edgeToDualVertex;
     }
+
+    public void replaceWith(Graph<T> other) {
+        this.edges.clear();
+        for (T v : other.getEdges().keySet()) {
+            this.addVertex(v);
+        }
+        for (T begin : other.getEdges().keySet()) {
+            for (T end : other.getEdges().get(begin).keySet()) {
+                this.edges.get(begin).put(end, other.getEdges().get(begin).get(end));
+            }
+        }
+    }
 }

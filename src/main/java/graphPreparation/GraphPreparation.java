@@ -55,12 +55,13 @@ public class GraphPreparation {
 		
         Assertions.assertTrue(gph.isConnected());
 		Graph<Vertex> graph;
-		if (!isPlanar) {
-			SweepLine sl = new SweepLine(inaccuracy);
-			graph = sl.makePlanar(gph);
-		} else {
-			graph = gph;
-		}
+        if (!isPlanar) {
+            SweepLine sl = new SweepLine(inaccuracy);
+            graph = sl.makePlanar(gph);
+            gph.replaceWith(graph);
+        } else {
+            graph = gph;
+        }
 		
         Assertions.assertTrue(graph.isConnected());
 

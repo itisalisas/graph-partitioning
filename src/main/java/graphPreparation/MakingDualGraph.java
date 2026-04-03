@@ -32,10 +32,10 @@ public class MakingDualGraph {
   private void addDualEdges(Graph<VertexOfDualGraph> res, 
                             HashMap<EdgeOfGraph<Vertex>, 
                             VertexOfDualGraph> inFace) {
-    EdgeOfGraph<Vertex> back = null;
-    double oldLength = 0;
+    EdgeOfGraph<Vertex> back;
+    double oldLength;
     for (EdgeOfGraph<Vertex> edge : inFace.keySet()) {
-      back = new EdgeOfGraph<Vertex>(edge.end, edge.begin, edge.length);
+      back = new EdgeOfGraph<>(edge.end, edge.begin, edge.length);
       if (inFace.get(edge).equals((inFace).get(back))) {
         continue;
       }
@@ -57,8 +57,8 @@ public class MakingDualGraph {
                                  HashMap<Vertex, TreeSet<EdgeOfGraph<Vertex>>> sortedGraph,
                                  EdgeOfGraph<Vertex>[] edgesList,
                                  HashMap<Vertex, Integer> vertexInFaceNumber) {
-    ArrayList<Vertex> verticesOfFace = new ArrayList<Vertex>();
-    HashSet<EdgeOfGraph<Vertex>> inActualFace = new HashSet<EdgeOfGraph<Vertex>>();
+    ArrayList<Vertex> verticesOfFace = new ArrayList<>();
+    HashSet<EdgeOfGraph<Vertex>> inActualFace = new HashSet<>();
     long vertName = 0;
     for (int i = 0; i < edgesList.length; i++) {
       if (inFace.containsKey(edgesList[i])) {

@@ -276,9 +276,6 @@ public class ShortestPathTreeSearcher {
      */
     private static void handleBoundaryLeaf(Vertex vertex, EulerTourContext context) {
         if (context.boundaryLeaves.contains(vertex)) {
-            System.out.println("  Leaf " + context.currentLeafIndex +
-                                   " (vertex " + vertex.getName() +
-                                   "): cumulative=" + context.cumulativeWeight);
             context.leafIndices.add(context.weights.size() - 1);
             //System.out.println("  Leaf " + context.currentLeafIndex +
             //                           " (vertex " + vertex.getName() +
