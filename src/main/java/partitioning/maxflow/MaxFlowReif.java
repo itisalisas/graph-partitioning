@@ -801,9 +801,9 @@ public class MaxFlowReif implements MaxFlow {
         Set<Vertex> externalBoundarySet = new HashSet<>(externalBoundary);
 
         // Добавляем границы
-        modifiedGraph.addBoundEdges(sourceBoundary);
-        modifiedGraph.addBoundEdges(sinkBoundary);
-        modifiedGraph.addBoundEdges(externalBoundary);
+        modifiedGraph.addBoundEdges(sourceBoundary, initGraph);
+        modifiedGraph.addBoundEdges(sinkBoundary, initGraph);
+        modifiedGraph.addBoundEdges(externalBoundary, initGraph);
 
         // Добавляем внутренние вершины
         for (Vertex v : initGraph.verticesArray()) {

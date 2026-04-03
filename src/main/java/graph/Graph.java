@@ -414,13 +414,17 @@ public class Graph<T extends Vertex> {
         return edges.get(vertex).keySet().stream().sorted(Comparator.comparingDouble(v -> -v.weight)).toList();
     }
 
-    public void addBoundEdges(List<T> boundVertices) {
+    public void addBoundEdges(List<T> boundVertices, Graph<T> sourceGraph) {
         for (int i = 0; i < boundVertices.size(); i++) {
             T v = boundVertices.get(i);
             T next = boundVertices.get((i + 1) % boundVertices.size());
             addVertex(v);
             addVertex(next);
-            addEdge(v, next, v.getLength(next));
+            double length = sourceGraph.getEdges().get(v) != null
+                    && sourceGraph.getEdges().get(v).get(next) != null
+                    ? sourceGraph.getEdges().get(v).get(next).length
+                    : v.getLength(next);
+            addEdge(v, next, length);
         }
     }
 
@@ -428,7 +432,7 @@ public class Graph<T extends Vertex> {
         addVertex(v);
         for (T neighbor : mainGraph.getEdges().get(v).keySet()) {
             if (edges.containsKey(neighbor)) {
-                addEdge(v, neighbor, v.getLength(neighbor));
+                addEdge(v, neighbor, mainGraph.getEdges().get(v).get(neighbor).length);
             }
         }
     }

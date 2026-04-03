@@ -7,7 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
+q
 import graph.*;
 import org.junit.jupiter.api.Assertions;
 
@@ -82,7 +82,6 @@ public class Main implements Runnable {
         }
 
         graph = graph.getLargestConnectedComponent();
-        System.out.println("Number of edges before preprocessing: " + graph.edgesNumber());
 
         GraphPreparation preparation = new GraphPreparation(false, false);
 
@@ -92,7 +91,6 @@ public class Main implements Runnable {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        System.out.println("Number of edges after preprocessing: " + graph.edgesNumber());
 
         for (VertexOfDualGraph v : preparedGraph.verticesArray()) {
             Assertions.assertNotNull(v.getVerticesOfFace());
