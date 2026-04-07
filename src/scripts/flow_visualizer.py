@@ -198,7 +198,9 @@ def load_spt(file_path):
         'boundary_leaves': [],  # list of (id, lat, lon, cumulative_weight, boundary_index)
         'tree_edges': [],       # list of (from_id, from_lat, from_lon, to_id, to_lat, to_lon, distance)
         'vertices': {},         # id -> (lat, lon, distance)
-        'region_weights': []    # list of (region_idx, from_leaf_idx, to_leaf_idx, weight, centroid_lon, centroid_lat)
+        'region_weights': [],   # list of (region_idx, region_vertex_id, from_leaf_idx, to_leaf_idx, weight, centroid_lat, centroid_lon)
+        'leaf_indices': [],     # list of (leaf_idx, region_idx)
+        'leaf_group_boundaries': []  # list of {group_idx, weight, boundary: [(lat, lon), ...]}
     }
     
     if not os.path.exists(file_path):
@@ -223,6 +225,13 @@ def load_spt(file_path):
                 continue
             elif line == 'REGION_WEIGHTS':
                 mode = 'REGION_WEIGHTS'
+                continue
+            elif line == 'LEAF_INDICES':
+                mode = 'LEAF_INDICES'
+                continue
+            elif line == 'LEAF_GROUP_BOUNDARIES':
+                mode = 'LEAF_GROUP_BOUNDARIES'
+                current_group = None
                 continue
             elif line == 'TREE_EDGES':
                 mode = 'TREE_EDGES'
@@ -277,6 +286,40 @@ def load_spt(file_path):
                     spt_data['region_weights'].append((region_idx, -1, from_leaf_idx, to_leaf_idx, 
                                                        weight, centroid_lat, centroid_lon))
             
+            elif mode == 'LEAF_INDICES':
+                parts = line.split()
+                if len(parts) >= 2:
+                    leaf_idx = int(parts[0])
+                    region_idx = int(parts[1])
+                    spt_data['leaf_indices'].append((leaf_idx, region_idx))
+            
+            elif mode == 'LEAF_GROUP_BOUNDARIES':
+                if line == '---':
+                    if current_group is not None:
+                        spt_data['leaf_group_boundaries'].append(current_group)
+                    current_group = None
+                elif current_group is None:
+                    parts = line.split()
+                    if len(parts) >= 3:
+                        current_group = {
+                            'group_idx': int(parts[0]),
+                            'weight': float(parts[1]),
+                            'boundary': []
+                        }
+                        num_verts = int(parts[2])
+                    elif len(parts) >= 2:
+                        current_group = {
+                            'group_idx': int(parts[0]),
+                            'weight': float(parts[1]),
+                            'boundary': []
+                        }
+                else:
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        longitude = float(parts[0])
+                        latitude = float(parts[1])
+                        current_group['boundary'].append((latitude, longitude))
+            
             elif mode == 'TREE_EDGES':
                 parts = line.split()
                 if len(parts) >= 7:
@@ -308,6 +351,8 @@ def load_spt(file_path):
     
     print(f"Loaded SPT: root={spt_data['root']}, {len(spt_data['boundary_leaves'])} boundary leaves, "
           f"{len(spt_data['tree_edges'])} tree edges, {len(spt_data['region_weights'])} regions, "
+          f"{len(spt_data['leaf_indices'])} leaf indices, "
+          f"{len(spt_data['leaf_group_boundaries'])} group boundaries, "
           f"total_weight={spt_data['total_region_weight']:.2f}")
     
     return spt_data
@@ -363,6 +408,8 @@ def visualize_reif_flow(directory_name, output_file):
     best_path_layer = folium.FeatureGroup(name='Best Path (Result)', show=True)
     spt1_layer = folium.FeatureGroup(name='SPT 1 (Left Split)', show=False)
     spt2_layer = folium.FeatureGroup(name='SPT 2 (Right Split)', show=False)
+    spt1_groups_layer = folium.FeatureGroup(name='SPT 1 Leaf Groups (Red→Green)', show=False)
+    spt2_groups_layer = folium.FeatureGroup(name='SPT 2 Leaf Groups (Red→Green)', show=False)
     
     # 0. Исходный (primal) граф
     if primal_vertices and primal_edges:
@@ -881,20 +928,17 @@ def visualize_reif_flow(directory_name, output_file):
                 tooltip=tooltip_text
             ).add_to(layer)
         
-        # Draw region weights as labels in the center of each region
+        # Draw region weight markers (hover to see info, no visible labels)
         if spt_data['region_weights']:
             for region_data in spt_data['region_weights']:
-                # Handle both old (6 fields) and new (7 fields) format
                 if len(region_data) == 7:
                     region_idx, region_vertex_id, from_leaf_idx, to_leaf_idx, weight, centroid_lat, centroid_lon = region_data
                 else:
                     region_idx, from_leaf_idx, to_leaf_idx, weight, centroid_lat, centroid_lon = region_data
                     region_vertex_id = -1
                 
-                # Calculate percentage of total weight
                 weight_percentage = (weight / total_weight * 100) if total_weight > 0 else 0
                 
-                # Create tooltip
                 tooltip_text = (
                     f"<b>Region {region_idx}</b> ({spt_name})<br>"
                     f"Dual vertex ID: {region_vertex_id}<br>"
@@ -903,21 +947,15 @@ def visualize_reif_flow(directory_name, output_file):
                     f"Total: {total_weight:.2f}"
                 )
                 
-                # Add label with region index and weight
-                label_text = f"[{region_idx}]: {weight:.1f}"
-                
-                folium.Marker(
+                folium.CircleMarker(
                     location=(centroid_lat, centroid_lon),
-                    icon=folium.DivIcon(
-                        html=f'<div style="font-size: 12px; color: {region_label_color}; font-weight: bold; '
-                             f'background-color: rgba(255, 255, 255, 0.9); padding: 3px 6px; '
-                             f'border: 2px solid {region_label_color}; border-radius: 4px; '
-                             f'white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.3);" '
-                             f'title="{tooltip_text}">'
-                             f'{label_text}</div>',
-                        icon_size=(80, 25),
-                        icon_anchor=(40, 12)
-                    )
+                    radius=4,
+                    color=region_label_color,
+                    fill=True,
+                    fill_color=region_label_color,
+                    fill_opacity=0.5,
+                    weight=1,
+                    tooltip=tooltip_text
                 ).add_to(layer)
         
         # Draw intermediate vertices (smaller, less prominent)
@@ -959,6 +997,109 @@ def visualize_reif_flow(directory_name, output_file):
             'vertex': '#66CDAA',    # Medium aquamarine
             'region_label': '#006666'  # Darker teal for region labels
         }, 'SPT2')
+    
+    # 7.5. Grouped regions between consecutive boundary leaves (red-to-green gradient)
+    def visualize_leaf_groups(spt_data, layer, spt_name):
+        """Visualizes groups of regions between consecutive boundary leaves.
+        
+        Uses actual boundary polygons computed by BoundSearcher.findBound in Java.
+        Colors gradient from red (first group) to green (last group).
+        """
+        if spt_data is None:
+            return
+        
+        groups = spt_data.get('leaf_group_boundaries', [])
+        boundary_leaves = spt_data.get('boundary_leaves', [])
+        total_weight = spt_data.get('total_region_weight', 0.0)
+        
+        if not groups:
+            print(f"  {spt_name}: No leaf group boundaries data")
+            return
+        
+        num_groups = len(groups)
+        print(f"  {spt_name}: Visualizing {num_groups} leaf groups with actual boundaries")
+        
+        for group_data in groups:
+            group_idx = group_data['group_idx']
+            group_weight = group_data['weight']
+            boundary = group_data['boundary']
+            
+            if not boundary or len(boundary) < 3:
+                continue
+            
+            # Red-to-green gradient: group 0 = red, last group = green
+            t = group_idx / max(num_groups - 1, 1)
+            r = int(255 * (1 - t))
+            g = int(255 * t)
+            color = f'#{r:02x}{g:02x}00'
+            
+            # Linear groups: 0=before L0, i=between L(i-1) and Li, N=after L(N-1)
+            num_leaves = len(boundary_leaves)
+            weight_pct = (group_weight / total_weight * 100) if total_weight > 0 else 0
+            
+            if group_idx == 0:
+                right_leaf = boundary_leaves[0][0] if num_leaves > 0 else '?'
+                label = f"Before L0 (v{right_leaf})"
+            elif group_idx <= num_leaves:
+                left_leaf = boundary_leaves[group_idx - 1][0]
+                if group_idx < num_leaves:
+                    right_leaf = boundary_leaves[group_idx][0]
+                    label = f"L{group_idx-1} (v{left_leaf}) → L{group_idx} (v{right_leaf})"
+                else:
+                    label = f"After L{group_idx-1} (v{left_leaf})"
+            else:
+                label = f"Group {group_idx}"
+            
+            tooltip_text = (
+                f"<b>Group {group_idx}</b> ({spt_name})<br>"
+                f"{label}<br>"
+                f"Weight: {group_weight:.2f} ({weight_pct:.1f}%)<br>"
+                f"Total: {total_weight:.2f}"
+            )
+            
+            popup_text = (
+                f"<b>Group {group_idx} ({spt_name})</b><br>"
+                f"{label}<br>"
+                f"<b>Weight: {group_weight:.2f}</b> ({weight_pct:.1f}% of {total_weight:.2f})"
+            )
+            
+            # Draw the actual boundary polygon with fill
+            folium.Polygon(
+                locations=boundary,
+                color=color,
+                fill=True,
+                fill_color=color,
+                fill_opacity=0.35,
+                weight=3,
+                opacity=0.8,
+                tooltip=tooltip_text,
+                popup=folium.Popup(popup_text, max_width=300)
+            ).add_to(layer)
+            
+            # Add a weight label at the centroid of the boundary
+            avg_lat = sum(p[0] for p in boundary) / len(boundary)
+            avg_lon = sum(p[1] for p in boundary) / len(boundary)
+            
+            folium.Marker(
+                location=(avg_lat, avg_lon),
+                icon=folium.DivIcon(
+                    html=f'<div style="font-size: 11px; color: white; font-weight: bold; '
+                         f'background-color: {color}; padding: 2px 5px; '
+                         f'border: 1px solid #333; border-radius: 3px; '
+                         f'white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,0.4); '
+                         f'opacity: 0.9;">'
+                         f'G{group_idx}: {group_weight:.1f}</div>',
+                    icon_size=(70, 22),
+                    icon_anchor=(35, 11)
+                )
+            ).add_to(layer)
+        
+        print(f"  {spt_name}: Drew {num_groups} leaf groups")
+    
+    if spt1:
+        visualize_leaf_groups(spt1, spt1_groups_layer, 'SPT1')
+    if spt2:
+        visualize_leaf_groups(spt2, spt2_groups_layer, 'SPT2')
     
     # 8. Лучший найденный путь (оранжевый/желтый - самый важный, рисуем последним)
     if best_path:
@@ -1023,6 +1164,8 @@ def visualize_reif_flow(directory_name, output_file):
     neighbor_splits_layer.add_to(map_osm)
     spt1_layer.add_to(map_osm)
     spt2_layer.add_to(map_osm)
+    spt1_groups_layer.add_to(map_osm)
+    spt2_groups_layer.add_to(map_osm)
     best_path_layer.add_to(map_osm)
     
     # Добавляем контроль слоев (переключатель в правом верхнем углу)

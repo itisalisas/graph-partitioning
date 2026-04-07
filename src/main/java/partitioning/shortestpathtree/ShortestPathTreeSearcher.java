@@ -7,6 +7,7 @@ import graph.EdgeOfGraph;
 import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
+import org.junit.jupiter.api.Assertions;
 import partitioning.entities.SPTWithRegionWeights;
 
 public class ShortestPathTreeSearcher {
@@ -28,8 +29,6 @@ public class ShortestPathTreeSearcher {
         Set<Vertex> externalBoundarySet = new HashSet<>(externalBoundary);
         List<Vertex> boundaryVerticesInSPT = findBoundaryVerticesInSPT(externalBoundarySet, previous);
 
-        System.out.println("leaves: " + boundaryVerticesInSPT.size());
-
         Map<Long, Integer> boundaryOrderMap = buildBoundaryOrderMap(externalBoundary);
         TwoKeyVertices keyVertices = findTwoKeyVertices(sourceCorners, sinkCorners, isFirstSide);
 
@@ -41,6 +40,12 @@ public class ShortestPathTreeSearcher {
 
         RegionWeightsResult weightsResult = computeRegionWeightsByEulerTour(
                 sourceVertex, previous, boundaryVerticesInSPT, graph, dualGraph);
+        Assertions.assertEquals(boundaryVerticesInSPT.size(), weightsResult.leafIndices.size());
+        System.out.println("INDICES: ");
+        for (int i = 0; i < weightsResult.leafIndices.size(); i++) {
+            System.out.print(boundaryVerticesInSPT.get(i).name + ": " + weightsResult.leafIndices.get(i) + ". ");
+        }
+        System.out.println();
 
         return new SPTWithRegionWeights(
                 weightsResult.regions, weightsResult.weights,
@@ -61,14 +66,24 @@ public class ShortestPathTreeSearcher {
     ) {}
 
     /**
-     * Состояние для итеративного Euler Tour
+     * Состояние для итеративного Euler Tour.
+     * Each frame holds the ordered edge list and a mutable index tracking
+     * which edge to process next, so non-tree edges are interleaved correctly
+     * with child subtree visits.
      */
-    private record EulerTourFrame(
-            Vertex vertex,
-            Vertex parent,
-            int edgeIndex,
-            boolean isReturning
-    ) {}
+    private static class EulerTourFrame {
+        final Vertex vertex;
+        final Vertex parent;
+        final List<EdgeOfGraph<Vertex>> edges;
+        int nextEdgeIdx;
+
+        EulerTourFrame(Vertex vertex, Vertex parent, List<EdgeOfGraph<Vertex>> edges) {
+            this.vertex = vertex;
+            this.parent = parent;
+            this.edges = edges;
+            this.nextEdgeIdx = 0;
+        }
+    }
 
     /**
      * Контекст для Euler Tour обхода
@@ -170,6 +185,7 @@ public class ShortestPathTreeSearcher {
 
         Set<Map.Entry<Vertex, Vertex>> sptEdges = buildSPTEdgesSet(previous);
         Map<Vertex, HashMap<Vertex, VertexOfDualGraph>> edgeToLeftFace = dualGraph.edgeToDualVertexMap();
+        graph.resetSortedEdgesCache();
         Map<Vertex, TreeSet<EdgeOfGraph<Vertex>>> sortedEdgesByVertex = graph.arrangeByAngle();
         Set<Vertex> sptVertices = buildSPTVerticesSet(root, previous);
 
@@ -179,79 +195,67 @@ public class ShortestPathTreeSearcher {
     }
 
     /**
-     * ИТЕРАТИВНЫЙ Euler tour обход используя стек
+     * ИТЕРАТИВНЫЙ Euler tour обход используя стек.
+     *
+     * Each frame keeps a pointer (nextEdgeIdx) into its ordered edge list.
+     * On every iteration we peek the top frame and advance one edge:
+     *   - non-tree edge → process the right face immediately, advance pointer
+     *   - tree edge → push child frame (will be processed before we return here)
+     *   - all edges done → pop frame, handle boundary leaf
+     *
+     * This guarantees that non-tree edges between two tree children are processed
+     * in between the two subtree visits, preserving the correct Euler tour order.
      */
     private static void eulerTourIterative(Vertex root, EulerTourContext context) {
         Deque<EulerTourFrame> stack = new ArrayDeque<>();
-        stack.push(new EulerTourFrame(root, null, 0, false));
+
+        TreeSet<EdgeOfGraph<Vertex>> rootEdges = context.sortedEdgesByVertex.get(root);
+        List<EdgeOfGraph<Vertex>> rootOrdered = getOrderedEdges(rootEdges, null);
+        stack.push(new EulerTourFrame(root, null, rootOrdered));
 
         while (!stack.isEmpty()) {
-            EulerTourFrame frame = stack.pop();
+            EulerTourFrame frame = stack.peek();
 
-            if (frame.isReturning()) {
-                handleBoundaryLeaf(frame.vertex(), context);
+            if (frame.nextEdgeIdx >= frame.edges.size()) {
+                // All edges of this vertex have been processed — leaving vertex
+                stack.pop();
+                handleBoundaryVertex(frame.vertex, context);
                 continue;
             }
 
-            TreeSet<EdgeOfGraph<Vertex>> edgesFromCurrent =
-                    context.sortedEdgesByVertex.get(frame.vertex());
+            EdgeOfGraph<Vertex> edge = frame.edges.get(frame.nextEdgeIdx);
+            frame.nextEdgeIdx++;
 
+            Vertex neighbor = edge.end;
 
-            stack.push(new EulerTourFrame(frame.vertex(), frame.parent(), 0, true));
-
-            List<EdgeOfGraph<Vertex>> edges = getOrderedEdges(
-                    edgesFromCurrent, frame.parent());
-
-            for (int i = edges.size() - 1; i >= 0; i--) {
-                EdgeOfGraph<Vertex> edge = edges.get(i);
-                processEdgeIterative(frame, edge, stack, context);
+            // Skip parent edge
+            if (frame.parent != null && neighbor.getName() == frame.parent.getName()) {
+                continue;
             }
-        }
-    }
 
-    /**
-     * Обрабатывает одно ребро в итеративном обходе
-     */
-    private static void processEdgeIterative(
-            EulerTourFrame currentFrame,
-            EdgeOfGraph<Vertex> edge,
-            Deque<EulerTourFrame> stack,
-            EulerTourContext context) {
+            boolean isTreeEdge = context.sptEdges.contains(
+                    Map.entry(frame.vertex, neighbor));
 
-        Vertex neighbor = edge.end;
-        //System.out.println("Processing edge: " + edge.begin.getName() + " - " + edge.end.getName());
-
-        // Пропускаем parent
-        if (currentFrame.parent() != null &&
-                neighbor.getName() == currentFrame.parent().getName()) {
-            //System.out.println("Skipping parent: " + currentFrame.parent().getName());
-            return;
-        }
-
-        boolean isTreeEdge = context.sptEdges.contains(Map.entry(currentFrame.vertex(), neighbor));
-
-        if (isTreeEdge) {
-            // Добавляем child в стек для обхода
-            stack.push(new EulerTourFrame(neighbor, currentFrame.vertex(), 0, false));
-        } else {
-            // Проверяем, не обработали ли мы это ребро уже
-            Map.Entry<Vertex, Vertex> edgeKey1 = Map.entry(currentFrame.vertex(), neighbor);
-            Map.Entry<Vertex, Vertex> edgeKey2 = Map.entry(neighbor, currentFrame.vertex());
-
-            if (!context.processedNonTreeEdges.contains(edgeKey1) &&
-                    !context.processedNonTreeEdges.contains(edgeKey2)) {
-
-                //System.out.println("Processing non-tree edge: " + edge.begin.getName() + " - " + edge.end.getName());
-                // Обрабатываем non-tree ребро
-                processRightFace(currentFrame.vertex(), neighbor, context);
-
-                // Отмечаем ребро как обработанное
-                context.processedNonTreeEdges.add(edgeKey1);
+            if (isTreeEdge) {
+                // Descend into child — push new frame (will be processed before
+                // we return to the current frame's next edge)
+                TreeSet<EdgeOfGraph<Vertex>> childEdges =
+                        context.sortedEdgesByVertex.get(neighbor);
+                List<EdgeOfGraph<Vertex>> childOrdered =
+                        getOrderedEdges(childEdges, frame.vertex);
+                stack.push(new EulerTourFrame(neighbor, frame.vertex, childOrdered));
             } else {
-                //System.out.println("Skipping already processed non-tree edge: " + edge.begin.getName() + " - " + edge.end.getName());
+                // Non-tree edge — process the right face
+                Map.Entry<Vertex, Vertex> edgeKey1 = Map.entry(frame.vertex, neighbor);
+                Map.Entry<Vertex, Vertex> edgeKey2 = Map.entry(neighbor, frame.vertex);
+
+                if (!context.processedNonTreeEdges.contains(edgeKey1) &&
+                        !context.processedNonTreeEdges.contains(edgeKey2)) {
+                    processRightFace(frame.vertex, neighbor, context);
+                    context.processedNonTreeEdges.add(edgeKey1);
+                }
             }
         }
-        // TODO переход на другое ребро внешней границы
     }
 
     /**
@@ -262,7 +266,8 @@ public class ShortestPathTreeSearcher {
             Vertex parent) {
 
         List<EdgeOfGraph<Vertex>> edgesList = new ArrayList<>(edges);
-        int startIdx = findStartIndex(edges, parent);
+        int startIdx = findParentIndex(edges, parent);
+        startIdx = (startIdx + 1) % edgesList.size();
 
         List<EdgeOfGraph<Vertex>> result = new ArrayList<>();
         for (int i = 0; i < edgesList.size(); i++) {
@@ -274,7 +279,7 @@ public class ShortestPathTreeSearcher {
     /**
      * Обрабатывает boundary leaf вершину
      */
-    private static void handleBoundaryLeaf(Vertex vertex, EulerTourContext context) {
+    private static void handleBoundaryVertex(Vertex vertex, EulerTourContext context) {
         if (context.boundaryLeaves.contains(vertex)) {
             context.leafIndices.add(context.weights.size() - 1);
             //System.out.println("  Leaf " + context.currentLeafIndex +
@@ -285,40 +290,44 @@ public class ShortestPathTreeSearcher {
     }
 
     /**
-     * Обработка правой грани при обходе non-tree ребра
+     * Обработка правой грани non-tree ребра current→neighbor.
+     * edgeToLeftFace[neighbor][current] = грань слева от neighbor→current
+     *                                   = грань справа от current→neighbor.
+     * При CW обходе рёбер это корректная грань.
      */
     private static void processRightFace(
             Vertex current,
             Vertex neighbor,
             EulerTourContext context) {
 
-        VertexOfDualGraph rightFace = null;
+        VertexOfDualGraph face = null;
 
         if (context.edgeToLeftFace.containsKey(neighbor)) {
-            rightFace = context.edgeToLeftFace.get(neighbor).get(current);
+            face = context.edgeToLeftFace.get(neighbor).get(current);
         }
         Vertex newNeighbor = new Vertex(neighbor.name / 1000, neighbor.x, neighbor.y);
         Vertex newCurrent = new Vertex(current.name / 1000, current.x, current.y);
-        if (rightFace == null && context.edgeToLeftFace.containsKey(newNeighbor)) {
-            rightFace = context.edgeToLeftFace.get(newNeighbor).get(current);
+        if (face == null && context.edgeToLeftFace.containsKey(newNeighbor)) {
+            face = context.edgeToLeftFace.get(newNeighbor).get(current);
         }
-        else if (rightFace == null && context.edgeToLeftFace.containsKey(neighbor)) {
-            rightFace = context.edgeToLeftFace.get(neighbor).get(newCurrent);
+        else if (face == null && context.edgeToLeftFace.containsKey(neighbor)) {
+            face = context.edgeToLeftFace.get(neighbor).get(newCurrent);
         }
-        else if (rightFace == null && context.edgeToLeftFace.containsKey(newNeighbor)) {
-            rightFace = context.edgeToLeftFace.get(newNeighbor).get(newCurrent);
+        else if (face == null && context.edgeToLeftFace.containsKey(newNeighbor)) {
+            face = context.edgeToLeftFace.get(newNeighbor).get(newCurrent);
         }
-        if (rightFace != null) {
-            context.cumulativeWeight += rightFace.getWeight();
+        if (face != null) {
+            context.cumulativeWeight += face.getWeight();
             context.weights.add(context.cumulativeWeight);
-            context.regions.add(rightFace);
+            context.regions.add(face);
             
-            // Инкрементально обновляем длину границы
-            double boundaryLength = updateBoundaryLength(rightFace, context);
+            double boundaryLength = updateBoundaryLength(face, context);
             context.distances.add(boundaryLength);
             
-            // Добавляем регион в множество (ВАЖНО: после вычисления!)
-            context.addedRegions.add(rightFace);
+            context.addedRegions.add(face);
+        } else {
+            System.err.println("WARNING: no face found for non-tree edge "
+                    + current.getName() + " -> " + neighbor.getName());
         }
     }
 
@@ -333,7 +342,7 @@ public class ShortestPathTreeSearcher {
         Set<Vertex> inTree = new HashSet<>(previous.values());
 
         for (Vertex v: externalBoundarySet) {
-            if (!previous.containsKey(v) || inTree.contains(v)) {
+            if (previous.containsKey(v) || inTree.contains(v)) {
                 result.add(v);
             }
         }
@@ -380,14 +389,11 @@ public class ShortestPathTreeSearcher {
         int sourcePos = boundaryOrderMap.getOrDefault(corners.sourceVertex.getName(), 0);
         int sinkPos = boundaryOrderMap.getOrDefault(corners.sinkVertex.getName(), 0);
 
-        // Начинаем с source corner (левый край сегмента)
-        int segmentStart = sourcePos;
-
         System.out.println("Boundary segment: from source corner at " + sourcePos + " (name = " + corners.sourceVertex.name +
                 ") to sink corner at " + sinkPos + " (name = " + corners.sinkVertex.name +
-                ") -> segmentStart=" + segmentStart);
+                ") -> segmentStart=" + sourcePos);
 
-        return segmentStart;
+        return sourcePos;
     }
 
     private static void logEulerTourStart(EulerTourContext context, Graph<VertexOfDualGraph> dualGraph) {
@@ -410,6 +416,8 @@ public class ShortestPathTreeSearcher {
     private static void logEulerTourEnd(EulerTourContext context) {
         System.out.println("  Total region weight: " + context.cumulativeWeight);
         System.out.println("  Total region number: " + context.regions.size());
+        System.out.println("  Unique regions: " + new java.util.HashSet<>(context.regions).size());
+        System.out.println("  Processed non-tree edges: " + context.processedNonTreeEdges.size());
     }
 
     /**
@@ -432,6 +440,7 @@ public class ShortestPathTreeSearcher {
             int boundarySegmentStart,
             int n) {
 
+        // Reverse order (CW traversal instead of CCW)
         boundaryVerticesInSPT.sort((a, b) -> {
             int posA = boundaryOrderMap.getOrDefault(a.getName(), 0);
             int posB = boundaryOrderMap.getOrDefault(b.getName(), 0);
@@ -439,10 +448,10 @@ public class ShortestPathTreeSearcher {
             int adjA = (posA - boundarySegmentStart + n) % n;
             int adjB = (posB - boundarySegmentStart + n) % n;
 
-            return Integer.compare(adjA, adjB);
+            return Integer.compare(adjB, adjA);
         });
 
-        System.out.println("Boundary leaves ordering: segmentStart=" +
+        System.out.println("Boundary leaves ordering (CW): segmentStart=" +
                                    boundarySegmentStart +
                                    ", numLeaves=" + boundaryVerticesInSPT.size());
     }
@@ -470,16 +479,16 @@ public class ShortestPathTreeSearcher {
      * Строит set всех вершин в SPT
      */
     private static Set<Vertex> buildSPTVerticesSet(Vertex root, Map<Vertex, Vertex> previous) {
-        Set<Vertex> vertices = new HashSet<>();
+        Set<Vertex> vertices = new HashSet<>(previous.keySet());
         vertices.add(root);
-        vertices.addAll(new HashSet<>(previous.keySet()));
         return vertices;
     }
 
     /**
-     * Находит начальный индекс для обхода ребер (от parent)
+     * Находит индекс ребра к parent в CCW-отсортированном списке.
+     * Если parent == null (корень), возвращает 0.
      */
-    private static int findStartIndex(
+    private static int findParentIndex(
             TreeSet<EdgeOfGraph<Vertex>> edgesFromCurrent,
             Vertex parent) {
 
@@ -490,7 +499,7 @@ public class ShortestPathTreeSearcher {
         List<EdgeOfGraph<Vertex>> edgesList = new ArrayList<>(edgesFromCurrent);
         for (int i = 0; i < edgesList.size(); i++) {
             if (edgesList.get(i).end.getName() == parent.getName()) {
-                return (i + 1) % edgesList.size();
+                return i;
             }
         }
 

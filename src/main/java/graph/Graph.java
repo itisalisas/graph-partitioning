@@ -467,4 +467,8 @@ public class Graph<T extends Vertex> {
             }
         }
     }
+
+    public void resetSortedEdgesCache() {
+        this.vertexToSortedEdges = null;
+    }
 }

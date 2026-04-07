@@ -10,9 +10,9 @@ import partitioning.entities.SPTResult;
 
 public class ShortestPathTreeProcessor {
 
-    private static final double ALPHA = 0.5; // баланс vs длина
+    private static final double ALPHA = 0.5, BETA = 0.5; // коэф
 
-    public SPTResult findBestPath(DijkstraResult result1, DijkstraResult result2) {
+    public SPTResult findBestPath(DijkstraResult result1, DijkstraResult result2, double sourceWeight, double sinkWeight) {
         int n1 = result1.leafIndices().size();
         int n2 = result2.leafIndices().size();
         if (n1 == 0 || n2 == 0) {
@@ -23,26 +23,16 @@ public class ShortestPathTreeProcessor {
             );
         }
 
-        int i1 = 0, i2 = 0;
         double bestScore = Double.MAX_VALUE;
         int bestI1 = 0, bestI2 = 0;
-
-        while (i1 < n1 && i2 < n2) {
-            double score1 = leafScore(result1, i1);
-            double score2 = leafScore(result2, i2);
-
-            double combined = score1 + score2;
-            if (combined < bestScore) {
-                bestScore = combined;
-                bestI1 = i1;
-                bestI2 = i2;
-            }
-
-            // шаг по тому указателю, у которого значение хуже
-            if (score1 >= score2) {
-                i1++;
-            } else {
-                i2++;
+        for (int i1 = 0; i1 < n1; i1++) {
+            for (int i2 = 0; i2 < n2; i2++) {
+                double score = leafScore(result1, i1, result2, i2, sourceWeight, sinkWeight);
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestI1 = i1;
+                    bestI2 = i2;
+                }
             }
         }
 
@@ -62,11 +52,22 @@ public class ShortestPathTreeProcessor {
         return new SPTResult(balance, totalDistance, combinePaths(path1, path2));
     }
 
-    private double leafScore(DijkstraResult result, int i) {
-        double leftWeight = result.weights().get(result.leafIndices().get(i));
-        double balance = Math.abs(2 * leftWeight - result.totalRegionWeight());
-        double length = result.distances().get(result.leafIndices().get(i));
-        return ALPHA * balance + (1 - ALPHA) * length;
+    private double leafScore(DijkstraResult result1, int i1, DijkstraResult result2, int i2, double sourceWeight, double sinkWeight) {
+        // TODO - разные порядки длины и баланса???
+        if (result1.leafIndices().get(i1) == -1
+                || result2.leafIndices().get(i2) == -1
+        ) {
+            return Double.MAX_VALUE;
+        }
+        double length = result1.distances().get(result1.leafIndices().get(i1))
+                + result2.distances().get(result2.leafIndices().get(i2));
+        double totalWeight = result1.totalRegionWeight() + result2.totalRegionWeight() + sourceWeight + sinkWeight;
+        double leftWeight = result1.weights().get(result1.leafIndices().get(i1))
+                + (result2.totalRegionWeight() - result2.weights().get(result2.leafIndices().get(i2)))
+                + sourceWeight;
+        double balance = Math.abs(ALPHA * totalWeight - leftWeight);
+        //System.out.println("length = " + length + ", balance = " + balance + ", totalWeight = " + totalWeight + ", score = " + (BETA * length + (1 - BETA) * balance));
+        return BETA * length + (1 - BETA) * balance;
     }
 
     private List<Vertex> reconstructPathToLeaf(DijkstraResult result, int leafIdx) {

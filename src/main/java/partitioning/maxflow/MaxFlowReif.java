@@ -396,7 +396,7 @@ public class MaxFlowReif implements MaxFlow {
         DijkstraResult path2ToBoundary = path2ToBoundaryOpt.get();
 
         ShortestPathTreeProcessor sptProcessor = new ShortestPathTreeProcessor();
-        SPTResult result = sptProcessor.findBestPath(path1ToBoundary, path2ToBoundary);
+        SPTResult result = sptProcessor.findBestPath(path1ToBoundary, path2ToBoundary, source.getWeight(), sink.getWeight());
 
         List<Vertex> pathInOriginalGraph = mapToOriginalGraph(
                 result.path(),
@@ -613,7 +613,8 @@ public class MaxFlowReif implements MaxFlow {
                 best.splitVertex1(),
                 best.splitVertex2(),
                 splitToOriginalMap,
-                sourceNeighbors, sinkNeighbors, flow, conversion
+                sourceNeighbors, sinkNeighbors, flow, conversion,
+                initGraph, comparisonForDualGraph
         );
     }
 
