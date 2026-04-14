@@ -8,8 +8,11 @@ import graph.Edge;
 import graph.Graph;
 import graph.Point;
 import graph.Vertex;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GraphReader {
+	private static final Logger logger = LoggerFactory.getLogger(GraphReader.class);
 
 	public CoordinateConversion coordConver;
 
@@ -47,7 +50,7 @@ public class GraphReader {
 		int ni = 0;
 		double length = 0;
 		Vertex vi;
-		System.out.println("Vertices num: " + n);
+		logger.info("Vertices num: {}", n);
 		for (int i = 0; i < n && sc.hasNext(); i++) {
 			// read Vertex..
 			vi = readVertex(graph, sc, geodetic);
@@ -61,7 +64,7 @@ public class GraphReader {
 		ni = 0;
 		length = 0;
 		Vertex vj;
-		System.out.println("Readed all Vertices");
+		logger.info("Read all vertices");
 
 		for (int i = 0; i < n && sc.hasNext(); i++) {
 			// read Vertex..

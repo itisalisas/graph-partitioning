@@ -5,6 +5,8 @@ import java.util.stream.Collectors;
 
 import graph.*;
 import jakarta.validation.constraints.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import partitioning.entities.SPTResult;
 import partitioning.entities.SPTWithRegionWeights;
 import partitioning.shortestpathtree.ShortestPathTreeProcessor;
@@ -21,6 +23,7 @@ import static partitioning.splitting.VertexSplitter.splitVertex;
 import static partitioning.maxflow.Dijkstra.dijkstraMultiSource;
 
 public class MaxFlowReif implements MaxFlow {
+    private static final Logger logger = LoggerFactory.getLogger(MaxFlowReif.class);
     Graph<Vertex> initGraph;
     Graph<VertexOfDualGraph> dualGraph;
     VertexOfDualGraph source;
@@ -65,7 +68,7 @@ public class MaxFlowReif implements MaxFlow {
         );
 
         if (boundaries.externalBoundary().isEmpty()) {
-            System.out.println("ERROR: External boundary is empty!");
+            logger.error("External boundary is empty!");
             return new FlowResult(0, dualGraph, source, sink);
         }
 
@@ -90,9 +93,8 @@ public class MaxFlowReif implements MaxFlow {
                                         sinkNeighbors, modifiedGraph);
         }
 
-        System.out.println("Found shortest path with " +
-                                   shortestPathResult.path().size() +
-                                   " vertices, distance: " + shortestPathResult.distance());
+        logger.info("Found shortest path with {} vertices, distance: {}", 
+                shortestPathResult.path().size(), shortestPathResult.distance());
 
         // Препроцессинг разделения вершин
         Map<Long, NeighborSplit> neighborSplits = preprocessVertexSplits(
@@ -108,9 +110,8 @@ public class MaxFlowReif implements MaxFlow {
 
         // Поиск лучшего пути через split-вершины
         IntersectionsData intersections = findAllIntersections(boundaries);
-        System.out.println("Found " + intersections.sourceIntersections.size() +
-                " source intersections and " + intersections.sinkIntersections.size() +
-                " sink intersections on external boundary");
+        logger.info("Found {} source intersections and {} sink intersections on external boundary", 
+                intersections.sourceIntersections.size(), intersections.sinkIntersections.size());
         Optional<PathCandidate> bestCandidate = findBestPathThroughSplits(
                 splitData, modifiedGraph, boundaries,
                 intersections, dualGraph
@@ -243,7 +244,7 @@ public class MaxFlowReif implements MaxFlow {
             );
         } catch (RuntimeException e) {
             if (e.getMessage() != null && e.getMessage().contains("broken boundary")) {
-                System.out.println("Broken boundary detected: " + e.getMessage());
+                logger.error("Broken boundary detected: {}", e.getMessage());
                 FlowWriter.dumpVisualizationData(
                         boundaries.externalBoundary(),
                         boundaries.sourceBoundary(),
@@ -426,7 +427,7 @@ public class MaxFlowReif implements MaxFlow {
             boolean isFirstSide) {
 
         if (sourceIntersections.isEmpty() || sinkIntersections.isEmpty()) {
-            System.out.println("WARNING: No intersections found, using full boundary");
+            logger.warn("No intersections found, using full boundary");
             return externalBoundary;
         }
 
@@ -441,7 +442,7 @@ public class MaxFlowReif implements MaxFlow {
         Vertex sinkCorner = keyVertices.sinkVertex();
 
         if (sourceCorner == null || sinkCorner == null) {
-            System.out.println("WARNING: Could not find corner pair, using full boundary");
+            logger.warn("Could not find corner pair, using full boundary");
             return externalBoundary;
         }
 
@@ -469,9 +470,8 @@ public class MaxFlowReif implements MaxFlow {
             iterations++;
         }
 
-        System.out.println("Extracted boundary segment: " + segment.size() + " vertices " +
-                "(from " + sourceCorner.getName() + " to " + sinkCorner.getName() +
-                ", isFirstSide=" + isFirstSide + ")");
+        logger.debug("Extracted boundary segment: {} vertices (from {} to {}, isFirstSide={})", 
+                segment.size(), sourceCorner.getName(), sinkCorner.getName(), isFirstSide);
 
         return segment;
     }
@@ -496,10 +496,10 @@ public class MaxFlowReif implements MaxFlow {
         TwoKeyVertices pair1 = new TwoKeyVertices(firstSourceCorner, lastSinkCorner);
         TwoKeyVertices pair2 = new TwoKeyVertices(lastSourceCorner, firstSinkCorner);
 
-        System.out.println("Pair 1 (first source + last sink): source=" + pair1.sourceVertex().getName() +
-                ", sink=" + pair1.sinkVertex().getName());
-        System.out.println("Pair 2 (last source + first sink): source=" + pair2.sourceVertex().getName() +
-                ", sink=" + pair2.sinkVertex().getName());
+        logger.debug("Pair 1 (first source + last sink): source={}, sink={}", 
+                pair1.sourceVertex().getName(), pair1.sinkVertex().getName());
+        logger.debug("Pair 2 (last source + first sink): source={}, sink={}", 
+                pair2.sourceVertex().getName(), pair2.sinkVertex().getName());
 
         return !isFirstSide ? pair1 : pair2;
     }
@@ -528,15 +528,12 @@ public class MaxFlowReif implements MaxFlow {
             boolean isPath1Found,
             boolean isPath2Found) {
 
-        System.out.println("ERROR: Path to external boundary not found!");
-        System.out.println("  Original vertex on shortest path: " +
-                                   splitToOriginalMap.get(splitVertex1).getName());
-        System.out.println("  Split vertex 1 ID: " + splitVertex1.getName());
-        System.out.println("  Split vertex 2 ID: " + splitVertex2.getName());
-        System.out.println("  Path1ToBoundary (left): " +
-                                   (isPath1Found ? "FOUND" : "NULL"));
-        System.out.println("  Path2ToBoundary (right): " +
-                                   (isPath2Found ? "FOUND" : "NULL"));
+        logger.error("Path to external boundary not found!");
+        logger.error("  Original vertex on shortest path: {}", splitToOriginalMap.get(splitVertex1).getName());
+        logger.error("  Split vertex 1 ID: {}", splitVertex1.getName());
+        logger.error("  Split vertex 2 ID: {}", splitVertex2.getName());
+        logger.error("  Path1ToBoundary (left): {}", isPath1Found ? "FOUND" : "NULL");
+        logger.error("  Path2ToBoundary (right): {}", isPath2Found ? "FOUND" : "NULL");
     }
 
     /**
@@ -548,7 +545,7 @@ public class MaxFlowReif implements MaxFlow {
             HashSet<VertexOfDualGraph> sinkNeighbors,
             Graph<Vertex> modifiedGraph) {
 
-        System.out.println("ERROR: No shortest path found between source and sink boundaries!");
+        logger.error("No shortest path found between source and sink boundaries!");
         FlowWriter.dumpVisualizationData(
                 boundaries.externalBoundary(),
                 boundaries.sourceBoundary(),
@@ -572,7 +569,7 @@ public class MaxFlowReif implements MaxFlow {
             HashSet<VertexOfDualGraph> sinkNeighbors,
             Graph<Vertex> modifiedGraph) {
 
-        System.out.println("ERROR: No best path found to external boundary!");
+        logger.error("No best path found to external boundary!");
         FlowWriter.dumpVisualizationData(
                 boundaries.externalBoundary(),
                 boundaries.sourceBoundary(),
@@ -650,7 +647,8 @@ public class MaxFlowReif implements MaxFlow {
 
         SPTWithRegionWeights spt = ShortestPathTreeSearcher.buildSPTWithRegionWeights(
                 graph, defaultResult.previous(), sourceVertex, targetSegment,
-                dualGraph, sourceIntersections, sinkIntersections, isFirstSide
+                dualGraph, sourceIntersections, sinkIntersections, isFirstSide,
+                cornerConstraints
         );
 
         return Optional.of(new DijkstraResult(
@@ -860,7 +858,7 @@ public class MaxFlowReif implements MaxFlow {
             boolean isFirstSide) {
 
         if (!keyVertices.isValid()) {
-            System.out.println("WARNING: Invalid key vertices, no constraints");
+            logger.warn("Invalid key vertices, no constraints");
             return CornerConstraints.empty();
         }
 
@@ -925,8 +923,7 @@ public class MaxFlowReif implements MaxFlow {
         }
 
         if (externalBoundaryEdgeIdx == -1 || sourceSinkEdgeIdx == -1) {
-            System.out.println("WARNING: Corner " + corner.getName() +
-                    " - не найдены граничные рёбра, разрешаем все");
+            logger.warn("Corner {} - не найдены граничные рёбра, разрешаем все", corner.getName());
             return edgesList;
         }
 
@@ -969,11 +966,9 @@ public class MaxFlowReif implements MaxFlow {
             currentIdx = (currentIdx + 1) % edgesList.size();
         }
 
-        System.out.println("Corner " + corner.getName() +
-                " (type=" + (isSourceCorner ? "SOURCE" : "SINK") +
-                ", isFirstSide=" + isFirstSide + "): " +
-                "allowed " + allowedEdges.size() + "/" + edgesList.size() + " edges " +
-                "(from idx " + startIdx + " to " + endIdx + ")");
+        logger.debug("Corner {} (type={}, isFirstSide={}): allowed {}/{} edges (from idx {} to {})", 
+                corner.getName(), isSourceCorner ? "SOURCE" : "SINK", isFirstSide, 
+                allowedEdges.size(), edgesList.size(), startIdx, endIdx);
 
         return allowedEdges;
     }

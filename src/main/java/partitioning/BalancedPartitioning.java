@@ -9,9 +9,12 @@ import java.util.Set;
 
 import graph.*;
 import org.junit.jupiter.api.Assertions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import partitioning.algorithms.BalancedPartitioningOfPlanarGraphs;
 
 public class BalancedPartitioning {
+	private static final Logger logger = LoggerFactory.getLogger(BalancedPartitioning.class);
 	public BalancedPartitioningOfPlanarGraphs bp;
 
 	public double maxSumVerticesWeight;
@@ -39,12 +42,12 @@ public class BalancedPartitioning {
 	private void calculateCutWeights(Graph<VertexOfDualGraph> graph, List<Set<VertexOfDualGraph>> partitions) {
 		cutEdgesMap = new HashMap<>();
 		if (graph == null) {
-			System.out.println("graph - null1");
+			logger.warn("graph is null (check 1)");
 		}
 		for (Set<VertexOfDualGraph> partition : partitions) {
 			double cutEdgesWeightSum = 0;
 			if (graph == null) {
-				System.out.println("graph - null2");
+				logger.warn("graph is null (check 2)");
 			}
 			for (EdgeOfGraph<VertexOfDualGraph> edge : graph.edgesArray()) {
 				VertexOfDualGraph u = edge.begin;

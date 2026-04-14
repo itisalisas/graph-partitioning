@@ -6,11 +6,14 @@ import java.util.stream.Collectors;
 import graph.*;
 import jakarta.validation.constraints.NotNull;
 import org.junit.jupiter.api.Assertions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import partitioning.BalancedPartitioning;
 import partitioning.algorithms.InertialFlowPartitioning;
 
 public class Balancer {
+    private static final Logger logger = LoggerFactory.getLogger(Balancer.class);
 
     Graph<PartitionGraphVertex> partitionGraph;
     Graph<VertexOfDualGraph> dualGraph;
@@ -352,12 +355,12 @@ public class Balancer {
     private Map<Set<VertexOfDualGraph>, Double> calculateCutWeights(@NotNull Graph<VertexOfDualGraph> graph, List<Set<VertexOfDualGraph>> partitions) {
         Map<Set<VertexOfDualGraph>, Double> cutEdgesMap = new HashMap<>();
         if (graph == null) {
-            System.out.println("graph - null1");
+            logger.warn("graph is null (check 1)");
         }
         for (Set<VertexOfDualGraph> partition : partitions) {
             double cutEdgesWeightSum = 0;
             if (graph == null) {
-                System.out.println("graph - null2");
+                logger.warn("graph is null (check 2)");
             }
             for (EdgeOfGraph<VertexOfDualGraph> edge : graph.edgesArray()) {
                 VertexOfDualGraph u = edge.begin;

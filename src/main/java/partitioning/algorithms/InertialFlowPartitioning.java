@@ -5,6 +5,9 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import graph.*;
 import org.junit.jupiter.api.Assertions;
 import partitioning.entities.FlowResult;
@@ -13,6 +16,7 @@ import partitioning.maxflow.MaxFlowDinic;
 import partitioning.maxflow.MaxFlowReif;
 
 public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs {
+    private static final Logger logger = LoggerFactory.getLogger(InertialFlowPartitioning.class);
 
     private final double PARAMETER_SOURCE, PARAMETER_SINK;
     private final boolean USE_REIF;
@@ -167,7 +171,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                 if (startVertices.size() > 1) {
                     startVertex = startVertices.get(1);
                 }
-                System.out.println("graph size = " + currentGraph.verticesArray().size() + ", startVertices size = " + startVertices.size());
+                logger.debug("graph size = {}, startVertices size = {}", currentGraph.verticesArray().size(), startVertices.size());
                 sinkSet = selectVerticesForSet(vertices, currentIndex, targetWeightSink, sourceSet, currentGraph, startVertex);
 
                 boolean isDisjoint = Collections.disjoint(sinkSet, sourceSet);
@@ -222,7 +226,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                         .ifPresent(sinkSet::add);
             }
 
-            System.out.println("sourceSet size = " + sourceSet.size() + ", sinkSet size = " + sinkSet.size());
+            logger.debug("sourceSet size = {}, sinkSet size = {}", sourceSet.size(), sinkSet.size());
             Graph<VertexOfDualGraph> copyGraph = createGraphWithSourceSink(currentGraph, sourceSet, source, sinkSet, sink);
 
             Assertions.assertEquals(currentGraph.verticesNumber() + 2, copyGraph.verticesNumber());
@@ -234,7 +238,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                 maxFlow = new MaxFlowDinic(copyGraph, source, sink);
             }
             FlowResult flowResult = maxFlow.findFlow();
-            System.out.println("\n\nFLOW SIZE: " + flowResult.flowSize() + "\n\n");
+            logger.debug("Flow size: {}", flowResult.flowSize());
 
             List<Graph<VertexOfDualGraph>> subpartition;
             if (USE_REIF) {
@@ -242,10 +246,10 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             } else {
                 subpartition = partitionGraph(flowResult);
             }
-            System.out.println("\n\nSUBPARTITION SIZE: " + subpartition.size());
-            System.out.println("Subgraph 0 vertices: " + subpartition.get(0).verticesNumber() + ", weight: " + subpartition.get(0).verticesWeight());
-            System.out.println("Subgraph 1 vertices: " + subpartition.get(1).verticesNumber() + ", weight: " + subpartition.get(1).verticesWeight());
-            System.out.println("Original graph vertices: " + currentGraph.verticesNumber() + ", weight: " + currentGraph.verticesWeight() + "\n\n");
+            logger.debug("SUBPARTITION SIZE: {}", subpartition.size());
+            logger.debug("Subgraph 0 vertices: {}, weight: {}", subpartition.get(0).verticesNumber(), subpartition.get(0).verticesWeight());
+            logger.debug("Subgraph 1 vertices: {}, weight: {}", subpartition.get(1).verticesNumber(), subpartition.get(1).verticesWeight());
+            logger.debug("Original graph vertices: {}, weight: {}\n\n", currentGraph.verticesNumber(), currentGraph.verticesWeight());
 
             for (Graph<VertexOfDualGraph> subgraph : subpartition) {
                 stack.push(subgraph);
@@ -439,11 +443,11 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
         List<Graph<VertexOfDualGraph>> subpartition = new ArrayList<>();
         
         if (components.isEmpty()) {
-            System.out.println("No components found, returning empty graphs");
+            logger.warn("No components found, returning empty graphs");
             subpartition.add(new Graph<>());
             subpartition.add(new Graph<>());
         } else if (components.size() == 1) {
-            System.out.println("Only one component, graph not separated");
+            logger.warn("Only one component, graph not separated");
             subpartition.add(flow.graphWithFlow().createSubgraph(components.get(0)));
             subpartition.add(new Graph<>());
         } else {

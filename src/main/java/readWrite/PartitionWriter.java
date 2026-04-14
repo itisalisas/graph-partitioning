@@ -19,10 +19,13 @@ import graph.BoundSearcher;
 import graph.Point;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import partitioning.BalancedPartitioning;
 import partitioning.algorithms.BalancedPartitioningOfPlanarGraphs;
 
 public class PartitionWriter {
+	private static final Logger logger = LoggerFactory.getLogger(PartitionWriter.class);
 
 	static CoordinateConversion cc;
 
@@ -165,8 +168,8 @@ public class PartitionWriter {
 
 		printStat(outputDirectory, partitionResult, balancedPartitioning, bp, partitionTime, memory);
 
-		System.out.println("Empty parts number: " + balancedPartitioning.countEmptyParts(partitionResult));
-		System.out.println("Graph weight after: " + balancedPartitioning.countSumPartitioningWeight(partitionResult));
+		logger.info("Empty parts number: {}", balancedPartitioning.countEmptyParts(partitionResult));
+		logger.info("Graph weight after: {}", balancedPartitioning.countSumPartitioningWeight(partitionResult));
 	}
 
 	private void printStat(

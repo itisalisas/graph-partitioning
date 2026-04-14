@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import graph.BoundSearcher;
 import graph.Edge;
 import graph.Graph;
@@ -14,6 +16,7 @@ import partitioning.entities.DijkstraResult;
 import partitioning.entities.NeighborSplit;
 
 public class FlowWriter {
+    private static final Logger logger = LoggerFactory.getLogger(FlowWriter.class);
 
     public static void dumpVisualizationData(List<Vertex> externalBoundary, List<Vertex> sourceBoundary,
                                                   List<Vertex> sinkBoundary, List<Vertex> stPath, List<Vertex> bestPath,
@@ -50,9 +53,9 @@ public class FlowWriter {
             writeDualGraphWithFlow(outputDir + "dual_graph_flow.txt", dualGraph, source, sink, coordConversion);
             writePrimalGraph(outputDir + "primal_graph.txt", graph, sourceNeighbors, sinkNeighbors, coordConversion);
 
-            System.out.println("Visualization data saved to " + outputDir);
+            logger.info("Visualization data saved to {}", outputDir);
         } catch (Exception e) {
-            System.err.println("Error saving visualization data: " + e.getMessage());
+            logger.error("Error saving visualization data: {}", e.getMessage());
         }
     }
 
@@ -66,7 +69,7 @@ public class FlowWriter {
     }
 
     private static void writeNeighborSplitsToFile(String filename, Map<Long, NeighborSplit> neighborSplits, CoordinateConversion coordConversion) throws java.io.IOException {
-        System.out.println("Writing neighbor splits, total: " + neighborSplits.size());
+        logger.debug("Writing neighbor splits, total: {}", neighborSplits.size());
         try (java.io.FileWriter writer = new java.io.FileWriter(filename)) {
 
             for (Map.Entry<Long, NeighborSplit> entry : neighborSplits.entrySet()) {
@@ -97,7 +100,7 @@ public class FlowWriter {
 
                 writer.write("---\n");
             }
-            System.out.println("Neighbor splits file written");
+            logger.debug("Neighbor splits file written");
         }
     }
 
@@ -118,7 +121,7 @@ public class FlowWriter {
                         v.getName(), geoVertex.x, geoVertex.y));
                 vertexCount++;
             }
-            System.out.println("Wrote " + vertexCount + " vertices to primal graph");
+            logger.debug("Wrote {} vertices to primal graph", vertexCount);
 
             // Записываем рёбра (неориентированные, каждое только один раз)
             writer.write("EDGES\n");
@@ -142,7 +145,7 @@ public class FlowWriter {
                     }
                 }
             }
-            System.out.println("Wrote " + edgeCount + " edges to primal graph");
+            logger.debug("Wrote {} edges to primal graph", edgeCount);
         }
     }
 
@@ -295,10 +298,9 @@ public class FlowWriter {
             writeSPTToFile(outputDir + "spt2.txt", spt2, root2, splitToOriginalMap, "SPT2",
                     coordConversion, initGraph, comparisonForDualGraph);
 
-            System.out.println("SPT visualization data saved to " + outputDir);
+            logger.info("SPT visualization data saved to {}", outputDir);
         } catch (Exception e) {
-            System.err.println("Error saving SPT visualization data: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error saving SPT visualization data: {}", e.getMessage(), e);
         }
     }
 
@@ -330,9 +332,9 @@ public class FlowWriter {
             writer.write("BOUNDARY_LEAVES\n");
             writer.write("# vertex_id longitude latitude cumulative_left_weight boundary_index\n");
 
-            System.out.println("Writing " + spt.boundaryLeaves().size() + " boundary leaves for " + sptName);
-            System.out.println("IN LEAF INDICES " + spt.leafIndices().size());
-            System.out.println("  leftRegionWeights map has " + spt.weights().size() + " entries");
+            logger.debug("Writing {} boundary leaves for {}", spt.boundaryLeaves().size(), sptName);
+            logger.debug("IN LEAF INDICES {}", spt.leafIndices().size());
+            logger.debug("  leftRegionWeights map has {} entries", spt.weights().size());
 
             int numLeaves = spt.leafIndices().size();
             int numWeights = spt.weights().size();
@@ -357,7 +359,7 @@ public class FlowWriter {
             writer.write("# region_index region_vertex_id from_leaf_index to_leaf_index weight centroid_lon centroid_lat\n");
             
             int numRegions = spt.regions() != null ? spt.regions().size() : 0;
-            System.out.println("Writing " + numRegions + " regions for " + sptName);
+            logger.debug("Writing {} regions for {}", numRegions, sptName);
             
             for (int regionIdx = 0; regionIdx < numWeights; regionIdx++) {
                 int fromLeafIdx = regionIdx;
@@ -393,7 +395,7 @@ public class FlowWriter {
                     //                   " at (" + centroidLon + ", " + centroidLat + "), weight=" + regionWeight);
                 } else {
                     // Fallback: calculate centroid between the two leaves if regions list is not available
-                    System.err.println("WARNING: Region " + regionIdx + " not found in regions list, using fallback");
+                    logger.warn("Region {} not found in regions list, using fallback", regionIdx);
                     Vertex fromLeaf = spt.boundaryLeaves().get(fromLeafIdx);
                     Vertex toLeaf = spt.boundaryLeaves().get(toLeafIdx);
                     Vertex originalFromLeaf = splitToOriginalMap.getOrDefault(fromLeaf, fromLeaf);
@@ -468,13 +470,17 @@ public class FlowWriter {
                             .add(entry.getKey());
                 }
 
-                System.out.println("Leaf group stats for " + sptName + ": " + numLeaves + " leaves, "
-                        + numGroups + " groups, "
-                        + numRegionsTotal + " total region entries, "
-                        + faceToGroup.size() + " unique faces assigned");
+                // Count faces not assigned to any group
+                int totalDualFaces = 0;
+                if (comparisonForDualGraph != null) {
+                    totalDualFaces = comparisonForDualGraph.size();
+                }
+                logger.debug("Leaf group stats for {}: {} leaves, {} groups, {} total region entries, {} unique faces assigned, total dual faces: {}", 
+                        sptName, numLeaves, numGroups, numRegionsTotal, faceToGroup.size(), totalDualFaces);
 
+                int emptyGroups = 0;
+                int failedGroups = 0;
                 for (int groupIdx = 0; groupIdx < numGroups; groupIdx++) {
-                    // Compute group weight from prefix sums
                     double groupWeight;
                     if (groupIdx == 0) {
                         groupWeight = safeWeightAt.apply(0);
@@ -488,6 +494,7 @@ public class FlowWriter {
                             groupToFaces.getOrDefault(groupIdx, new java.util.HashSet<>());
 
                     if (groupFaces.isEmpty()) {
+                        emptyGroups++;
                         writer.write(String.format("%d %.6f 0\n", groupIdx, groupWeight));
                         writer.write("---\n");
                         continue;
@@ -502,12 +509,13 @@ public class FlowWriter {
                             writer.write(String.format("%.10f %.10f\n", geoV.x, geoV.y));
                         }
                     } catch (Exception e) {
-                        System.err.println("WARNING: Failed to compute boundary for group " + groupIdx
-                                + " (" + groupFaces.size() + " faces): " + e.getMessage());
+                        failedGroups++;
+                        logger.warn("Failed to compute boundary for group {} ({} faces): {}", groupIdx, groupFaces.size(), e.getMessage());
                         writer.write(String.format("%d %.6f 0\n", groupIdx, groupWeight));
                     }
                     writer.write("---\n");
                 }
+                logger.debug("  {}: {} empty groups, {} failed boundary computations", sptName, emptyGroups, failedGroups);
             }
             writer.write("\n");
 

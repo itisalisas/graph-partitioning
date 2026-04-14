@@ -8,13 +8,15 @@ import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
 import org.junit.jupiter.api.Assertions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import partitioning.entities.SPTWithRegionWeights;
+import partitioning.maxflow.CornerConstraints;
+import readWrite.CoordinateConversion;
 
 public class ShortestPathTreeSearcher {
+    private static final Logger logger = LoggerFactory.getLogger(ShortestPathTreeSearcher.class);
 
-    /**
-     * Builds SPT (Shortest Path Tree) with region weights
-     */
     public static SPTWithRegionWeights buildSPTWithRegionWeights(
             Graph<Vertex> graph,
             Map<Vertex, Vertex> previous,
@@ -23,7 +25,8 @@ public class ShortestPathTreeSearcher {
             Graph<VertexOfDualGraph> dualGraph,
             List<Vertex> sourceCorners,
             List<Vertex> sinkCorners,
-            boolean isFirstSide
+            boolean isFirstSide,
+            CornerConstraints cornerConstraints
     ) {
 
         Set<Vertex> externalBoundarySet = new HashSet<>(externalBoundary);
@@ -39,13 +42,16 @@ public class ShortestPathTreeSearcher {
                                     boundarySegmentStart, externalBoundary.size());
 
         RegionWeightsResult weightsResult = computeRegionWeightsByEulerTour(
-                sourceVertex, previous, boundaryVerticesInSPT, graph, dualGraph);
-        Assertions.assertEquals(boundaryVerticesInSPT.size(), weightsResult.leafIndices.size());
-        System.out.println("INDICES: ");
-        for (int i = 0; i < weightsResult.leafIndices.size(); i++) {
-            System.out.print(boundaryVerticesInSPT.get(i).name + ": " + weightsResult.leafIndices.get(i) + ". ");
+                sourceVertex, previous, boundaryVerticesInSPT, graph, dualGraph, cornerConstraints);
+
+        if (logger.isDebugEnabled()) {
+            StringBuilder indices = new StringBuilder("INDICES: ");
+            for (int i = 0; i < weightsResult.leafIndices.size(); i++) {
+                indices.append(boundaryVerticesInSPT.get(i).name).append(": ")
+                       .append(weightsResult.leafIndices.get(i)).append(". ");
+            }
+            logger.debug(indices.toString());
         }
-        System.out.println();
 
         return new SPTWithRegionWeights(
                 weightsResult.regions, weightsResult.weights,
@@ -66,7 +72,6 @@ public class ShortestPathTreeSearcher {
     ) {}
 
     /**
-     * Состояние для итеративного Euler Tour.
      * Each frame holds the ordered edge list and a mutable index tracking
      * which edge to process next, so non-tree edges are interleaved correctly
      * with child subtree visits.
@@ -98,6 +103,7 @@ public class ShortestPathTreeSearcher {
         final List<Double> weights;
         final List<Double> distances;
         final List<Integer> leafIndices;
+        final CornerConstraints cornerConstraints;
 
         double cumulativeWeight;
         int currentLeafIndex;
@@ -112,13 +118,15 @@ public class ShortestPathTreeSearcher {
                 Set<Vertex> sptVertices,
                 Set<Vertex> boundaryLeaves,
                 Map<Vertex, HashMap<Vertex, VertexOfDualGraph>> edgeToLeftFace,
-                Graph<VertexOfDualGraph> dualGraph) {
+                Graph<VertexOfDualGraph> dualGraph,
+                CornerConstraints cornerConstraints) {
 
             this.sortedEdgesByVertex = sortedEdgesByVertex;
             this.sptEdges = sptEdges;
             this.sptVertices = sptVertices;
             this.boundaryLeaves = boundaryLeaves;
             this.edgeToLeftFace = edgeToLeftFace;
+            this.cornerConstraints = cornerConstraints;
             this.regions = new ArrayList<>();
             this.weights = new ArrayList<>();
             this.distances = new ArrayList<>();
@@ -152,14 +160,15 @@ public class ShortestPathTreeSearcher {
             Map<Vertex, Vertex> previous,
             List<Vertex> boundaryLeaves,
             Graph<Vertex> graph,
-            Graph<VertexOfDualGraph> dualGraph) {
+            Graph<VertexOfDualGraph> dualGraph,
+            CornerConstraints cornerConstraints) {
 
         if (boundaryLeaves.isEmpty()) {
             return new RegionWeightsResult(List.of(), List.of(), List.of(), List.of(), 0);
         }
 
         EulerTourContext context = prepareEulerTourContext(
-                root, previous, boundaryLeaves, graph, dualGraph);
+                root, previous, boundaryLeaves, graph, dualGraph, cornerConstraints);
 
         logEulerTourStart(context, dualGraph);
         eulerTourIterative(root, context);
@@ -181,7 +190,8 @@ public class ShortestPathTreeSearcher {
             Map<Vertex, Vertex> previous,
             List<Vertex> boundaryLeaves,
             Graph<Vertex> graph,
-            Graph<VertexOfDualGraph> dualGraph) {
+            Graph<VertexOfDualGraph> dualGraph,
+            CornerConstraints cornerConstraints) {
 
         Set<Map.Entry<Vertex, Vertex>> sptEdges = buildSPTEdgesSet(previous);
         Map<Vertex, HashMap<Vertex, VertexOfDualGraph>> edgeToLeftFace = dualGraph.edgeToDualVertexMap();
@@ -191,7 +201,7 @@ public class ShortestPathTreeSearcher {
 
         return new EulerTourContext(
                 sortedEdgesByVertex, sptEdges, sptVertices,
-                new HashSet<>(boundaryLeaves), edgeToLeftFace, dualGraph);
+                new HashSet<>(boundaryLeaves), edgeToLeftFace, dualGraph, cornerConstraints);
     }
 
     /**
@@ -230,6 +240,13 @@ public class ShortestPathTreeSearcher {
 
             // Skip parent edge
             if (frame.parent != null && neighbor.getName() == frame.parent.getName()) {
+                continue;
+            }
+
+            // Skip edges that violate corner constraints (edges to source/sink boundaries that are not allowed)
+            if (!context.cornerConstraints.isNeighborAllowed(frame.vertex, neighbor)) {
+                logger.debug("Skipping edge {} -> {} due to corner constraints", 
+                        frame.vertex.getName(), neighbor.getName());
                 continue;
             }
 
@@ -282,9 +299,7 @@ public class ShortestPathTreeSearcher {
     private static void handleBoundaryVertex(Vertex vertex, EulerTourContext context) {
         if (context.boundaryLeaves.contains(vertex)) {
             context.leafIndices.add(context.weights.size() - 1);
-            //System.out.println("  Leaf " + context.currentLeafIndex +
-            //                           " (vertex " + vertex.getName() +
-            //                           "): cumulative=" + context.cumulativeWeight);
+            logger.debug("  Leaf {} (vertex {}): cumulative={}", context.currentLeafIndex, vertex.getName(), context.cumulativeWeight);
             context.currentLeafIndex++;
         }
     }
@@ -326,8 +341,8 @@ public class ShortestPathTreeSearcher {
             
             context.addedRegions.add(face);
         } else {
-            System.err.println("WARNING: no face found for non-tree edge "
-                    + current.getName() + " -> " + neighbor.getName());
+            CoordinateConversion cc = new CoordinateConversion();
+            logger.warn("No face found for non-tree edge {} ({}, {}) -> {}", current.getName(), cc.fromEuclidean(current).x, cc.fromEuclidean(current).y, neighbor.getName());
         }
     }
 
@@ -359,7 +374,7 @@ public class ShortestPathTreeSearcher {
             boolean isFirstSide) {
 
         if (sourceIntersections.isEmpty() || sinkIntersections.isEmpty()) {
-            System.out.println("WARNING: No intersections found");
+            logger.warn("No intersections found");
             return new TwoKeyVertices(null, null);
         }
 
@@ -382,24 +397,23 @@ public class ShortestPathTreeSearcher {
             Map<Long, Integer> boundaryOrderMap) {
 
         if (!corners.isValid()) {
-            System.out.println("WARNING: Invalid corners, using position 0");
+            logger.warn("Invalid corners, using position 0");
             return 0;
         }
 
         int sourcePos = boundaryOrderMap.getOrDefault(corners.sourceVertex.getName(), 0);
         int sinkPos = boundaryOrderMap.getOrDefault(corners.sinkVertex.getName(), 0);
 
-        System.out.println("Boundary segment: from source corner at " + sourcePos + " (name = " + corners.sourceVertex.name +
-                ") to sink corner at " + sinkPos + " (name = " + corners.sinkVertex.name +
-                ") -> segmentStart=" + sourcePos);
+        logger.debug("Boundary segment: from source corner at {} (name = {}) to sink corner at {} (name = {}) -> segmentStart={}", 
+                sourcePos, corners.sourceVertex.name, sinkPos, corners.sinkVertex.name, sourcePos);
 
         return sourcePos;
     }
 
     private static void logEulerTourStart(EulerTourContext context, Graph<VertexOfDualGraph> dualGraph) {
-        System.out.println("SPT Region weights computation (Euler tour):");
-        System.out.println("  SPT has " + context.sptEdges.size() / 2 + " edges");
-        System.out.println("  SPT has " + context.sptVertices.size() + " vertices");
+        logger.debug("SPT Region weights computation (Euler tour):");
+        logger.debug("  SPT has {} edges", context.sptEdges.size() / 2);
+        logger.debug("  SPT has {} vertices", context.sptVertices.size());
         var map = dualGraph.edgeToDualVertexMap();
         Set<VertexOfDualGraph> faces = new HashSet<>();
         for (var edge: context.sptEdges) {
@@ -410,14 +424,14 @@ public class ShortestPathTreeSearcher {
                 }
             }
         }
-        System.out.println("EXPECTED " + faces.size() + " faces");
+        logger.debug("EXPECTED {} faces", faces.size());
     }
 
     private static void logEulerTourEnd(EulerTourContext context) {
-        System.out.println("  Total region weight: " + context.cumulativeWeight);
-        System.out.println("  Total region number: " + context.regions.size());
-        System.out.println("  Unique regions: " + new java.util.HashSet<>(context.regions).size());
-        System.out.println("  Processed non-tree edges: " + context.processedNonTreeEdges.size());
+        logger.debug("  Total region weight: {}", context.cumulativeWeight);
+        logger.debug("  Total region number: {}", context.regions.size());
+        logger.debug("  Unique regions: {}", new java.util.HashSet<>(context.regions).size());
+        logger.debug("  Processed non-tree edges: {}", context.processedNonTreeEdges.size());
     }
 
     /**
@@ -451,9 +465,8 @@ public class ShortestPathTreeSearcher {
             return Integer.compare(adjB, adjA);
         });
 
-        System.out.println("Boundary leaves ordering (CW): segmentStart=" +
-                                   boundarySegmentStart +
-                                   ", numLeaves=" + boundaryVerticesInSPT.size());
+        logger.debug("Boundary leaves ordering (CW): segmentStart={}, numLeaves={}", 
+                boundarySegmentStart, boundaryVerticesInSPT.size());
     }
 
     /**

@@ -2,6 +2,8 @@ package graphPreparation;
 
 import graph.*;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -19,6 +21,7 @@ record Action(double x, int edgeNum, Vertex vertex, ActionType type) {
 
 
 public class SweepLine {
+	private static final Logger logger = LoggerFactory.getLogger(SweepLine.class);
 	double inaccuracy;
 
 	Comparator<Vertex> backXComp = (o1, o2) -> Double.compare(o2.x, o1.x);
@@ -75,7 +78,7 @@ public class SweepLine {
 		//System.out.println(verName);
 		for (Vertex v : graph.getEdges().keySet()) {
 			if (v.name == 0) {
-				System.out.println(v.name);	 
+				logger.debug("Found vertex with name 0: {}", v.name);	 
 			}
 		}
 		for (Vertex begin : gph.getEdges().keySet()) {
@@ -114,7 +117,7 @@ public class SweepLine {
 		}
 	
 	
-		System.out.println("small edges num after sweepline: " + smallEdgesNum);
+		logger.info("small edges num after sweepline: {}", smallEdgesNum);
 		return graph;
 	}
 

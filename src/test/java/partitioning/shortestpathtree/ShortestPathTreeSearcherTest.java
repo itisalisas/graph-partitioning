@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import partitioning.entities.DijkstraResult;
 import partitioning.entities.SPTWithRegionWeights;
 import partitioning.maxflow.Dijkstra;
+import partitioning.maxflow.CornerConstraints;
 
 public class ShortestPathTreeSearcherTest {
 
@@ -76,7 +77,8 @@ public class ShortestPathTreeSearcherTest {
                 dualGraph,
                 List.of(vertices.get(6)),
                 List.of(vertices.get(5)),
-                true
+                true,
+                CornerConstraints.empty()
         );
 
         System.out.println(spt.faces().stream().map(VertexOfDualGraph::getName).toList());

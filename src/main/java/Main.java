@@ -10,6 +10,8 @@ import java.util.Set;
 
 import graph.*;
 import org.junit.jupiter.api.Assertions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import addingPoints.LocalizationPoints;
 import graphPreparation.GraphPreparation;
@@ -30,6 +32,7 @@ import picocli.CommandLine.Parameters;
 @Command(name = "graph-partitioning", mixinStandardHelpOptions = true, version = "1.0",
         description = "Application for balanced partitioning of planar graphs")
 public class Main implements Runnable {
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
     private static final String BASE_DIRECTORY = "src" + File.separatorChar + "main" + File.separatorChar;
     private static final String RESOURCES_DIRECTORY = BASE_DIRECTORY + "resources" + File.separatorChar;
     private static final String OUTPUT_DIRECTORY = BASE_DIRECTORY + "output" + File.separatorChar;
@@ -151,7 +154,7 @@ public class Main implements Runnable {
         }
         double partitioningTime = ((double)(System.currentTimeMillis() - startTime)) / 1000.0;
 
-        System.out.println("Partition size: " + partitionResultForFaces.size());
+        logger.info("Partition size: {}", partitionResultForFaces.size());
 
         ArrayList<HashSet<Vertex>> partitionResult = new ArrayList<>();
         List<Map.Entry<List<Vertex>, Double>> bounds = new ArrayList<>();
@@ -168,7 +171,7 @@ public class Main implements Runnable {
             bounds.add(Map.entry(BoundSearcher.findBound(graph, partitionResultForFaces.get(i), comparisonForDualGraph), partitionResultForFaces.get(i).stream().mapToDouble(Vertex::getWeight).sum()));
         }
 
-        System.out.println("Number of parts: " + partitionResultForFaces.size() + ", number of parts with radius > max: " + countPartsWithNonFittingRadius);
+        logger.info("Number of parts: {}, number of parts with radius > max: {}", partitionResultForFaces.size(), countPartsWithNonFittingRadius);
 
         List<Point> centers = BalancedPartitioning.calculatePartCenters(partitionResultForFaces);
 
@@ -181,7 +184,7 @@ public class Main implements Runnable {
         Runtime runtime = Runtime.getRuntime();
         runtime.gc();
         long usedMemory = (runtime.totalMemory() - runtime.freeMemory()) / 1024 / 1024; // convert to MB
-        System.out.println("Without GC, used memory: " + usedMemory + " MB");
+        logger.info("Without GC, used memory: {} MB", usedMemory);
         PartitionWriter pw = new PartitionWriter(cc);
         pw.savePartitionToDirectory(partitioning, partitioning.bp,OUTPUT_DIRECTORY + pathToResultDirectory, partitionResultForFaces, true, partitioningTime, cc.referencePoint, usedMemory);
         try {

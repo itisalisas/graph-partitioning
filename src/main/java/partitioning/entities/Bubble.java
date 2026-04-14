@@ -4,8 +4,11 @@ import java.util.HashSet;
 
 import graph.Graph;
 import graph.VertexOfDualGraph;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Bubble {
+    private static final Logger logger = LoggerFactory.getLogger(Bubble.class);
     public HashSet<VertexOfDualGraph> vertexSet;
     public Double weight;
     public Double borderLength;
@@ -18,7 +21,7 @@ public class Bubble {
         this.weight = center.getWeight();
         this.borderLength = 0.0;
         if (!graph.getEdges().containsKey(center)) {
-            System.out.println("Not possible to build bubble with this center in this graph. No such oint in graph.");
+            logger.warn("Not possible to build bubble with this center in this graph. No such point in graph.");
         } else {
             for (VertexOfDualGraph v : graph.getEdges().get(center).keySet()) {
                 borderLength += graph.getEdges().get(center).get(v).length;
@@ -28,7 +31,7 @@ public class Bubble {
         vertexSet.add(center); 
         if (this.weight >= maxBubbleWeight) {
             completed = true;
-            System.out.println("center weight >= maxBubbleWeight");
+            logger.warn("center weight >= maxBubbleWeight");
         } else {
             completed = false;
         }
@@ -117,7 +120,7 @@ public class Bubble {
      */
     public void checkBubbleWeight(int maxBubbleWeight) {
         if (weight > maxBubbleWeight) {
-            System.out.println("Bubble weight > maxBubbleWeight!");
+            logger.warn("Bubble weight > maxBubbleWeight!");
         }
     }
 }

@@ -4,10 +4,13 @@ import java.util.*;
 
 import graph.*;
 import org.junit.jupiter.api.Assertions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.junit.jupiter.api.Assertions;
 
 public class MakingDualGraph {
+  private static final Logger logger = LoggerFactory.getLogger(MakingDualGraph.class);
   private HashMap<Vertex, VertexOfDualGraph> comparison;
   public MakingDualGraph() {
     this.comparison = new HashMap<Vertex, VertexOfDualGraph>();

@@ -13,9 +13,12 @@ import graph.BoundSearcher;
 import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import partitioning.entities.Bubble;
 
 public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanarGraphs {
+    private static final Logger logger = LoggerFactory.getLogger(BubblePartitioningSequentially.class);
 
     Comparator<VertexOfDualGraph> vertexComparator = (o1, o2) -> Double.compare(o1.x, o2.x);
 
@@ -36,7 +39,7 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
         int iterCounter = 0;
         while (!unused.isEmpty()) {
             if (iterCounter > graph.getEdges().size()) {
-                System.out.println("    check while rule");
+                logger.debug("    check while rule");
                 break;
             }
             //method prepare
@@ -46,7 +49,7 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
             bubbles.put(center, new Bubble(bubble));
             iterCounter++;
         }
-        System.out.println("    bubbles were grown");
+        logger.debug("    bubbles were grown");
         // HashMap<VertexOfDualGraph, Bubble> zeroBubbles = findZeroWeightBubbles(bubbles);
         // //find close bubble to zero bubble
         // HashSet<VertexOfDualGraph> closeToZeroBubble = new HashSet<>();
@@ -91,7 +94,7 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
         for (VertexOfDualGraph seed : bubbles.keySet()) {
             partition.add(bubbles.get(seed).vertexSet);
         }
-        System.out.println("    end bubble");
+        logger.debug("    end bubble");
         
     }
 
@@ -222,7 +225,7 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
             }
         }
         if (nextVertices.isEmpty()) {
-            System.out.println("check 1 vertex bubble");
+            logger.debug("check 1 vertex bubble");
             return;
         }
         double sumBubbleWeight = bubble.weight;

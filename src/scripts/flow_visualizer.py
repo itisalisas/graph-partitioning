@@ -1019,12 +1019,19 @@ def visualize_reif_flow(directory_name, output_file):
         num_groups = len(groups)
         print(f"  {spt_name}: Visualizing {num_groups} leaf groups with actual boundaries")
         
+        skipped_empty = 0
+        skipped_small = 0
+        drawn = 0
         for group_data in groups:
             group_idx = group_data['group_idx']
             group_weight = group_data['weight']
             boundary = group_data['boundary']
             
-            if not boundary or len(boundary) < 3:
+            if not boundary:
+                skipped_empty += 1
+                continue
+            if len(boundary) < 3:
+                skipped_small += 1
                 continue
             
             # Red-to-green gradient: group 0 = red, last group = green
@@ -1094,7 +1101,9 @@ def visualize_reif_flow(directory_name, output_file):
                 )
             ).add_to(layer)
         
-        print(f"  {spt_name}: Drew {num_groups} leaf groups")
+            drawn += 1
+        
+        print(f"  {spt_name}: {drawn} drawn, {skipped_empty} empty, {skipped_small} too small (< 3 pts), total {num_groups} groups")
     
     if spt1:
         visualize_leaf_groups(spt1, spt1_groups_layer, 'SPT1')

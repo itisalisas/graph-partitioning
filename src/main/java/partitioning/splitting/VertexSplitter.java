@@ -7,9 +7,12 @@ import graph.EdgeOfGraph;
 import graph.Graph;
 import graph.Vertex;
 import org.junit.jupiter.api.Assertions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import partitioning.entities.NeighborSplit;
 
 public class VertexSplitter {
+    private static final Logger logger = LoggerFactory.getLogger(VertexSplitter.class);
 
     /**
      * Контекст для разделения вершины пути
@@ -88,7 +91,7 @@ public class VertexSplitter {
             List<Vertex> sinkBoundary,
             List<Vertex> externalBoundary) {
 
-        System.out.println("Preprocessing neighbor splits for " + path.size() + " vertices in path");
+        logger.info("Preprocessing neighbor splits for {} vertices in path", path.size());
 
         BoundaryContext boundaryContext = BoundaryContext.create(sourceBoundary, sinkBoundary);
         Map<Vertex, java.util.TreeSet<EdgeOfGraph<Vertex>>> orderedEdges = graph.arrangeByAngle();
@@ -115,9 +118,9 @@ public class VertexSplitter {
                 if (directionMatchesOpt.isPresent()) {
                     boundaryFlagsMap.put(context.current().getName(), directionMatchesOpt.get());
 
-                    System.out.println("Vertex " + context.current().getName() +
-                                               " on external boundary, direction " +
-                                               (directionMatchesOpt.get() ? "matches" : "does not match"));
+                    logger.debug("Vertex {} on external boundary, direction {}", 
+                            context.current().getName(), 
+                            directionMatchesOpt.get() ? "matches" : "does not match");
                 }
             }
 
@@ -135,7 +138,7 @@ public class VertexSplitter {
             //logSplitResult(context.current(), split);
         }
 
-        System.out.println("Preprocessed " + splits.size() + " neighbor splits");
+        logger.info("Preprocessed {} neighbor splits", splits.size());
         return splits;
     }
 
@@ -162,7 +165,7 @@ public class VertexSplitter {
         if (split != null) {
             connectSplitVertices(splitGraph, vertexInGraph, splitVertices, split);
         } else {
-            System.out.println("No split found for vertex " + vertex.getName());
+            logger.warn("No split found for vertex {}", vertex.getName());
         }
 
         splitGraph.deleteVertex(vertexInGraph);
@@ -245,8 +248,7 @@ public class VertexSplitter {
         EdgeIndices indices = findPathEdgeIndices(curVertexEdges, context.previous(), context.next());
 
         if (!indices.isValid()) {
-            System.err.println("Warning: could not find path edges for vertex " +
-                                       context.current().getName());
+            logger.warn("Could not find path edges for vertex {}", context.current().getName());
             return new NeighborLists(pathNeighbors, new ArrayList<>(), new ArrayList<>());
         }
 
@@ -357,13 +359,13 @@ public class VertexSplitter {
             PathVertexContext context,
             List<Vertex> path,
             BoundaryContext boundaryContext) {
-        System.out.println("CURRENT TO SPLIT: " + context.current.name);
+        logger.debug("CURRENT TO SPLIT: {}", context.current.name);
 
         List<Vertex> boundaryToUse = context.isFirst()
                 ? boundaryContext.sourceBoundary()
                 : boundaryContext.sinkBoundary();
 
-        System.out.println("BOUNDARY TO USE == SOURCE:" + context.isFirst);
+        logger.debug("BOUNDARY TO USE == SOURCE: {}", context.isFirst);
 
         List<Vertex> boundaryNeighbors = getBoundaryNeighbors(
                 context.current(), boundaryToUse);
@@ -378,8 +380,7 @@ public class VertexSplitter {
 
         int pathEdgeIdx = findPathEdgeIndex(edgesList, pathVertexNames);
         if (pathEdgeIdx == -1) {
-            System.out.println("WARNING: No path edge found for boundary vertex " +
-                                       context.current().getName());
+            logger.warn("No path edge found for boundary vertex {}", context.current().getName());
             return NeighborLists.empty();
         }
 
@@ -556,7 +557,7 @@ public class VertexSplitter {
             List<Vertex> sinkBoundary,
             Optional<Boolean> boundaryFlag) {
 
-        System.out.println("handleThreeNeighborsCase");
+        logger.debug("handleThreeNeighborsCase");
 
         List<Vertex> leftNeighbors = new ArrayList<>();
         List<Vertex> rightNeighbors = new ArrayList<>();
@@ -611,7 +612,7 @@ public class VertexSplitter {
             List<Vertex> sinkBoundary,
             Map<Vertex, java.util.TreeSet<EdgeOfGraph<Vertex>>> angleOrderedEdges, Optional<Boolean> boundaryFlag) {
 
-        System.out.println("split for " + currentVertex.name);
+        logger.debug("split for {}", currentVertex.name);
 
         ManyNeighborsState state = new ManyNeighborsState();
 
@@ -672,14 +673,12 @@ public class VertexSplitter {
             ManyNeighborsState state) {
 
         if (state.isRight) {
-            System.out.println("to right without modifications, vertex " + edge.end.name +
-                                       " " + state.meetSource + " " + state.meetSink + " " +
-                                       state.prevMeetSource + " " + state.prevMeetSink);
+            logger.debug("to right without modifications, vertex {} {} {} {} {}", 
+                    edge.end.name, state.meetSource, state.meetSink, state.prevMeetSource, state.prevMeetSink);
             state.rightNeighbors.add(edge.end);
         } else {
-            System.out.println("to left without modifications, vertex " + edge.end.name +
-                                       " " + state.meetSource + " " + state.meetSink + " " +
-                                       state.prevMeetSource + " " + state.prevMeetSink);
+            logger.debug("to left without modifications, vertex {} {} {} {} {}", 
+                    edge.end.name, state.meetSource, state.meetSink, state.prevMeetSource, state.prevMeetSink);
             state.leftNeighbors.add(edge.end);
         }
 
@@ -731,14 +730,12 @@ public class VertexSplitter {
             ManyNeighborsState state) {
 
         if (state.isRight) {
-            System.out.println("to right with modifications, vertex " + edge.end.name +
-                                       " " + state.meetSource + " " + state.meetSink + " " +
-                                       state.prevMeetSource + " " + state.prevMeetSink);
+            logger.debug("to right with modifications, vertex {} {} {} {} {}", 
+                    edge.end.name, state.meetSource, state.meetSink, state.prevMeetSource, state.prevMeetSink);
             state.rightNeighbors.add(edge.end);
         } else {
-            System.out.println("to left with modifications, vertex " + edge.end.name +
-                                       " " + state.meetSource + " " + state.meetSink + " " +
-                                       state.prevMeetSource + " " + state.prevMeetSink);
+            logger.debug("to left with modifications, vertex {} {} {} {} {}", 
+                    edge.end.name, state.meetSource, state.meetSink, state.prevMeetSource, state.prevMeetSink);
             state.leftNeighbors.add(edge.end);
         }
     }
@@ -762,9 +759,9 @@ public class VertexSplitter {
             splitVertex1.setIsOnBoundary(firstPartOnBoundary);
             splitVertex2.setIsOnBoundary(!firstPartOnBoundary);
 
-            System.out.println("Split boundary vertex " + originalName +
-                                       " -> v1(" + splitVertex1.getName() + ") onBoundary=" + firstPartOnBoundary +
-                                       ", v2(" + splitVertex2.getName() + ") onBoundary=" + !firstPartOnBoundary);
+            logger.debug("Split boundary vertex {} -> v1({}) onBoundary={}, v2({}) onBoundary={}", 
+                    originalName, splitVertex1.getName(), firstPartOnBoundary, 
+                    splitVertex2.getName(), !firstPartOnBoundary);
         }
 
         splitToOriginalMap.put(splitVertex1, vertex);
@@ -872,13 +869,11 @@ public class VertexSplitter {
             splitGraph.addEdge(splitVertex1, splitNeighbor1, edgeLength);
             splitGraph.addEdge(splitVertex2, splitNeighbor2, edgeLength);
 
-            System.out.println("  Connected split vertices of " + originalVertex.getName() +
-                                       " with corresponding split versions of path neighbor " +
-                                       neighbor.getName());
+            logger.debug("  Connected split vertices of {} with corresponding split versions of path neighbor {}", 
+                    originalVertex.getName(), neighbor.getName());
         } else {
-            System.out.println("  WARNING: Path neighbor " + neighbor.getName() +
-                                       " not found (neither original nor split) for vertex " +
-                                       originalVertex.getName());
+            logger.warn("  Path neighbor {} not found (neither original nor split) for vertex {}", 
+                    neighbor.getName(), originalVertex.getName());
         }
     }
 
@@ -1017,7 +1012,7 @@ public class VertexSplitter {
         }
 
         if (currentPosInBoundary == -1) {
-            System.out.println("WARNING: vertex " + currentId + " not found in external boundary");
+            logger.warn("vertex {} not found in external boundary", currentId);
             return Optional.empty();
         }
 
@@ -1035,11 +1030,11 @@ public class VertexSplitter {
             long prevPathId = prevPathVertex.getName();
             if (prevPathId == nextInBoundaryId) {
                 // Пытаемся идти навстречу потоку границы
-                System.out.println("  Arrived from NextBoundary (Upstream) -> NOT match");
+                logger.debug("  Arrived from NextBoundary (Upstream) -> NOT match");
                 return Optional.of(false);
             }
             if (prevPathId == prevInBoundaryId) {
-                System.out.println("  Arrived from PrevBoundary (Downstream) -> match");
+                logger.debug("  Arrived from PrevBoundary (Downstream) -> match");
                 return Optional.of(true);
             }
         }
@@ -1049,12 +1044,12 @@ public class VertexSplitter {
 
             // 1. Идем далее по границе -> верно
             if (nextPathId == nextInBoundaryId) {
-                System.out.println("  Going forwards on boundary -> match");
+                logger.debug("  Going forwards on boundary -> match");
                 return Optional.of(true);
             }
             // 2. Разворачиваемся назад по границе -> неверно
             if (nextPathId == prevInBoundaryId) {
-                System.out.println("  Going backwards on boundary -> NOT match");
+                logger.debug("  Going backwards on boundary -> NOT match");
                 return Optional.of(false);
             }
         }
@@ -1085,7 +1080,7 @@ public class VertexSplitter {
 
         // Если не все нужные рёбра границы найдены
         if (prevBoundaryEdge == null || nextBoundaryEdge == null) {
-            System.out.println("WARNING: boundary edges not found");
+            logger.warn("boundary edges not found");
             return Optional.empty();
         }
 
@@ -1098,12 +1093,8 @@ public class VertexSplitter {
             boolean boundariesAfterPath = areBothBoundariesAfterEdge(
                     edges, nextPathEdge, prevBoundaryEdge, nextBoundaryEdge);
 
-            System.out.println("Direction check for START vertex " + currentId +
-                    ": nextPath=" + nextPathId +
-                    ", prevBoundary=" + prevInBoundaryId +
-                    ", nextBoundary=" + nextInBoundaryId +
-                    " -> boundaries after path edge: " + boundariesAfterPath +
-                    " -> matches=" + !boundariesAfterPath);
+            logger.debug("Direction check for START vertex {}: nextPath={}, prevBoundary={}, nextBoundary={} -> boundaries after path edge: {} -> matches={}", 
+                    currentId, nextPathId, prevInBoundaryId, nextInBoundaryId, boundariesAfterPath, !boundariesAfterPath);
 
             return Optional.of(!boundariesAfterPath);
         }
@@ -1114,12 +1105,8 @@ public class VertexSplitter {
             boolean boundariesBeforePath = areBothBoundariesAfterEdge(
                     edges, prevPathEdge, prevBoundaryEdge, nextBoundaryEdge);
 
-            System.out.println("Direction check for END vertex " + currentId +
-                    ": prevPath=" + prevPathId +
-                    ", prevBoundary=" + prevInBoundaryId +
-                    ", nextBoundary=" + nextInBoundaryId +
-                    " -> boundaries after path edge: " + boundariesBeforePath +
-                    " -> matches=" + !boundariesBeforePath);
+            logger.debug("Direction check for END vertex {}: prevPath={}, prevBoundary={}, nextBoundary={} -> boundaries after path edge: {} -> matches={}", 
+                    currentId, prevPathId, prevInBoundaryId, nextInBoundaryId, boundariesBeforePath, !boundariesBeforePath);
 
             return Optional.of(!boundariesBeforePath);
         }
@@ -1130,18 +1117,13 @@ public class VertexSplitter {
             boolean boundariesBetweenPath = areBothBoundariesBetweenPathEdges(
                     edges, prevPathEdge, nextPathEdge, prevBoundaryEdge, nextBoundaryEdge);
 
-            System.out.println("Direction check for MIDDLE vertex " + currentId +
-                    ": prevPath=" + prevPathId +
-                    ", nextPath=" + nextPathId +
-                    ", prevBoundary=" + prevInBoundaryId +
-                    ", nextBoundary=" + nextInBoundaryId +
-                    " -> boundaries between path edges: " + boundariesBetweenPath +
-                    " -> matches=" + !boundariesBetweenPath);
+            logger.debug("Direction check for MIDDLE vertex {}: prevPath={}, nextPath={}, prevBoundary={}, nextBoundary={} -> boundaries between path edges: {} -> matches={}", 
+                    currentId, prevPathId, nextPathId, prevInBoundaryId, nextInBoundaryId, boundariesBetweenPath, !boundariesBetweenPath);
 
             return Optional.of(!boundariesBetweenPath);
         }
 
-        System.out.println("WARNING: unexpected case for vertex " + currentId);
+        logger.warn("unexpected case for vertex {}", currentId);
         return Optional.empty();
     }
 
@@ -1220,13 +1202,11 @@ public class VertexSplitter {
     }
 
     private static void logSplitResult(Vertex vertex, NeighborSplit split) {
-        System.out.println("Vertex " + vertex.getName() +
-                                   ": Path=" + split.pathNeighbors().size() + " " +
-                                   split.pathNeighbors().stream().map(Vertex::getName).toList() +
-                                   ", Left=" + split.leftNeighbors().size() +
-                                   split.leftNeighbors().stream().map(Vertex::getName).toList() +
-                                   ", Right=" + split.rightNeighbors().size() +
-                                   split.rightNeighbors().stream().map(Vertex::getName).toList());
+        logger.debug("Vertex {}: Path={} {}, Left={} {}, Right={} {}", 
+                vertex.getName(), 
+                split.pathNeighbors().size(), split.pathNeighbors().stream().map(Vertex::getName).toList(),
+                split.leftNeighbors().size(), split.leftNeighbors().stream().map(Vertex::getName).toList(),
+                split.rightNeighbors().size(), split.rightNeighbors().stream().map(Vertex::getName).toList());
     }
 
     private static void logEndVertexResult(
@@ -1235,9 +1215,7 @@ public class VertexSplitter {
             List<Vertex> leftNeighbors,
             List<Vertex> rightNeighbors) {
 
-        System.out.println("End vertex " + vertex.getName() +
-                                   ": pathNeighbors=" + pathNeighbors.size() +
-                                   ", leftNeighbors=" + leftNeighbors.size() +
-                                   ", rightNeighbors=" + rightNeighbors.size());
+        logger.debug("End vertex {}: pathNeighbors={}, leftNeighbors={}, rightNeighbors={}", 
+                vertex.getName(), pathNeighbors.size(), leftNeighbors.size(), rightNeighbors.size());
     }
 }
