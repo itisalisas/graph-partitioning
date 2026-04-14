@@ -26,7 +26,8 @@ public class ShortestPathTreeSearcher {
             List<Vertex> sourceCorners,
             List<Vertex> sinkCorners,
             boolean isFirstSide,
-            CornerConstraints cornerConstraints
+            CornerConstraints cornerConstraints,
+            List<Vertex> path
     ) {
 
         Set<Vertex> externalBoundarySet = new HashSet<>(externalBoundary);
@@ -42,7 +43,8 @@ public class ShortestPathTreeSearcher {
                                     boundarySegmentStart, externalBoundary.size());
 
         RegionWeightsResult weightsResult = computeRegionWeightsByEulerTour(
-                sourceVertex, previous, boundaryVerticesInSPT, graph, dualGraph, cornerConstraints);
+                sourceVertex, previous, boundaryVerticesInSPT, graph, dualGraph, cornerConstraints, path, isFirstSide
+        );
 
         if (logger.isDebugEnabled()) {
             StringBuilder indices = new StringBuilder("INDICES: ");
@@ -111,6 +113,8 @@ public class ShortestPathTreeSearcher {
         final Set<VertexOfDualGraph> addedRegions;
         final Graph<VertexOfDualGraph> dualGraph;
         double currentBoundaryLength;
+        List<Vertex> path;
+        boolean isFirstSide;
 
         EulerTourContext(
                 Map<Vertex, TreeSet<EdgeOfGraph<Vertex>>> sortedEdgesByVertex,
@@ -119,7 +123,10 @@ public class ShortestPathTreeSearcher {
                 Set<Vertex> boundaryLeaves,
                 Map<Vertex, HashMap<Vertex, VertexOfDualGraph>> edgeToLeftFace,
                 Graph<VertexOfDualGraph> dualGraph,
-                CornerConstraints cornerConstraints) {
+                CornerConstraints cornerConstraints,
+                List<Vertex> path,
+                boolean isFirstSide
+        ) {
 
             this.sortedEdgesByVertex = sortedEdgesByVertex;
             this.sptEdges = sptEdges;
@@ -137,6 +144,8 @@ public class ShortestPathTreeSearcher {
             this.dualGraph = dualGraph;
             this.currentBoundaryLength = 0.0;
             this.leafIndices = new ArrayList<>();
+            this.path = path;
+            this.isFirstSide = isFirstSide;
         }
     }
 
@@ -161,14 +170,18 @@ public class ShortestPathTreeSearcher {
             List<Vertex> boundaryLeaves,
             Graph<Vertex> graph,
             Graph<VertexOfDualGraph> dualGraph,
-            CornerConstraints cornerConstraints) {
+            CornerConstraints cornerConstraints,
+            List<Vertex> path,
+            boolean isFirstSide
+    ) {
 
         if (boundaryLeaves.isEmpty()) {
             return new RegionWeightsResult(List.of(), List.of(), List.of(), List.of(), 0);
         }
 
         EulerTourContext context = prepareEulerTourContext(
-                root, previous, boundaryLeaves, graph, dualGraph, cornerConstraints);
+                root, previous, boundaryLeaves, graph, dualGraph, cornerConstraints, path, isFirstSide
+        );
 
         logEulerTourStart(context, dualGraph);
         eulerTourIterative(root, context);
@@ -191,7 +204,10 @@ public class ShortestPathTreeSearcher {
             List<Vertex> boundaryLeaves,
             Graph<Vertex> graph,
             Graph<VertexOfDualGraph> dualGraph,
-            CornerConstraints cornerConstraints) {
+            CornerConstraints cornerConstraints,
+            List<Vertex> path,
+            boolean isFirstSide
+    ) {
 
         Set<Map.Entry<Vertex, Vertex>> sptEdges = buildSPTEdgesSet(previous);
         Map<Vertex, HashMap<Vertex, VertexOfDualGraph>> edgeToLeftFace = dualGraph.edgeToDualVertexMap();
@@ -201,7 +217,8 @@ public class ShortestPathTreeSearcher {
 
         return new EulerTourContext(
                 sortedEdgesByVertex, sptEdges, sptVertices,
-                new HashSet<>(boundaryLeaves), edgeToLeftFace, dualGraph, cornerConstraints);
+                new HashSet<>(boundaryLeaves), edgeToLeftFace, dualGraph, cornerConstraints, path, isFirstSide
+        );
     }
 
     /**
@@ -220,11 +237,14 @@ public class ShortestPathTreeSearcher {
         Deque<EulerTourFrame> stack = new ArrayDeque<>();
 
         TreeSet<EdgeOfGraph<Vertex>> rootEdges = context.sortedEdgesByVertex.get(root);
-        List<EdgeOfGraph<Vertex>> rootOrdered = getOrderedEdges(rootEdges, null);
+        List<EdgeOfGraph<Vertex>> rootOrdered = getOrderedEdges(rootEdges, null, root, context.path, context.isFirstSide);
         stack.push(new EulerTourFrame(root, null, rootOrdered));
 
         while (!stack.isEmpty()) {
             EulerTourFrame frame = stack.peek();
+            if (root.name == 131001) {
+                logger.debug("Processing vertex {}", frame.vertex.getName());
+            }
 
             if (frame.nextEdgeIdx >= frame.edges.size()) {
                 // All edges of this vertex have been processed — leaving vertex
@@ -245,8 +265,10 @@ public class ShortestPathTreeSearcher {
 
             // Skip edges that violate corner constraints (edges to source/sink boundaries that are not allowed)
             if (!context.cornerConstraints.isNeighborAllowed(frame.vertex, neighbor)) {
-                logger.debug("Skipping edge {} -> {} due to corner constraints", 
-                        frame.vertex.getName(), neighbor.getName());
+                if (root.name == 131001) {
+                    logger.debug("Skipping edge {} -> {} due to corner constraints",
+                            frame.vertex.getName(), neighbor.getName());
+                }
                 continue;
             }
 
@@ -254,14 +276,20 @@ public class ShortestPathTreeSearcher {
                     Map.entry(frame.vertex, neighbor));
 
             if (isTreeEdge) {
+                if (root.name == 131001) {
+                    logger.debug("Processing tree edge {} -> {}", frame.vertex.getName(), neighbor.getName());
+                }
                 // Descend into child — push new frame (will be processed before
                 // we return to the current frame's next edge)
                 TreeSet<EdgeOfGraph<Vertex>> childEdges =
                         context.sortedEdgesByVertex.get(neighbor);
                 List<EdgeOfGraph<Vertex>> childOrdered =
-                        getOrderedEdges(childEdges, frame.vertex);
+                        getOrderedEdges(childEdges, frame.vertex, null, null, context.isFirstSide);
                 stack.push(new EulerTourFrame(neighbor, frame.vertex, childOrdered));
             } else {
+                if (root.name == 131001) {
+                    logger.debug("Processing non-tree edge {} -> {}", frame.vertex.getName(), neighbor.getName());
+                }
                 // Non-tree edge — process the right face
                 Map.Entry<Vertex, Vertex> edgeKey1 = Map.entry(frame.vertex, neighbor);
                 Map.Entry<Vertex, Vertex> edgeKey2 = Map.entry(neighbor, frame.vertex);
@@ -280,11 +308,25 @@ public class ShortestPathTreeSearcher {
      */
     private static List<EdgeOfGraph<Vertex>> getOrderedEdges(
             TreeSet<EdgeOfGraph<Vertex>> edges,
-            Vertex parent) {
-
+            Vertex parent,
+            Vertex start,
+            List<Vertex> path,
+            boolean isFirstSide
+    ) {
         List<EdgeOfGraph<Vertex>> edgesList = new ArrayList<>(edges);
-        int startIdx = findParentIndex(edges, parent);
-        startIdx = (startIdx + 1) % edgesList.size();
+        int startIdx = -1;
+        if (parent != null) {
+            startIdx = findParentIndex(edges, parent);
+            startIdx = (startIdx + 1) % edgesList.size();
+        } else {
+            var splittedVertex = new Vertex(start.name / 1000, start);
+            for (int i = 0; i < path.size(); i++) {
+                if (path.get(i).equals(start) || path.get(i).equals(splittedVertex)) {
+                    Vertex nextVertex = isFirstSide ? path.get((i + 1) % path.size()) : path.get((i - 1 + path.size()) % path.size());
+                    startIdx = findParentIndex(edges, nextVertex);
+                }
+            }
+        }
 
         List<EdgeOfGraph<Vertex>> result = new ArrayList<>();
         for (int i = 0; i < edgesList.size(); i++) {
@@ -340,6 +382,7 @@ public class ShortestPathTreeSearcher {
             context.distances.add(boundaryLength);
             
             context.addedRegions.add(face);
+            logger.debug("  Non-tree edge {} -> {}: cumulative={}, face={}", current.getName(), neighbor.getName(), context.cumulativeWeight, face.getName());
         } else {
             CoordinateConversion cc = new CoordinateConversion();
             logger.warn("No face found for non-tree edge {} ({}, {}) -> {}", current.getName(), cc.fromEuclidean(current).x, cc.fromEuclidean(current).y, neighbor.getName());

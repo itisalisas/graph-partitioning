@@ -211,20 +211,24 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                 }
             }
 
+            // Если sourceSet пустой, выбираем самую левую вершину (минимальная проекция)
             if (sourceSet.isEmpty()) {
-                HashSet<VertexOfDualGraph> finalSinkSet = sinkSet;
-                vertices.stream()
-                        .filter(v -> !finalSinkSet.contains(v))
-                        .findFirst()
+                logger.warn("Source set is empty, selecting extremum vertex");
+                selectExtremumVertex(vertices, sinkSet, bestLine, true)
                         .ifPresent(sourceSet::add);
+                logger.warn("Found source extremum vertex {}", sourceSet.iterator().next().name);
             }
+            
+            // Если sinkSet пустой, выбираем самую правую вершину (максимальная проекция)
             if (sinkSet.isEmpty()) {
-                HashSet<VertexOfDualGraph> finalSourceSet = sourceSet;
-                vertices.stream()
-                        .filter(v -> !finalSourceSet.contains(v))
-                        .findFirst()
+                logger.warn("Sink set is empty, selecting extremum vertex");
+                selectExtremumVertex(vertices, sourceSet, bestLine, false)
                         .ifPresent(sinkSet::add);
+                logger.warn("Found sink extremum vertex {}", sinkSet.iterator().next().name);
             }
+
+            // Добираем вершины, достижимые только из одного множества
+            expandSetsWithUnreachableRegions(currentGraph, sourceSet, sinkSet);
 
             logger.debug("sourceSet size = {}, sinkSet size = {}", sourceSet.size(), sinkSet.size());
             Graph<VertexOfDualGraph> copyGraph = createGraphWithSourceSink(currentGraph, sourceSet, source, sinkSet, sink);
@@ -245,6 +249,12 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                 subpartition = partitionGraphReif(flowResult);
             } else {
                 subpartition = partitionGraph(flowResult);
+            }
+            for (Graph<VertexOfDualGraph> subgraph : subpartition) {
+                if (!subgraph.isConnected()) {
+                    logger.warn("Subgraph is not connected");
+                    // TODO - странный путь, когда станет понятно почему, пролемы быть не должно
+                }
             }
             logger.debug("SUBPARTITION SIZE: {}", subpartition.size());
             logger.debug("Subgraph 0 vertices: {}, weight: {}", subpartition.get(0).verticesNumber(), subpartition.get(0).verticesWeight());
@@ -288,6 +298,71 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
         return vertexSet;
     }
 
+    /**
+     * Расширяет sourceSet и sinkSet, добавляя вершины, достижимые только из одного множества.
+     * Это устраняет "мертвые зоны" между внешней границей и множествами.
+     */
+    private void expandSetsWithUnreachableRegions(
+            Graph<VertexOfDualGraph> graph,
+            HashSet<VertexOfDualGraph> sourceSet,
+            HashSet<VertexOfDualGraph> sinkSet) {
+
+        // Находим вершины, достижимые только из sourceSet
+        Set<VertexOfDualGraph> reachableFromSource = findReachableVertices(graph, sourceSet, sinkSet);
+        Set<VertexOfDualGraph> onlyFromSource = new HashSet<>(reachableFromSource);
+        onlyFromSource.removeAll(sourceSet);
+
+        // Находим вершины, достижимые только из sinkSet
+        Set<VertexOfDualGraph> reachableFromSink = findReachableVertices(graph, sinkSet, sourceSet);
+        Set<VertexOfDualGraph> onlyFromSink = new HashSet<>(reachableFromSink);
+        onlyFromSink.removeAll(sinkSet);
+
+        // Исключаем вершины, достижимые из обоих множеств
+        onlyFromSource.removeAll(reachableFromSink);
+        onlyFromSink.removeAll(reachableFromSource);
+
+        if (!onlyFromSource.isEmpty() || !onlyFromSink.isEmpty()) {
+            logger.debug("Expanding sets: adding {} vertices only reachable from source, {} only from sink",
+                    onlyFromSource.size(), onlyFromSink.size());
+        }
+
+        sourceSet.addAll(onlyFromSource);
+        sinkSet.addAll(onlyFromSink);
+    }
+
+    /**
+     * Находит все вершины, достижимые из startSet, не проходя через blockedSet
+     */
+    private Set<VertexOfDualGraph> findReachableVertices(
+            Graph<VertexOfDualGraph> graph,
+            Set<VertexOfDualGraph> startSet,
+            Set<VertexOfDualGraph> blockedSet) {
+
+        Set<VertexOfDualGraph> reachable = new HashSet<>(startSet);
+        Queue<VertexOfDualGraph> queue = new LinkedList<>(startSet);
+
+        while (!queue.isEmpty()) {
+            VertexOfDualGraph current = queue.poll();
+
+            if (!graph.getEdges().containsKey(current)) {
+                continue;
+            }
+
+            for (VertexOfDualGraph neighbor : graph.getEdges().get(current).keySet()) {
+                if (blockedSet.contains(neighbor)) {
+                    continue;
+                }
+
+                if (!reachable.contains(neighbor)) {
+                    reachable.add(neighbor);
+                    queue.add(neighbor);
+                }
+            }
+        }
+
+        return reachable;
+    }
+
     public List<VertexOfDualGraph> selectSourceSink(Vector2D line, Graph<VertexOfDualGraph> currentGraph) {
         List<VertexOfDualGraph> dualVertices = new ArrayList<>(currentGraph.verticesArray());
 
@@ -301,34 +376,17 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
         double maxProjection = -Double.MAX_VALUE;
 
         for (VertexOfDualGraph dualVertex : dualVertices) {
-            ArrayList<Vertex> faceVertices = dualVertex.getVerticesOfFace();
+            double minProjValue = calculateVertexProjection(dualVertex, line, true);
+            double maxProjValue = calculateVertexProjection(dualVertex, line, false);
 
-            if (faceVertices.isEmpty()) {
-                Point projected = line.projectPoint(dualVertex);
-                double projValue = line.isVertical ? projected.y : projected.x;
-
-                if (projValue < minProjection && !dualVertex.equals(sinkVertex)) {
-                    minProjection = projValue;
-                    sourceVertex = dualVertex;
-                }
-                if (projValue > maxProjection && !dualVertex.equals(sourceVertex)) {
-                    maxProjection = projValue;
-                    sinkVertex = dualVertex;
-                }
-            } else {
-                for (Vertex v : faceVertices) {
-                    Point projected = line.projectPoint(v);
-                    double projValue = line.isVertical ? projected.y : projected.x;
-
-                    if (projValue < minProjection && !dualVertex.equals(sinkVertex)) {
-                        minProjection = projValue;
-                        sourceVertex = dualVertex;
-                    }
-                    if (projValue > maxProjection && !dualVertex.equals(sourceVertex)) {
-                        maxProjection = projValue;
-                        sinkVertex = dualVertex;
-                    }
-                }
+            if (minProjValue < minProjection && !dualVertex.equals(sinkVertex)) {
+                minProjection = minProjValue;
+                sourceVertex = dualVertex;
+            }
+            
+            if (maxProjValue > maxProjection && !dualVertex.equals(sourceVertex)) {
+                maxProjection = maxProjValue;
+                sinkVertex = dualVertex;
             }
         }
 
@@ -341,6 +399,79 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
         }
 
         return result;
+    }
+
+    /**
+     * Выбирает вершину с экстремальной проекцией на линию (самую левую или правую)
+     * @param vertices список вершин для выбора
+     * @param excludeSet множество вершин, которые нужно исключить
+     * @param line линия для проекции
+     * @param selectMin true - выбрать минимум (самую левую), false - максимум (самую правую)
+     * @return Optional с выбранной вершиной
+     */
+    private Optional<VertexOfDualGraph> selectExtremumVertex(
+            List<VertexOfDualGraph> vertices,
+            Set<VertexOfDualGraph> excludeSet,
+            Vector2D line,
+            boolean selectMin) {
+
+        VertexOfDualGraph selectedVertex = null;
+        double extremumProjection = selectMin ? Double.MAX_VALUE : -Double.MAX_VALUE;
+
+        for (VertexOfDualGraph vertex : vertices) {
+            // Пропускаем вершины из excludeSet
+            if (excludeSet.contains(vertex)) {
+                continue;
+            }
+
+            double projValue = calculateVertexProjection(vertex, line, selectMin);
+
+            // Проверяем, является ли текущая проекция более экстремальной
+            boolean isMoreExtreme = selectMin 
+                    ? (projValue < extremumProjection) 
+                    : (projValue > extremumProjection);
+
+            if (isMoreExtreme) {
+                extremumProjection = projValue;
+                selectedVertex = vertex;
+            }
+        }
+
+        return Optional.ofNullable(selectedVertex);
+    }
+
+    /**
+     * Вычисляет экстремальную проекцию вершины на линию.
+     * Если у вершины есть грани, берёт минимальную (для source) или максимальную (для sink) 
+     * проекцию среди всех вершин грани.
+     */
+    private double calculateVertexProjection(VertexOfDualGraph vertex, Vector2D line, boolean selectMin) {
+        ArrayList<Vertex> faceVertices = vertex.getVerticesOfFace();
+
+        if (faceVertices == null || faceVertices.isEmpty()) {
+            return getProjectionValue(vertex, line);
+        }
+
+        // Для вершин с гранями берём экстремальную проекцию
+        double extremumProjection = selectMin ? Double.MAX_VALUE : -Double.MAX_VALUE;
+        for (Vertex v : faceVertices) {
+            double projValue = getProjectionValue(v, line);
+            
+            if (selectMin) {
+                extremumProjection = Math.min(extremumProjection, projValue);
+            } else {
+                extremumProjection = Math.max(extremumProjection, projValue);
+            }
+        }
+        return extremumProjection;
+    }
+
+    /**
+     * Вычисляет значение проекции точки на линию
+     */
+    private double getProjectionValue(Point point, Vector2D line) {
+        Point projected = line.projectPoint(point);
+        return line.isVertical ? projected.y : projected.x;
     }
 
     private List<Graph<VertexOfDualGraph>> partitionGraph(FlowResult flow) {

@@ -60,7 +60,7 @@ public class ShortestPathTreeSearcherTest {
             System.out.println(v.getName() + " : " + v.getVerticesOfFace().stream().map(Vertex::getName).toList() + ", w = " + v.getWeight());
         }
 
-        Optional<DijkstraResult> dijkstraResultOpt = Dijkstra.dijkstraSingleSource(graph, vertices.get(0), List.of(vertices.get(6), vertices.get(8), vertices.get(5)));
+        Optional<DijkstraResult> dijkstraResultOpt = Dijkstra.dijkstraSingleSource(graph, vertices.get(0), List.of(vertices.get(6), vertices.get(8), vertices.get(5)), CornerConstraints.empty());
         Assertions.assertTrue(dijkstraResultOpt.isPresent());
         DijkstraResult dijkstraResult = dijkstraResultOpt.get();
         for (Vertex vertex : dijkstraResult.previous().keySet()) {
@@ -77,8 +77,9 @@ public class ShortestPathTreeSearcherTest {
                 dualGraph,
                 List.of(vertices.get(6)),
                 List.of(vertices.get(5)),
-                true,
-                CornerConstraints.empty()
+                false,
+                CornerConstraints.empty(),
+                dijkstraResult.path()
         );
 
         System.out.println(spt.faces().stream().map(VertexOfDualGraph::getName).toList());

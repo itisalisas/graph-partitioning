@@ -178,7 +178,7 @@ public class SweepLine {
        		 	}
 				if (copyPoints.containsKey(currVertex)) {
 					gph.addVertex(prevVert);
-        			double newLength = currEdge.length == 0 ? 0 : prevVert.getLength(currVertex);
+        			double newLength = currEdge.length < 1 ? currEdge.length : prevVert.getLength(currVertex);
 					gph.addEdge(prevVert, copyPoints.get(currVertex), newLength);
         			prevVert = copyPoints.get(currVertex);
 					//System.out.println(copyPoints.get(currVertex).name);
@@ -186,7 +186,7 @@ public class SweepLine {
 				}
 				gph.addVertex(prevVert);
 				gph.addVertex(currVertex);
-        		double newLength = currEdge.length == 0 ? 0 : prevVert.getLength(currVertex);
+        		double newLength = currEdge.length < 1 ? currEdge.length : prevVert.getLength(currVertex);
 				gph.addEdge(prevVert, currVertex, newLength);
         		prevVert = currVertex;
     		}
@@ -197,7 +197,7 @@ public class SweepLine {
 	public ArrayList<ArrayList<Vertex>> findPointsOfIntersection(ArrayList<EdgeOfGraph<Vertex>> edgesList) {
 			ArrayList<ArrayList<Vertex>> intersectionPoints = new ArrayList<ArrayList<Vertex>>();
 			for (int i = 0; i < edgesList.size(); i++) {
-				intersectionPoints.add(new ArrayList<Vertex>());
+				intersectionPoints.add(new ArrayList<>());
 			}
 			ArrayList<Action> actions = initActions(edgesList);
 			actions.sort((a1, a2) -> a1.x() < a2.x() ? -1
