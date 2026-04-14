@@ -20,7 +20,6 @@ public class FlowWriter {
 
     public static void dumpVisualizationData(List<Vertex> externalBoundary, List<Vertex> sourceBoundary,
                                                   List<Vertex> sinkBoundary, List<Vertex> stPath, List<Vertex> bestPath,
-                                                  Map<Long, NeighborSplit> neighborSplits,
                                                   HashSet<VertexOfDualGraph> sourceNeighbors,
                                                   HashSet<VertexOfDualGraph> sinkNeighbors,
                                                   double size,
@@ -48,9 +47,7 @@ public class FlowWriter {
                 writeVertexListToFile(outputDir + "best_path.txt", bestPath, coordConversion);
             }
 
-            writeNeighborSplitsToFile(outputDir + "neighbor_splits.txt", neighborSplits, coordConversion);
             writeDualGraph(outputDir + "dual_graph.txt", dualGraph, source, sink, coordConversion);
-            writeDualGraphWithFlow(outputDir + "dual_graph_flow.txt", dualGraph, source, sink, coordConversion);
             writePrimalGraph(outputDir + "primal_graph.txt", graph, sourceNeighbors, sinkNeighbors, coordConversion);
 
             logger.info("Visualization data saved to {}", outputDir);
@@ -68,41 +65,6 @@ public class FlowWriter {
         }
     }
 
-    private static void writeNeighborSplitsToFile(String filename, Map<Long, NeighborSplit> neighborSplits, CoordinateConversion coordConversion) throws java.io.IOException {
-        logger.debug("Writing neighbor splits, total: {}", neighborSplits.size());
-        try (java.io.FileWriter writer = new java.io.FileWriter(filename)) {
-
-            for (Map.Entry<Long, NeighborSplit> entry : neighborSplits.entrySet()) {
-                NeighborSplit split = entry.getValue();
-
-                // Используем сохраненную в NeighborSplit вершину
-                Vertex vertex = split.vertex();
-                Vertex geoVertex = coordConversion.fromEuclidean(vertex);
-                writer.write(String.format("%d %.10f %.10f\n", geoVertex.getName(), geoVertex.x, geoVertex.y));
-
-                for (Vertex neighbor : split.pathNeighbors()) {
-                    Vertex geoNeighbor = coordConversion.fromEuclidean(neighbor);
-                    writer.write(String.format("PATH %d %.10f %.10f\n",
-                            geoNeighbor.getName(), geoNeighbor.x, geoNeighbor.y));
-                }
-
-                for (Vertex neighbor : split.leftNeighbors()) {
-                    Vertex geoNeighbor = coordConversion.fromEuclidean(neighbor);
-                    writer.write(String.format("LEFT %d %.10f %.10f\n",
-                            geoNeighbor.getName(), geoNeighbor.x, geoNeighbor.y));
-                }
-
-                for (Vertex neighbor : split.rightNeighbors()) {
-                    Vertex geoNeighbor = coordConversion.fromEuclidean(neighbor);
-                    writer.write(String.format("RIGHT %d %.10f %.10f\n",
-                            geoNeighbor.getName(), geoNeighbor.x, geoNeighbor.y));
-                }
-
-                writer.write("---\n");
-            }
-            logger.debug("Neighbor splits file written");
-        }
-    }
 
     private static void writePrimalGraph(String filename, Graph<Vertex> graph,
                                          HashSet<VertexOfDualGraph> sourceNeighbors,
@@ -205,71 +167,6 @@ public class FlowWriter {
         }
     }
 
-    private static void writeDualGraphWithFlow(String filename, Graph<VertexOfDualGraph> dualGraph,
-                                               VertexOfDualGraph source, VertexOfDualGraph sink,
-                                               CoordinateConversion coordConversion) throws java.io.IOException {
-        try (java.io.FileWriter writer = new java.io.FileWriter(filename)) {
-            // Сначала записываем вершины двойственного графа (центроиды граней)
-            writer.write("VERTICES\n");
-            for (VertexOfDualGraph face : dualGraph.verticesArray()) {
-                // Вычисляем центроид грани
-                List<Vertex> faceVertices = face.getVerticesOfFace();
-                if (faceVertices == null || faceVertices.isEmpty()) continue;
-
-                double sumX = 0, sumY = 0;
-                for (Vertex v : faceVertices) {
-                    sumX += v.x;
-                    sumY += v.y;
-                }
-                double centroidX = sumX / faceVertices.size();
-                double centroidY = sumY / faceVertices.size();
-
-                // Конвертируем в географические координаты
-                Vertex euclideanCentroid = new Vertex(face.getName(), centroidX, centroidY, 0);
-                Vertex geoCentroid = coordConversion.fromEuclidean(euclideanCentroid);
-
-                // Определяем тип вершины
-                String type = "NORMAL";
-                if (face.equals(source)) type = "SOURCE";
-                else if (face.equals(sink)) type = "SINK";
-
-                writer.write(String.format("%d %.10f %.10f %s\n",
-                        face.getName(), geoCentroid.x, geoCentroid.y, type));
-            }
-
-            // Затем записываем рёбра с информацией о потоке
-            writer.write("EDGES\n");
-            Set<String> recordedEdges = new HashSet<>();
-
-            for (VertexOfDualGraph face : dualGraph.verticesArray()) {
-                if (dualGraph.getEdges().get(face) == null) continue;
-
-                for (Map.Entry<VertexOfDualGraph, Edge> edgeEntry : dualGraph.getEdges().get(face).entrySet()) {
-                    VertexOfDualGraph neighbor = edgeEntry.getKey();
-                    Edge edge = edgeEntry.getValue();
-
-                    // Создаём уникальный ключ для ребра (неориентированного)
-                    long id1 = face.getName();
-                    long id2 = neighbor.getName();
-                    String edgeKey = (id1 < id2) ? (id1 + "_" + id2) : (id2 + "_" + id1);
-
-                    // Записываем каждое ребро только один раз (как неориентированное)
-                    if (!recordedEdges.contains(edgeKey)) {
-                        recordedEdges.add(edgeKey);
-
-                        double bandwidth = edge.getBandwidth();
-                        double flow = edge.flow;
-                        boolean isSaturated = Math.abs(flow - bandwidth) < 1e-9 && flow > 1e-9;
-
-                        // Записываем в порядке возрастания ID для единообразия
-                        writer.write(String.format("%d %d %.6f %.6f %s\n",
-                                Math.min(id1, id2), Math.max(id1, id2), bandwidth, flow,
-                                isSaturated ? "SATURATED" : "NORMAL"));
-                    }
-                }
-            }
-        }
-    }
     public static void dumpSPTVisualizationData(
             DijkstraResult spt1, DijkstraResult spt2,
             Vertex root1, Vertex root2,
@@ -409,6 +306,51 @@ public class FlowWriter {
                 
                 writer.write(String.format("%d %d %d %d %.6f %.10f %.10f\n",
                         regionIdx, regionVertexId, fromLeafIdx, toLeafIdx, regionWeight, centroidLon, centroidLat));
+            }
+            writer.write("\n");
+
+            // Write region boundaries (boundary for each individual region)
+            writer.write("REGION_BOUNDARIES\n");
+            writer.write("# region_index region_vertex_id num_vertices\n");
+            writer.write("# lon lat (for each vertex)\n");
+            writer.write("# ---\n");
+            
+            if (initGraph != null && comparisonForDualGraph != null && spt.regions() != null) {
+                logger.debug("Writing {} region boundaries for {}", numRegions, sptName);
+                
+                int successCount = 0;
+                int failCount = 0;
+                
+                for (int regionIdx = 0; regionIdx < numRegions; regionIdx++) {
+                    VertexOfDualGraph regionVertex = spt.regions().get(regionIdx);
+                    long regionVertexId = regionVertex.getName();
+                    
+                    // Create a set with only this region's face
+                    HashSet<VertexOfDualGraph> singleFaceSet = new HashSet<>();
+                    singleFaceSet.add(regionVertex);
+                    
+                    try {
+                        List<Vertex> boundary = BoundSearcher.findBound(initGraph, singleFaceSet, comparisonForDualGraph);
+                        if (boundary != null && boundary.size() >= 3) {
+                            writer.write(String.format("%d %d %d\n", regionIdx, regionVertexId, boundary.size()));
+                            for (Vertex v : boundary) {
+                                Vertex originalV = splitToOriginalMap.getOrDefault(v, v);
+                                Vertex geoV = coordConversion.fromEuclidean(originalV);
+                                writer.write(String.format("%.10f %.10f\n", geoV.x, geoV.y));
+                            }
+                            successCount++;
+                        } else {
+                            logger.debug("Region {} has invalid boundary (size: {})", regionIdx, boundary != null ? boundary.size() : 0);
+                            writer.write(String.format("%d %d 0\n", regionIdx, regionVertexId));
+                        }
+                    } catch (Exception e) {
+                        failCount++;
+                        logger.debug("Failed to compute boundary for region {}: {}", regionIdx, e.getMessage());
+                        writer.write(String.format("%d %d 0\n", regionIdx, regionVertexId));
+                    }
+                    writer.write("---\n");
+                }
+                logger.debug("  {}: {} successful region boundaries, {} failed", sptName, successCount, failCount);
             }
             writer.write("\n");
 

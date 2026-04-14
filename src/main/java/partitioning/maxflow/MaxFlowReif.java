@@ -119,8 +119,7 @@ public class MaxFlowReif implements MaxFlow {
 
         if (bestCandidate.isEmpty()) {
             return handleNoBestPath(boundaries, shortestPathResult.path(),
-                                    neighborSplits, sourceNeighbors,
-                                    sinkNeighbors, modifiedGraph);
+                                    sourceNeighbors, sinkNeighbors, modifiedGraph);
         }
 
         // Заполнение потока
@@ -129,7 +128,7 @@ public class MaxFlowReif implements MaxFlow {
 
         // Визуализация
         dumpVisualization(boundaries, shortestPathResult.path(),
-                          best.pathInOriginalGraph(), neighborSplits,
+                          best.pathInOriginalGraph(),
                           sourceNeighbors, sinkNeighbors, modifiedGraph,
                           best, splitData.splitToOriginalMap());
 
@@ -249,7 +248,7 @@ public class MaxFlowReif implements MaxFlow {
                         boundaries.externalBoundary(),
                         boundaries.sourceBoundary(),
                         boundaries.sinkBoundary(),
-                        path, null, new HashMap<>(),
+                        path, null,
                         sourceNeighbors, sinkNeighbors, 0,
                         modifiedGraph, dualGraph, source, sink, conversion
                 );
@@ -557,7 +556,7 @@ public class MaxFlowReif implements MaxFlow {
                 boundaries.externalBoundary(),
                 boundaries.sourceBoundary(),
                 boundaries.sinkBoundary(),
-                List.of(), List.of(), Map.of(),
+                List.of(), List.of(),
                 sourceNeighbors, sinkNeighbors, 0,
                 modifiedGraph, dualGraph, source, sink, conversion
         );
@@ -571,7 +570,6 @@ public class MaxFlowReif implements MaxFlow {
     private FlowResult handleNoBestPath(
             BoundariesData boundaries,
             List<Vertex> shortestPath,
-            Map<Long, NeighborSplit> neighborSplits,
             HashSet<VertexOfDualGraph> sourceNeighbors,
             HashSet<VertexOfDualGraph> sinkNeighbors,
             Graph<Vertex> modifiedGraph) {
@@ -581,7 +579,7 @@ public class MaxFlowReif implements MaxFlow {
                 boundaries.externalBoundary(),
                 boundaries.sourceBoundary(),
                 boundaries.sinkBoundary(),
-                shortestPath, null, neighborSplits,
+                shortestPath, null,
                 sourceNeighbors, sinkNeighbors, 0,
                 modifiedGraph, dualGraph, source, sink, conversion
         );
@@ -595,7 +593,6 @@ public class MaxFlowReif implements MaxFlow {
             BoundariesData boundaries,
             List<Vertex> shortestPath,
             List<Vertex> bestPath,
-            Map<Long, NeighborSplit> neighborSplits,
             HashSet<VertexOfDualGraph> sourceNeighbors,
             HashSet<VertexOfDualGraph> sinkNeighbors,
             Graph<Vertex> modifiedGraph,
@@ -606,7 +603,7 @@ public class MaxFlowReif implements MaxFlow {
                 boundaries.externalBoundary(),
                 boundaries.sourceBoundary(),
                 boundaries.sinkBoundary(),
-                shortestPath, bestPath, neighborSplits,
+                shortestPath, bestPath,
                 sourceNeighbors, sinkNeighbors, flow,
                 modifiedGraph, dualGraph, source, sink, conversion
         );
