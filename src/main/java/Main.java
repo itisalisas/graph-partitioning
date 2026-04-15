@@ -153,6 +153,7 @@ public class Main implements Runnable {
             throw new RuntimeException(e);
         }
         double partitioningTime = ((double)(System.currentTimeMillis() - startTime)) / 1000.0;
+        logger.info("Partitioning time: {} seconds", partitioningTime);
 
         logger.info("Partition size: {}", partitionResultForFaces.size());
 

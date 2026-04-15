@@ -62,10 +62,13 @@ public class MaxFlowReif implements MaxFlow {
         // Подготовка данных
         HashSet<VertexOfDualGraph> sourceNeighbors = collectNeighbors(source);
         HashSet<VertexOfDualGraph> sinkNeighbors = collectNeighbors(sink);
+        long startTime = System.currentTimeMillis();
 
         BoundariesData boundaries = computeBoundaries(
                 sourceNeighbors, sinkNeighbors, comparisonForDualGraph
         );
+        long time1 = System.currentTimeMillis();
+        logger.info("Time for computing boundaries: {} seconds", (time1 - startTime) / 1000.0);
 
         if (boundaries.externalBoundary().isEmpty()) {
             logger.error("External boundary is empty!");
@@ -76,11 +79,15 @@ public class MaxFlowReif implements MaxFlow {
         Graph<Vertex> modifiedGraph = createModifiedGraph(
                 boundaries, sourceNeighbors, sinkNeighbors
         );
+        long time2 = System.currentTimeMillis();
+        logger.info("Time for creating modified graph: {} seconds", (time2 - time1) / 1000.0);
 
         // Поиск кратчайшего пути
         Optional<DijkstraResult> shortestPathResultOpt = dijkstraMultiSource(
                 modifiedGraph, boundaries.sourceBoundary(), boundaries.sinkBoundary(), CornerConstraints.empty()
         );
+        long time3 = System.currentTimeMillis();
+        logger.info("Time for finding shortest path between source and sink: {} seconds", (time3 - time2) / 1000.0);
 
         if (shortestPathResultOpt.isEmpty()) {
             return handleNoShortestPath(boundaries, sourceNeighbors,
@@ -101,12 +108,16 @@ public class MaxFlowReif implements MaxFlow {
                 modifiedGraph, shortestPathResult.path(), boundaries,
                 sourceNeighbors, sinkNeighbors
         );
+        long time4 = System.currentTimeMillis();
+        logger.info("Time for preprocessing vertex splits: {} seconds", (time4 - time3) / 1000.0);
 
         // Разделение вершин пути
         // TODO покрыть тестами
         SplitVerticesData splitData = splitPathVertices(
                 modifiedGraph, shortestPathResult.path(), neighborSplits
         );
+        long time5 = System.currentTimeMillis();
+        logger.info("Time for splitting path vertices: {} seconds", (time5 - time4) / 1000.0);
 
         // Поиск лучшего пути через split-вершины
         IntersectionsData intersections = findAllIntersections(boundaries);
@@ -116,6 +127,8 @@ public class MaxFlowReif implements MaxFlow {
                 splitData, modifiedGraph, boundaries,
                 intersections, dualGraph, shortestPathResult.path()
         );
+        long time6 = System.currentTimeMillis();
+        logger.info("Time for finding best path through splits: {} seconds", (time6 - time5) / 1000.0);
 
         if (bestCandidate.isEmpty()) {
             return handleNoBestPath(boundaries, shortestPathResult.path(),
@@ -125,6 +138,8 @@ public class MaxFlowReif implements MaxFlow {
         // Заполнение потока
         PathCandidate best = bestCandidate.get();
         flow = fillFlowInDualGraph(best.pathInOriginalGraph(), dualGraph);
+        long time7 = System.currentTimeMillis();
+        logger.info("Time for filling flow in dual graph: {} seconds", (time7 - time6) / 1000.0);
 
         // Визуализация
         dumpVisualization(boundaries, shortestPathResult.path(),
@@ -365,6 +380,7 @@ public class MaxFlowReif implements MaxFlow {
         List<Vertex> targetSegment2 = extractBoundarySegment(
                 boundaries.externalBoundary, sourceIntersections, sinkIntersections, false);
 
+        long startTime = System.currentTimeMillis();
 
         // Поиск путей от обеих split-вершин к границе
         Optional<DijkstraResult> path1ToBoundaryOpt = dijkstraSingleSourceWithRegionWeights(
@@ -379,6 +395,9 @@ public class MaxFlowReif implements MaxFlow {
                 path
         );
 
+        long time1 = System.currentTimeMillis();
+        logger.info("Time for build 1st spt: {} seconds", (time1 - startTime) / 1000.0);
+
         Optional<DijkstraResult> path2ToBoundaryOpt = dijkstraSingleSourceWithRegionWeights(
                 modifiedGraph,
                 splitVertex2,
@@ -390,6 +409,9 @@ public class MaxFlowReif implements MaxFlow {
                 false,
                 path
         );
+
+        long time2 = System.currentTimeMillis();
+        logger.info("Time for build 2nd spt: {} seconds", (time2 - time1) / 1000.0);
 
         if (path1ToBoundaryOpt.isEmpty() || path2ToBoundaryOpt.isEmpty()) {
             logMissingPath(splitVertex1, splitVertex2, splitToOriginalMap,
@@ -404,6 +426,8 @@ public class MaxFlowReif implements MaxFlow {
 
         ShortestPathTreeProcessor sptProcessor = new ShortestPathTreeProcessor();
         SPTResult result = sptProcessor.findBestPath(path1ToBoundary, path2ToBoundary, source.getWeight(), sink.getWeight());
+        long time3 = System.currentTimeMillis();
+        logger.info("Time for find best path in spt: {} seconds", (time3 - time2) / 1000.0);
 
         List<Vertex> pathInOriginalGraph = mapToOriginalGraph(
                 result.path(),

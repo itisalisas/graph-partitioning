@@ -87,6 +87,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
         Stack<Graph<VertexOfDualGraph>> stack = new Stack<>();
         graph = getLargestConnectedComponent(graph);
         this.graph = graph;
+        long startTime = System.currentTimeMillis();
 
         stack.push(graph);
 
@@ -135,6 +136,8 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             double targetWeightSink = PARAMETER_SINK * totalWeight;
 
             long maxIndex = vertices.stream().max(Comparator.comparingLong(VertexOfDualGraph::getName)).get().getName();
+
+            long time1 = System.currentTimeMillis();
 
             VertexOfDualGraph source = new VertexOfDualGraph(maxIndex + 1);
             VertexOfDualGraph sink = new VertexOfDualGraph(maxIndex + 2);
@@ -230,8 +233,14 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             // Добираем вершины, достижимые только из одного множества
             expandSetsWithUnreachableRegions(currentGraph, sourceSet, sinkSet);
 
+            long time2 = System.currentTimeMillis();
+            logger.info("Time for selecting source and sink: {} seconds", (time2 - time1) / 1000.0);
+
             logger.debug("sourceSet size = {}, sinkSet size = {}", sourceSet.size(), sinkSet.size());
             Graph<VertexOfDualGraph> copyGraph = createGraphWithSourceSink(currentGraph, sourceSet, source, sinkSet, sink);
+
+            long time3 = System.currentTimeMillis();
+            logger.info("Time for creating graph with source and sink: {} seconds", (time3 - time2) / 1000.0);
 
             Assertions.assertEquals(currentGraph.verticesNumber() + 2, copyGraph.verticesNumber());
 
@@ -243,6 +252,8 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             }
             FlowResult flowResult = maxFlow.findFlow();
             logger.debug("Flow size: {}", flowResult.flowSize());
+            long time4 = System.currentTimeMillis();
+            logger.info("Time for finding flow: {} seconds", (time4 - time3) / 1000.0);
 
             List<Graph<VertexOfDualGraph>> subpartition;
             if (USE_REIF) {
@@ -256,6 +267,8 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                     // TODO - странный путь, когда станет понятно почему, пролемы быть не должно
                 }
             }
+            long time5 = System.currentTimeMillis();
+            logger.info("Time for partitioning graph: {} seconds", (time5 - time4) / 1000.0);
             logger.debug("SUBPARTITION SIZE: {}", subpartition.size());
             logger.debug("Subgraph 0 vertices: {}, weight: {}", subpartition.get(0).verticesNumber(), subpartition.get(0).verticesWeight());
             logger.debug("Subgraph 1 vertices: {}, weight: {}", subpartition.get(1).verticesNumber(), subpartition.get(1).verticesWeight());
@@ -265,7 +278,8 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                 stack.push(subgraph);
             }
         }
-
+        long endTime = System.currentTimeMillis();
+        logger.info("Total time in Inertial Flow: {} seconds", (endTime - startTime) / 1000.0);
     }
 
     public HashSet<VertexOfDualGraph> selectVerticesForSet(
