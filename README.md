@@ -7,7 +7,6 @@
 - [Scripts](#scripts)
 - [License](#license)
 
-
 ## Description
 
 This is an application designed for balanced partitioning of planar graphs using various algorithms.
@@ -28,16 +27,20 @@ file format: 	n (Vertices number)
 		long double x2		long
 ```
 
-In addition to the partition files, each partition directory also contains an `info.txt` file with summary statistics about the partition. The info.txt file includes the following metrics:
+In addition to the partition files, each partition directory also contains an `partition_info.json` file with summary statistics about the partition. 
+The `partition_info.json` file includes the following metrics:
 
-- MIN: The minimum weight of the partition.
-- MAX: The maximum weight of the partition.
-- AVERAGE: The average weight of the partition.
-- VARIANCE: The variance of the weights within the partition.
-- CV: The coefficient of variation of the weights.
+- partition time (seconds)
+- used memory (megabytes)
+- number of dual vertices in graph and total weight of the graph
+- minimum and maximum weight of the parts in the partition
+- average weight of the parts in the partition 
+- variance of the weights within the partition
+- number of parts in the partition, and the expected ideal number of parts
+- total length of boundaries of the parts in the partition, avg / variance
+- and information about all parts - lengths of boundary, diameters, and `region_weight / max_weight` ratio
 
 ## Usage
-
 
 ### Running the Application
 
@@ -45,19 +48,26 @@ This project uses Gradle as a build tool.
 
 The program takes the following arguments in the command line:
 
-- `algorithm-name`: The type of the algorithm to use for partitioning. Currently, the supported algorithm is "Inertial Flow", which can be specified as `IF`.
+- `algorithm-name`: The type of the algorithm to use for partitioning. 
+Supported algorithms: `IF` (Inertial Flow), `BUP` (Bubble algorithm - parallel version), `BUS` (Bubble algorithm - sequential version).
 
-- `path-to-graph-file`: The path to the input file that describes the graph to be partitioned. (From graph-partitioning/src/main/resources/)
+- `path-to-graph-file`: The path to the input file that describes the graph to be partitioned. (From `graph-partitioning/src/main/resources/`)
 
-- `path-to-buildings-file`: The path to the input file that describes the buildings with their weights. (From graph-partitioning/src/main/resources/)
+- `path-to-buildings-file`: The path to the input file that describes the buildings with their weights. (From `graph-partitioning/src/main/resources/`)
 
 - `max-sum-vertices-weight`: The maximum total weight of the vertices in the partition parts.
 
-- `output-directory`: The name of the directory where the partition files will be written. (From graph-partitioning/src/main/output/) The partition files will be named in the format `partition_*.txt`.
+- `max-region-radius-meters`: The maximum radius of the region in meters.
 
-- `param` (optional): The fraction of the weight that must be present in each partition part. If not provided, the default value is 0.25.
+- `path-to-result-directory`: The name of the directory where the partition files will be written. (From `graph-partitioning/src/main/output/`) 
+The partition files will be named in the format `partition_*.txt`.
 
-To run the application, execute the following command:
+- `-p, --param` (optional): the fraction of the weight that must be present in each partition part (used for Inertial Flow algorithm). 
+If not provided, the default value is 0.25.
+
+See `--help` for available options.
+
+To run the application, execute the following commands:
 
 ```bash
 git clone https:/github.com/itisalisas/graph-partitioning.git
@@ -66,13 +76,13 @@ cd graph-partitioning
 
 ./gradlew build
 
-./gradlew run --args="<algorithm-name> <path-to-graph-file> <path-to-buildings-file> <max-sum-vertices-weight> <output-directory> [param]" 
+./gradlew run --args="<algorithm-name> <path-to-graph-file> <path-to-buildings-file> <max-sum-vertices-weight> <max-region-radius-meters> <path-to-result-directory> [param]" 
 ```
 
 Example:
 
 ```bash
-./gradlew run --args="IF dataExample/spb/simple/graph_59.93893094417527_30.32268115454809_500.txt buildings.txt 10000 59.93893094417527_30.32268115454809_500"
+./gradlew run --args="IF dataExample/spb/simple/graph_59.93893094417527_30.32268115454809_500.txt buildings.txt 10000 200 spb_500"
 
 ```
 
@@ -80,8 +90,19 @@ Example:
 
 ### AdjacencyListFromOSM
 
-This is an application for getting the adjacency list of a graph from OpenStreetMaps. It is necessary to select the coordinates of the center and the distance around to determine the area from where information about the graph is extracted. 
-The graph format is an adjacency list, see the "file format" for more details.
+This is a script for getting the adjacency list of a graph from OpenStreetMaps. 
+It is necessary to select the coordinates of the center and the distance around to determine the area from where information about the graph is extracted. 
+The graph format is an adjacency list, see the ["file format"](#file-format) for more details.
+
+Arguments:
+
+- `latitude`: Latitude of the center of the area.
+- `longitude`: Longitude of the center of the area.
+- Default values: `59.93893094417527`, `30.32268115454809` (Saint Petersburg).
+- `distance`: Distance around the center in meters (default = 50).
+- `with_rivers`: Flag for including rivers in the graph (default = false).
+
+Generates a file `graph_<latitude>_<longitude>_<distance>.txt` in the `graph-partitioning/src/main/resources/` directory.
 
 ### Visualization Scripts
 

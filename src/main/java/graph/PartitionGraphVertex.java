@@ -2,15 +2,15 @@ package graph;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class PartitionGraphVertex extends Vertex {
-    public ArrayList<VertexOfDualGraph> vertices;
+    public List<VertexOfDualGraph> vertices;
 
-    public PartitionGraphVertex(long partitionId, ArrayList<VertexOfDualGraph> vertices) {
+    public PartitionGraphVertex(long partitionId, List<VertexOfDualGraph> vertices) {
         super(partitionId);
         this.vertices = vertices;
         this.weight = calculateTotalWeight(vertices);
@@ -33,7 +33,7 @@ public class PartitionGraphVertex extends Vertex {
         }
     }
 
-    private double calculateTotalWeight(ArrayList<VertexOfDualGraph> vertices) {
+    private double calculateTotalWeight(List<VertexOfDualGraph> vertices) {
         return vertices.stream().mapToDouble(VertexOfDualGraph::getWeight).sum();
     }
 
@@ -50,8 +50,8 @@ public class PartitionGraphVertex extends Vertex {
     }
 
     static public Graph<PartitionGraphVertex> buildPartitionGraph(Graph<VertexOfDualGraph> dualGraph,
-                                                                  ArrayList<HashSet<VertexOfDualGraph>> partition,
-                                                                  HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber) {
+                                                                  List<Set<VertexOfDualGraph>> partition,
+                                                                  Map<VertexOfDualGraph, Integer> dualVertexToPartNumber) {
         Graph<PartitionGraphVertex> partitionGraph = new Graph<>();
 
         ArrayList<PartitionGraphVertex> vertices = new ArrayList<>();

@@ -8,8 +8,11 @@ import graph.Edge;
 import graph.Graph;
 import graph.Point;
 import graph.Vertex;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GraphReader {
+	private static final Logger logger = LoggerFactory.getLogger(GraphReader.class);
 
 	public CoordinateConversion coordConver;
 
@@ -42,51 +45,31 @@ public class GraphReader {
 	public void readGraphFromFile(Graph<Vertex> graph, String inFilename, boolean geodetic) throws FileNotFoundException {
 		graph.getEdges().clear();
 		Scanner sc = new Scanner(new File(inFilename));
-		int n = 0;
-		n = sc.nextInt();
-		int ni = 0;
-		double length = 0;
-		Vertex vi;
-		System.out.println("Vertices num: " + n);
+		int n = sc.nextInt();
+		logger.info("Vertices num: {}", n);
 		for (int i = 0; i < n && sc.hasNext(); i++) {
-			// read Vertex..
-			vi = readVertex(graph, sc, geodetic);
+			readVertex(graph, sc, geodetic);
 			sc.nextLine();
 		}
 		sc.close();
 
 		sc = new Scanner(new File(inFilename));
-		n = 0;
 		n = sc.nextInt();
-		ni = 0;
-		length = 0;
-		Vertex vj;
-		System.out.println("Readed all Vertices");
+        int ni;
+        double length;
+        Vertex vi, vj;
+		logger.info("Read all vertices");
 
 		for (int i = 0; i < n && sc.hasNext(); i++) {
-			// read Vertex..
 			vi = readVertex(graph, sc, geodetic);
 			ni = sc.nextInt();
 			for (int j = 0; j < ni && sc.hasNext(); j++) {
 				vj = readVertex(graph, sc, geodetic);
 				String lengthStr = sc.next().replace(',', '.');
 				length = Double.parseDouble(lengthStr);
-				// if (length < 0.001) {
-				// 	smallEdgesNum++;
-				// }
 				graph.getEdges().get(vi).put(vj, new Edge(length));
-				// System.out.println(vi.getLength(vj) + " " + length);
-				// if (Math.abs(vi.getLength(vj) - length) > 50) {
-				// 	countUncorrectedges++;
-				// }
 			}
 		}
-		// System.out.println("small edges of graph number: " + smallEdgesNum);
-		// System.out.println("num edges length err > 50    " + countUncorrectedges);
 		sc.close();
-	}
-	
-	public void readGraphFromOSM(Point center, int dist) {
-
 	}
 }

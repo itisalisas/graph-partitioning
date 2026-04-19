@@ -5,25 +5,32 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import graph.*;
 import org.junit.jupiter.api.Assertions;
-import partitioning.models.FlowResult;
+import partitioning.entities.FlowResult;
 import partitioning.maxflow.MaxFlow;
 import partitioning.maxflow.MaxFlowDinic;
 import partitioning.maxflow.MaxFlowReif;
 
 public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs {
+    private static final Logger logger = LoggerFactory.getLogger(InertialFlowPartitioning.class);
 
     private final double PARAMETER_SOURCE, PARAMETER_SINK;
+    private final boolean USE_REIF;
 
     public InertialFlowPartitioning() {
         this.PARAMETER_SOURCE = 0.25;
         this.PARAMETER_SINK = 0.25;
+        this.USE_REIF = true;
     }
 
-    public InertialFlowPartitioning(double parameter) {
+    public InertialFlowPartitioning(double parameter, boolean useReif) {
         this.PARAMETER_SOURCE = parameter;
-        this.PARAMETER_SINK = parameter; 
+        this.PARAMETER_SINK = parameter;
+        this.USE_REIF = useReif;
     }
 
     private static class Vector2D {
@@ -65,21 +72,16 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             new Vector2D(new Point(2, -1))
     );
 
-    private Graph<VertexOfDualGraph> getLargestConnectedComponent(Graph<VertexOfDualGraph> graph) {
-        List<HashSet<VertexOfDualGraph>> connectivityComponents = graph.makeUndirectedGraph().splitForConnectedComponents();
-        HashSet<VertexOfDualGraph> largestComponent = connectivityComponents.stream().max(Comparator.comparingInt(HashSet::size)).orElseThrow();
-        return graph.createSubgraph(largestComponent);
-    }
-
     @Override
     public void balancedPartitionAlgorithm(Graph<Vertex> simpleGraph, 
-										   HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph, 
+										   Map<Vertex, VertexOfDualGraph> comparisonForDualGraph,
 										   Graph<VertexOfDualGraph> graph, 
 										   int maxSumVerticesWeight) {
 
         Stack<Graph<VertexOfDualGraph>> stack = new Stack<>();
-        graph = getLargestConnectedComponent(graph);
+        graph = graph.getLargestConnectedComponent();
         this.graph = graph;
+        long startTime = System.currentTimeMillis();
 
         stack.push(graph);
 
@@ -129,20 +131,27 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
             long maxIndex = vertices.stream().max(Comparator.comparingLong(VertexOfDualGraph::getName)).get().getName();
 
+            long time1 = System.currentTimeMillis();
+
             VertexOfDualGraph source = new VertexOfDualGraph(maxIndex + 1);
             VertexOfDualGraph sink = new VertexOfDualGraph(maxIndex + 2);
+            List<VertexOfDualGraph> startVertices = selectSourceSink(bestLine, currentGraph);
 
             HashSet<VertexOfDualGraph> sourceSet = new HashSet<>();
+            HashSet<VertexOfDualGraph> maxSourceSet = new HashSet<>();
             int index = 0;
             while (index < vertices.size() && sourceSet.stream().mapToDouble(VertexOfDualGraph::getWeight).sum() < targetWeightSource) {
-                sourceSet = selectVerticesForSet(vertices, index, targetWeightSource, new HashSet<>(), currentGraph);
+                sourceSet = selectVerticesForSet(vertices, index, targetWeightSource, new HashSet<>(), currentGraph, startVertices.get(0));
+                if (sourceSet.stream().mapToDouble(VertexOfDualGraph::getWeight).sum()
+                        > maxSourceSet.stream().mapToDouble(VertexOfDualGraph::getWeight).sum()) {
+                    maxSourceSet = new HashSet<>(sourceSet);
+                }
                 index++;
             }
+            if (!maxSourceSet.isEmpty()) {
+                sourceSet = new HashSet<>(maxSourceSet);
+            }
 
-            /* может возникнуть проблема, что набрав sourceSet
-            связное множество нужного веса не наберется,
-            тогда берем максимальное по весу
-             */
             HashSet<VertexOfDualGraph> sinkSet = new HashSet<>();
             HashSet<VertexOfDualGraph> maxSinkSet = new HashSet<>();
             index = 1;
@@ -155,10 +164,16 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                     continue;
                 }
 
-                sinkSet = selectVerticesForSet(vertices, currentIndex, targetWeightSink, sourceSet, currentGraph);
+                VertexOfDualGraph startVertex = null;
+                if (startVertices.size() > 1) {
+                    startVertex = startVertices.get(1);
+                }
+                logger.debug("graph size = {}, startVertices size = {}", currentGraph.verticesArray().size(), startVertices.size());
+                sinkSet = selectVerticesForSet(vertices, currentIndex, targetWeightSink, sourceSet, currentGraph, startVertex);
 
                 boolean isDisjoint = Collections.disjoint(sinkSet, sourceSet);
-                if (isDisjoint && sinkSet.stream().mapToDouble(Vertex::getWeight).sum() > maxSinkSet.stream().mapToDouble(Vertex::getWeight).sum()) {
+                if (isDisjoint && sinkSet.stream().mapToDouble(Vertex::getWeight).sum()
+                        > maxSinkSet.stream().mapToDouble(Vertex::getWeight).sum()) {
                     maxSinkSet = new HashSet<>(sinkSet);
                 }
                 index++;
@@ -167,8 +182,6 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             if (!maxSinkSet.isEmpty()) {
                 sinkSet = new HashSet<>(maxSinkSet);
             } else {
-                // if sinkSet empty, cant fit balanced partition, so just take some vertices
-                // as sinkSet and sourceSet
                 sourceSet = new HashSet<>();
                 sinkSet = new HashSet<>();
 
@@ -195,43 +208,86 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                 }
             }
 
+            // Если sourceSet пустой, выбираем самую левую вершину (минимальная проекция)
+            if (sourceSet.isEmpty()) {
+                logger.warn("Source set is empty, selecting extremum vertex");
+                selectExtremumVertex(vertices, sinkSet, bestLine, true)
+                        .ifPresent(sourceSet::add);
+                logger.warn("Found source extremum vertex {}", sourceSet.iterator().next().name);
+            }
+            
+            // Если sinkSet пустой, выбираем самую правую вершину (максимальная проекция)
+            if (sinkSet.isEmpty()) {
+                logger.warn("Sink set is empty, selecting extremum vertex");
+                selectExtremumVertex(vertices, sourceSet, bestLine, false)
+                        .ifPresent(sinkSet::add);
+                logger.warn("Found sink extremum vertex {}", sinkSet.iterator().next().name);
+            }
+
+            // Добираем вершины, достижимые только из одного множества
+            expandSetsWithUnreachableRegions(currentGraph, sourceSet, sinkSet);
+
+            long time2 = System.currentTimeMillis();
+            logger.info("Time for selecting source and sink: {} seconds", (time2 - time1) / 1000.0);
+
+            logger.debug("sourceSet size = {}, sinkSet size = {}", sourceSet.size(), sinkSet.size());
             Graph<VertexOfDualGraph> copyGraph = createGraphWithSourceSink(currentGraph, sourceSet, source, sinkSet, sink);
+
+            long time3 = System.currentTimeMillis();
+            logger.info("Time for creating graph with source and sink: {} seconds", (time3 - time2) / 1000.0);
 
             Assertions.assertEquals(currentGraph.verticesNumber() + 2, copyGraph.verticesNumber());
 
             MaxFlow maxFlow;
-            boolean useReif = true;
-            if (useReif) {
-                maxFlow = new MaxFlowReif(simpleGraph, copyGraph, source, sink);
+            if (USE_REIF) {
+                maxFlow = new MaxFlowReif(simpleGraph, copyGraph, source, sink, comparisonForDualGraph);
             } else {
                 maxFlow = new MaxFlowDinic(copyGraph, source, sink);
             }
             FlowResult flowResult = maxFlow.findFlow();
-            System.out.println("\n\nFLOW SIZE: " + flowResult.flowSize() + "\n\n");
+            logger.debug("Flow size: {}", flowResult.flowSize());
+            long time4 = System.currentTimeMillis();
+            logger.info("Time for finding flow: {} seconds", (time4 - time3) / 1000.0);
 
             List<Graph<VertexOfDualGraph>> subpartition;
-            if (useReif) {
+            if (USE_REIF) {
                 subpartition = partitionGraphReif(flowResult);
             } else {
                 subpartition = partitionGraph(flowResult);
             }
-            System.out.println("\n\nSUBPARTITION SIZE: " + subpartition.size());
-            System.out.println("Subgraph 0 vertices: " + subpartition.get(0).verticesNumber() + ", weight: " + subpartition.get(0).verticesWeight());
-            System.out.println("Subgraph 1 vertices: " + subpartition.get(1).verticesNumber() + ", weight: " + subpartition.get(1).verticesWeight());
-            System.out.println("Original graph vertices: " + currentGraph.verticesNumber() + ", weight: " + currentGraph.verticesWeight() + "\n\n");
+            for (Graph<VertexOfDualGraph> subgraph : subpartition) {
+                if (!subgraph.isConnected()) {
+                    logger.warn("Subgraph is not connected");
+                    // TODO - странный путь, когда станет понятно почему, пролемы быть не должно
+                }
+            }
+            long time5 = System.currentTimeMillis();
+            logger.info("Time for partitioning graph: {} seconds", (time5 - time4) / 1000.0);
+            logger.debug("SUBPARTITION SIZE: {}", subpartition.size());
+            logger.debug("Subgraph 0 vertices: {}, weight: {}", subpartition.get(0).verticesNumber(), subpartition.get(0).verticesWeight());
+            logger.debug("Subgraph 1 vertices: {}, weight: {}", subpartition.get(1).verticesNumber(), subpartition.get(1).verticesWeight());
+            logger.debug("Original graph vertices: {}, weight: {}\n\n", currentGraph.verticesNumber(), currentGraph.verticesWeight());
 
             for (Graph<VertexOfDualGraph> subgraph : subpartition) {
                 stack.push(subgraph);
             }
         }
-
+        long endTime = System.currentTimeMillis();
+        logger.info("Total time in Inertial Flow: {} seconds", (endTime - startTime) / 1000.0);
     }
 
-    public HashSet<VertexOfDualGraph> selectVerticesForSet(List<VertexOfDualGraph> vertices, int startIndex, double targetWeight, Set<VertexOfDualGraph> sourceSet, Graph<VertexOfDualGraph> currentGraph) {
+    public HashSet<VertexOfDualGraph> selectVerticesForSet(
+            List<VertexOfDualGraph> vertices,
+            int startIndex,
+            double targetWeight,
+            Set<VertexOfDualGraph> sourceSet,
+            Graph<VertexOfDualGraph> currentGraph,
+            VertexOfDualGraph initVertex
+    ) {
         HashSet<VertexOfDualGraph> vertexSet = new HashSet<>();
         double currentWeight = 0;
         Queue<VertexOfDualGraph> queue = new LinkedList<>();
-        VertexOfDualGraph startVertex = vertices.get(startIndex);
+        VertexOfDualGraph startVertex = initVertex != null ? initVertex : vertices.get(startIndex);
         queue.add(startVertex);
 
         while (!queue.isEmpty() && currentWeight < targetWeight) {
@@ -248,6 +304,182 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
         }
 
         return vertexSet;
+    }
+
+    /**
+     * Расширяет sourceSet и sinkSet, добавляя вершины, достижимые только из одного множества.
+     * Это устраняет "мертвые зоны" между внешней границей и множествами.
+     */
+    private void expandSetsWithUnreachableRegions(
+            Graph<VertexOfDualGraph> graph,
+            HashSet<VertexOfDualGraph> sourceSet,
+            HashSet<VertexOfDualGraph> sinkSet) {
+
+        // Находим вершины, достижимые только из sourceSet
+        Set<VertexOfDualGraph> reachableFromSource = findReachableVertices(graph, sourceSet, sinkSet);
+        Set<VertexOfDualGraph> onlyFromSource = new HashSet<>(reachableFromSource);
+        onlyFromSource.removeAll(sourceSet);
+
+        // Находим вершины, достижимые только из sinkSet
+        Set<VertexOfDualGraph> reachableFromSink = findReachableVertices(graph, sinkSet, sourceSet);
+        Set<VertexOfDualGraph> onlyFromSink = new HashSet<>(reachableFromSink);
+        onlyFromSink.removeAll(sinkSet);
+
+        // Исключаем вершины, достижимые из обоих множеств
+        onlyFromSource.removeAll(reachableFromSink);
+        onlyFromSink.removeAll(reachableFromSource);
+
+        if (!onlyFromSource.isEmpty() || !onlyFromSink.isEmpty()) {
+            logger.debug("Expanding sets: adding {} vertices only reachable from source, {} only from sink",
+                    onlyFromSource.size(), onlyFromSink.size());
+        }
+
+        sourceSet.addAll(onlyFromSource);
+        sinkSet.addAll(onlyFromSink);
+    }
+
+    /**
+     * Находит все вершины, достижимые из startSet, не проходя через blockedSet
+     */
+    private Set<VertexOfDualGraph> findReachableVertices(
+            Graph<VertexOfDualGraph> graph,
+            Set<VertexOfDualGraph> startSet,
+            Set<VertexOfDualGraph> blockedSet) {
+
+        Set<VertexOfDualGraph> reachable = new HashSet<>(startSet);
+        Queue<VertexOfDualGraph> queue = new LinkedList<>(startSet);
+
+        while (!queue.isEmpty()) {
+            VertexOfDualGraph current = queue.poll();
+
+            if (!graph.getEdges().containsKey(current)) {
+                continue;
+            }
+
+            for (VertexOfDualGraph neighbor : graph.getEdges().get(current).keySet()) {
+                if (blockedSet.contains(neighbor)) {
+                    continue;
+                }
+
+                if (!reachable.contains(neighbor)) {
+                    reachable.add(neighbor);
+                    queue.add(neighbor);
+                }
+            }
+        }
+
+        return reachable;
+    }
+
+    public List<VertexOfDualGraph> selectSourceSink(Vector2D line, Graph<VertexOfDualGraph> currentGraph) {
+        List<VertexOfDualGraph> dualVertices = new ArrayList<>(currentGraph.verticesArray());
+
+        if (dualVertices.size() < 2) {
+            throw new RuntimeException("too few vertices in dual graph");
+        }
+
+        VertexOfDualGraph sourceVertex = null;
+        VertexOfDualGraph sinkVertex = null;
+        double minProjection = Double.MAX_VALUE;
+        double maxProjection = -Double.MAX_VALUE;
+
+        for (VertexOfDualGraph dualVertex : dualVertices) {
+            double minProjValue = calculateVertexProjection(dualVertex, line, true);
+            double maxProjValue = calculateVertexProjection(dualVertex, line, false);
+
+            if (minProjValue < minProjection && !dualVertex.equals(sinkVertex)) {
+                minProjection = minProjValue;
+                sourceVertex = dualVertex;
+            }
+            
+            if (maxProjValue > maxProjection && !dualVertex.equals(sourceVertex)) {
+                maxProjection = maxProjValue;
+                sinkVertex = dualVertex;
+            }
+        }
+
+        List<VertexOfDualGraph> result = new ArrayList<>();
+        if (sourceVertex != null) {
+            result.add(sourceVertex);
+        }
+        if (sinkVertex != null && !sinkVertex.equals(sourceVertex)) {
+            result.add(sinkVertex);
+        }
+
+        return result;
+    }
+
+    /**
+     * Выбирает вершину с экстремальной проекцией на линию (самую левую или правую)
+     * @param vertices список вершин для выбора
+     * @param excludeSet множество вершин, которые нужно исключить
+     * @param line линия для проекции
+     * @param selectMin true - выбрать минимум (самую левую), false - максимум (самую правую)
+     * @return Optional с выбранной вершиной
+     */
+    private Optional<VertexOfDualGraph> selectExtremumVertex(
+            List<VertexOfDualGraph> vertices,
+            Set<VertexOfDualGraph> excludeSet,
+            Vector2D line,
+            boolean selectMin) {
+
+        VertexOfDualGraph selectedVertex = null;
+        double extremumProjection = selectMin ? Double.MAX_VALUE : -Double.MAX_VALUE;
+
+        for (VertexOfDualGraph vertex : vertices) {
+            // Пропускаем вершины из excludeSet
+            if (excludeSet.contains(vertex)) {
+                continue;
+            }
+
+            double projValue = calculateVertexProjection(vertex, line, selectMin);
+
+            // Проверяем, является ли текущая проекция более экстремальной
+            boolean isMoreExtreme = selectMin 
+                    ? (projValue < extremumProjection) 
+                    : (projValue > extremumProjection);
+
+            if (isMoreExtreme) {
+                extremumProjection = projValue;
+                selectedVertex = vertex;
+            }
+        }
+
+        return Optional.ofNullable(selectedVertex);
+    }
+
+    /**
+     * Вычисляет экстремальную проекцию вершины на линию.
+     * Если у вершины есть грани, берёт минимальную (для source) или максимальную (для sink) 
+     * проекцию среди всех вершин грани.
+     */
+    private double calculateVertexProjection(VertexOfDualGraph vertex, Vector2D line, boolean selectMin) {
+        ArrayList<Vertex> faceVertices = vertex.getVerticesOfFace();
+
+        if (faceVertices == null || faceVertices.isEmpty()) {
+            return getProjectionValue(vertex, line);
+        }
+
+        // Для вершин с гранями берём экстремальную проекцию
+        double extremumProjection = selectMin ? Double.MAX_VALUE : -Double.MAX_VALUE;
+        for (Vertex v : faceVertices) {
+            double projValue = getProjectionValue(v, line);
+            
+            if (selectMin) {
+                extremumProjection = Math.min(extremumProjection, projValue);
+            } else {
+                extremumProjection = Math.max(extremumProjection, projValue);
+            }
+        }
+        return extremumProjection;
+    }
+
+    /**
+     * Вычисляет значение проекции точки на линию
+     */
+    private double getProjectionValue(Point point, Vector2D line) {
+        Point projected = line.projectPoint(point);
+        return line.isVertical ? projected.y : projected.x;
     }
 
     private List<Graph<VertexOfDualGraph>> partitionGraph(FlowResult flow) {
@@ -273,7 +505,11 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
     }
 
 
-    void markComponent(Graph<VertexOfDualGraph> graph, VertexOfDualGraph source, Map<VertexOfDualGraph, Boolean> isConnectedWithSource) {
+    void markComponent(
+            Graph<VertexOfDualGraph> graph,
+            VertexOfDualGraph source,
+            Map<VertexOfDualGraph, Boolean> isConnectedWithSource
+    ) {
         LinkedList<VertexOfDualGraph> queue = new LinkedList<>();
         queue.add(source);
         isConnectedWithSource.put(source, true);
@@ -290,17 +526,14 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
     }
 
-    public static Graph<VertexOfDualGraph> createGraphWithSourceSink(Graph<VertexOfDualGraph> currentGraph, Set<VertexOfDualGraph> sourceSet, VertexOfDualGraph source, Set<VertexOfDualGraph> sinkSet, VertexOfDualGraph sink) {
+    public static Graph<VertexOfDualGraph> createGraphWithSourceSink(
+            Graph<VertexOfDualGraph> currentGraph,
+            Set<VertexOfDualGraph> sourceSet,
+            VertexOfDualGraph source,
+            Set<VertexOfDualGraph> sinkSet,
+            VertexOfDualGraph sink
+    ) {
         Graph<VertexOfDualGraph> newGraph = currentGraph.clone();
-
-        for (VertexOfDualGraph u : newGraph.verticesArray()) {
-            for (Entry<VertexOfDualGraph, Edge> entry : newGraph.getEdges().get(u).entrySet()) {
-                Edge edge = entry.getValue();
-                if (edge.getBandwidth() == 0) {
-                    edge.setBandwidth(0.1);
-                }
-            }
-        }
 
         for (VertexOfDualGraph s : sourceSet) {
             newGraph.addEdge(source, s, 0, Integer.MAX_VALUE);
@@ -338,16 +571,16 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
         graph.deleteVertex(source);
         graph.deleteVertex(sink);
         
-        ArrayList<HashSet<VertexOfDualGraph>> components = graph.splitForConnectedComponents();
+        List<Set<VertexOfDualGraph>> components = graph.splitForConnectedComponents();
 
         List<Graph<VertexOfDualGraph>> subpartition = new ArrayList<>();
         
         if (components.isEmpty()) {
-            System.out.println("No components found, returning empty graphs");
+            logger.warn("No components found, returning empty graphs");
             subpartition.add(new Graph<>());
             subpartition.add(new Graph<>());
         } else if (components.size() == 1) {
-            System.out.println("Only one component, graph not separated");
+            logger.warn("Only one component, graph not separated");
             subpartition.add(flow.graphWithFlow().createSubgraph(components.get(0)));
             subpartition.add(new Graph<>());
         } else {

@@ -4,15 +4,19 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import org.junit.jupiter.api.Assertions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
 
 public class BubblePartitioning extends BalancedPartitioningOfPlanarGraphs {
+    private static final Logger logger = LoggerFactory.getLogger(BubblePartitioning.class);
 
     Comparator<VertexOfDualGraph> vertexComparator = (o1, o2) -> {
         double len1 = Math.pow(o1.x, 2) + Math.pow(o1.y, 2);
@@ -21,15 +25,17 @@ public class BubblePartitioning extends BalancedPartitioningOfPlanarGraphs {
     };
 
     @Override
-    public void balancedPartitionAlgorithm(Graph<Vertex> simpleGraph, 
-										   HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph, 
-										   Graph<VertexOfDualGraph> graph, 
-										   int maxSumVerticesWeight) {
+    public void balancedPartitionAlgorithm(
+            Graph<Vertex> simpleGraph,
+            Map<Vertex, VertexOfDualGraph> comparisonForDualGraph,
+            Graph<VertexOfDualGraph> graph,
+            int maxSumVerticesWeight
+    ) {
         this.graph = graph;
         //find initial seeds
         int seedsNumber = findSeedsNumber(graph, maxSumVerticesWeight);
         Set<VertexOfDualGraph> seeds = findSeeds(graph.getEdges().keySet(), seedsNumber);
-        System.out.println("    start seeds were found");
+        logger.debug("    start seeds were found");
         //start data
         int iterCounter = 0;
         HashMap<VertexOfDualGraph ,HashSet<VertexOfDualGraph>> bubbles = new HashMap<>();
@@ -45,11 +51,11 @@ public class BubblePartitioning extends BalancedPartitioningOfPlanarGraphs {
             used.add(ver);
         }
         checkNextVerticesForUsed(closedBubbles, nextVertices, used);
-        System.out.println("    start conditions were set");
+        logger.debug("    start conditions were set");
         //main circle
         while (used.size() < graph.getEdges().size() && closedBubbles.size() < seedsNumber) {
             if (iterCounter > graph.getEdges().size()) {
-                System.out.println("    check while rule");
+                logger.debug("    check while rule");
                 break;
             }
             growingBubblesStep(closedBubbles, bubbles, graph, used, nextVertices, borderLength, maxSumVerticesWeight);
@@ -61,17 +67,16 @@ public class BubblePartitioning extends BalancedPartitioningOfPlanarGraphs {
             // try {
             //     pw.printBound(bounds, str , true);
             // } catch (IOException e) {
-            //     // TODO Auto-generated catch block
             //     e.printStackTrace();
             // }
             // pw.printCenter(bubbles.keySet(), str, true);            
         }
-        System.out.println("    bubbles were grown");
+        logger.debug("    bubbles were grown");
         //bubbles to partition
         for (VertexOfDualGraph seed : bubbles.keySet()) {
             partition.add(bubbles.get(seed));
         }
-        System.out.println("    end bubble");
+        logger.debug("    end bubble");
         
     }
                 

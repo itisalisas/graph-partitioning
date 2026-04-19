@@ -9,9 +9,12 @@ import java.util.Set;
 
 import graph.*;
 import org.junit.jupiter.api.Assertions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import partitioning.algorithms.BalancedPartitioningOfPlanarGraphs;
 
 public class BalancedPartitioning {
+	private static final Logger logger = LoggerFactory.getLogger(BalancedPartitioning.class);
 	public BalancedPartitioningOfPlanarGraphs bp;
 
 	public double maxSumVerticesWeight;
@@ -22,27 +25,29 @@ public class BalancedPartitioning {
 		this.bp = bp;
 	}
 
-	public ArrayList<HashSet<VertexOfDualGraph>> partition(Graph<Vertex> simpleGraph, 
-														   HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph, 
-														   Graph<VertexOfDualGraph> graph,
-														   int maxSumVerticesWeight) {
+	public List<Set<VertexOfDualGraph>> partition(
+            Graph<Vertex> simpleGraph,
+            Map<Vertex, VertexOfDualGraph> comparisonForDualGraph,
+            Graph<VertexOfDualGraph> graph,
+            int maxSumVerticesWeight
+    ) {
 		bp.partition = new ArrayList<>();
 		this.maxSumVerticesWeight = maxSumVerticesWeight;
 		bp.balancedPartitionAlgorithm(simpleGraph, comparisonForDualGraph, graph, maxSumVerticesWeight);
-		ArrayList<HashSet<VertexOfDualGraph>> partitionResult = bp.getPartition();
+		List<Set<VertexOfDualGraph>> partitionResult = bp.getPartition();
 		calculateCutWeights(bp.graph, partitionResult);
 		return partitionResult;
 	}
 
-	private void calculateCutWeights(Graph<VertexOfDualGraph> graph, List<HashSet<VertexOfDualGraph>> partitions) {
+	private void calculateCutWeights(Graph<VertexOfDualGraph> graph, List<Set<VertexOfDualGraph>> partitions) {
 		cutEdgesMap = new HashMap<>();
 		if (graph == null) {
-			System.out.println("graph - null1");
+			logger.warn("graph is null (check 1)");
 		}
 		for (Set<VertexOfDualGraph> partition : partitions) {
 			double cutEdgesWeightSum = 0;
 			if (graph == null) {
-				System.out.println("graph - null2");
+				logger.warn("graph is null (check 2)");
 			}
 			for (EdgeOfGraph<VertexOfDualGraph> edge : graph.edgesArray()) {
 				VertexOfDualGraph u = edge.begin;
@@ -63,17 +68,17 @@ public class BalancedPartitioning {
 		return cutEdgesMap.values().stream().mapToDouble(Double::doubleValue).sum() / 2;
 	}
 
-	public int countEmptyParts(List<HashSet<VertexOfDualGraph>> partitionResult) {
+	public int countEmptyParts(List<Set<VertexOfDualGraph>> partitionResult) {
 		int ans = 0;
-        for (HashSet<VertexOfDualGraph> vertices : partitionResult) {
+        for (Set<VertexOfDualGraph> vertices : partitionResult) {
             if (vertices.isEmpty()) ans++;
         }
 		return ans;
 	}
 	
-	public double countSumPartitioningWeight(List<HashSet<VertexOfDualGraph>> partitionResult) {
+	public double countSumPartitioningWeight(List<Set<VertexOfDualGraph>> partitionResult) {
 		double ans = 0;
-        for (HashSet<VertexOfDualGraph> vertices : partitionResult) {
+        for (Set<VertexOfDualGraph> vertices : partitionResult) {
             for (Vertex ver : vertices) {
                 ans = ans + ver.getWeight();
             }
@@ -83,7 +88,7 @@ public class BalancedPartitioning {
 
 	public HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber() {
 		HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber = new HashMap<>();
-		ArrayList<HashSet<VertexOfDualGraph>> partition = bp.partition;
+		List<Set<VertexOfDualGraph>> partition = bp.partition;
 		for (int i = 0; i < partition.size(); i++) {
 			for (VertexOfDualGraph vertex : partition.get(i)) {
 				dualVertexToPartNumber.put(vertex, i);
@@ -92,9 +97,9 @@ public class BalancedPartitioning {
 		return dualVertexToPartNumber;
 	}
 
-	public static List<Point> calculatePartCenters(ArrayList<HashSet<VertexOfDualGraph>> partition) {
+	public static List<Point> calculatePartCenters(List<Set<VertexOfDualGraph>> partition) {
 		List<Point> centers = new ArrayList<>();
-		for (HashSet<VertexOfDualGraph> part : partition) {
+		for (Set<VertexOfDualGraph> part : partition) {
 			double sumX = 0, sumY = 0;
 			Point centerPoint;
 			VertexOfDualGraph centerVertex = null;

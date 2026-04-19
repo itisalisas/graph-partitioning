@@ -11,6 +11,7 @@ import graph.VertexOfDualGraph;
 import graphPreparation.SweepLine;
 
 public record LocalizationPoints(HashSet<Vertex> newVertices) {
+
     public HashMap<VertexOfDualGraph, ArrayList<Vertex>> findFacesForPoints(Graph<VertexOfDualGraph> dualGraph) {
         ArrayList<EdgeOfGraph<Vertex>> diagonalList = new ArrayList<>();
         HashMap<EdgeOfGraph<Vertex>, VertexOfDualGraph> returnFromSimplification = new HashMap<>();

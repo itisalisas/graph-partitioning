@@ -1,242 +1,199 @@
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import graph.*;
 import org.junit.jupiter.api.Assertions;
-
-import com.google.gson.Gson;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import addingPoints.LocalizationPoints;
 import graphPreparation.GraphPreparation;
 import partitioning.BalancedPartitioning;
 import partitioning.balancing.Balancer;
-import partitioning.algorithms.BubblePartitioning;
-import partitioning.algorithms.BubblePartitioningSequentially;
-import partitioning.algorithms.InertialFlowPartitioning;
+import partitioning.entities.Algorithm;
 import readWrite.CoordinateConversion;
 import readWrite.GraphReader;
 import readWrite.GraphWriter;
 import readWrite.PartitionWriter;
 import readWrite.PointsReader;
 
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
-public class Main {
+@Command(name = "graph-partitioning", mixinStandardHelpOptions = true, version = "1.0",
+        description = "Application for balanced partitioning of planar graphs")
+public class Main implements Runnable {
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+    private static final String BASE_DIRECTORY = "src" + File.separatorChar + "main" + File.separatorChar;
+    private static final String RESOURCES_DIRECTORY = BASE_DIRECTORY + "resources" + File.separatorChar;
+    private static final String OUTPUT_DIRECTORY = BASE_DIRECTORY + "output" + File.separatorChar;
 
-		public static void saveFacesToJson(HashMap<VertexOfDualGraph, ArrayList<Vertex>> faceToVertices, String filename, boolean geodetic, CoordinateConversion cc) throws Exception {
-		List<Map<String, Object>> facesData = new ArrayList<>();
-		Gson gson = new Gson();
+    @Parameters(index = "0", description = "Algorithm name (IF, BUP, BUS)")
+    private Algorithm algorithmName;
 
-		for (Map.Entry<VertexOfDualGraph, ArrayList<Vertex>> entry : faceToVertices.entrySet()) {
-			VertexOfDualGraph face = entry.getKey();
-			ArrayList<Vertex> vertices = entry.getValue();
+    @Parameters(index = "1", description = "Path to graph file (from resources/)")
+    private String pathToFile;
 
-			List<Map<String, Double>> points = new ArrayList<>();
-			for (Vertex vertex : vertices) {
-				if (geodetic) {
-					vertex = cc.fromEuclidean(vertex);
-				}
-				Map<String, Double> point = new HashMap<>();
-				point.put("x", vertex.x);
-				point.put("y", vertex.y);
-				points.add(point);
-			}
+    @Parameters(index = "2", description = "Path to buildings file (from resources/)")
+    private String pathToPointsFile;
 
-			Map<String, Object> faceEntry = new HashMap<>();
-			faceEntry.put("faceId", face.name);
-			faceEntry.put("vertices", points);
-			facesData.add(faceEntry);
-		}
+    @Parameters(index = "3", description = "Maximum sum of vertices weight")
+    private int maxSumVerticesWeight;
 
-		try (FileWriter writer = new FileWriter(filename)) {
-			gson.toJson(facesData, writer);
-		}
-	}
+    @Parameters(index = "4", description = "Maximum region radius in meters")
+    private int maxRegionRadiusMeters;
 
-	public static void main(String[] args) throws RuntimeException, IOException {
+    @Parameters(index = "5", description = "Output directory name")
+    private String pathToResultDirectory;
 
-		if (args.length < 6) {
-			throw new RuntimeException("Use : <algorithm-name> <path-to-file> <path-to-points-file> <max-sum-vertices-weight> <max-region-radius-meters> <output-directory-name> [param]");
-		}
+    @Option(names = {"-p", "--param"}, defaultValue = "0.25",
+            description = "Partition parameter (default: ${DEFAULT-VALUE})")
+    private double partitionParameter;
 
-		String algorithmName = args[0];
-		String pathToFile = args[1];
-		String pathToPointsFile = args[2];
+    @Override
+    public void run() throws RuntimeException {
+        BalancedPartitioning partitioning = Algorithm.getBalancedPartitioningByAlgorithmName(
+                algorithmName,
+                partitionParameter
+        );
 
-		String resourcesDirectory = "src/main/resources/".replace('/', File.separatorChar);
-		String outputDirectory = "src/main/output/".replace('/', File.separatorChar);
+        Graph<Vertex> graph = new Graph<>();
+        Graph<Vertex> geodeticGraph = new Graph<>();
 
-		BalancedPartitioning partitioning;
+        try {
+            GraphReader geodeticgr = new GraphReader();
+            geodeticgr.readGraphFromFile(geodeticGraph, RESOURCES_DIRECTORY + pathToFile, false);
+        } catch (Exception e) {
+            throw new RuntimeException("Can't read graph from file: " + e.getMessage());
+        }
 
-		if (algorithmName.equals("IF")) {
-			if (args.length < 7) {
-				partitioning = new BalancedPartitioning(new InertialFlowPartitioning());
-			} else {
-				double partitionParameter;
-				try {
-					partitionParameter = Double.parseDouble(args[6]);
-				} catch (NumberFormatException e) {
-					throw new RuntimeException("Can't parse partition parameter");
-				}
-				partitioning = new BalancedPartitioning(new InertialFlowPartitioning(partitionParameter));
-			}
-		} else if (algorithmName.equals("BUP")) {
-			if (args.length < 7) {
-				partitioning = new BalancedPartitioning(new BubblePartitioning());
-			} else {
-				System.out.println("check param");
-				partitioning = new BalancedPartitioning(new BubblePartitioning());
-			}
-		} else if (algorithmName.equals("BUS")) {
-			if (args.length < 7) {
-				partitioning = new BalancedPartitioning(new BubblePartitioningSequentially());
-			} else {
-				System.out.println("check param");
-				partitioning = new BalancedPartitioning(new BubblePartitioningSequentially());
-			}
-		} else {
-			throw new RuntimeException("No such partition algorithm");
-		}
+        CoordinateConversion cc = new CoordinateConversion(geodeticGraph.getEdges().keySet());
+        try {
+            GraphReader gr = new GraphReader(cc);
+            gr.readGraphFromFile(graph, RESOURCES_DIRECTORY + pathToFile, true);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException("Can't read graph from file: " + e.getMessage());
+        }
 
-		Graph<Vertex> graph = new Graph<>();
-		Graph<Vertex> geodeticGraph = new Graph<>();
+        graph = graph.getLargestConnectedComponent();
 
-		try {
-			GraphReader geodeticgr = new GraphReader();
-			geodeticgr.readGraphFromFile(geodeticGraph, resourcesDirectory + pathToFile, false);
-		} catch (Exception e) {
-			throw new RuntimeException("Can't read graph from file: " + e.getMessage());
-		}
+        GraphPreparation preparation = new GraphPreparation(false, false);
 
-		CoordinateConversion cc = new CoordinateConversion(geodeticGraph.getEdges().keySet());
-		try {
-			GraphReader gr = new GraphReader(cc);
-			gr.readGraphFromFile(graph, resourcesDirectory + pathToFile, true);
-		} catch (FileNotFoundException e) {
-			throw new RuntimeException("Can't read graph from file: " + e.getMessage());
-		}
+        Graph<VertexOfDualGraph> preparedGraph;
+        try {
+            preparedGraph = preparation.prepareGraph(graph, 1);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
-		int maxSumVerticesWeight;
-		try {
-			maxSumVerticesWeight = Integer.parseInt(args[3]);
-		} catch (NumberFormatException e) {
-			throw new RuntimeException("Can't parse max sum vertices weight");
-		}
+        for (VertexOfDualGraph v : preparedGraph.verticesArray()) {
+            Assertions.assertNotNull(v.getVerticesOfFace());
+        }
 
-		int maxRegionRadiusMeters;
-		try {
-			maxRegionRadiusMeters = Integer.parseInt(args[4]);
-		} catch (NumberFormatException e) {
-			throw new RuntimeException("Can't parse max region radius");
-		}
+        List<Vertex> weightedVertices;
 
-		graph = graph.getLargestConnectedComponent();
+        PointsReader pr = new PointsReader(cc);
+        weightedVertices = pr.readWeightedPoints(RESOURCES_DIRECTORY + pathToPointsFile, true);
 
-		GraphPreparation preparation = new GraphPreparation(false, false);
+        LocalizationPoints lp = new LocalizationPoints(new HashSet<>(weightedVertices));
+        HashMap<VertexOfDualGraph, ArrayList<Vertex>> faceToVertices = lp.findFacesForPoints(preparedGraph);
 
-		Graph<VertexOfDualGraph> preparedGraph = preparation.prepareGraph(graph, 1, outputDirectory, cc);
-        GraphWriter grWr = new GraphWriter(cc);
-        grWr.printGraphToFile(graph, outputDirectory, "my_graph.txt", true);
+        for (VertexOfDualGraph v: preparedGraph.verticesArray()) {
+            v.setWeight(0);
+            if (faceToVertices.containsKey(v)) {
+                v.setWeight(faceToVertices.get(v).stream().mapToDouble(Vertex::getWeight).sum());
+            }
+        }
 
-		for (VertexOfDualGraph v : preparedGraph.verticesArray()) {
-			Assertions.assertNotNull(v.getVerticesOfFace());
-		}
+        partitioning.bp.extractBigVertices(preparedGraph, maxSumVerticesWeight);
 
-		List<Vertex> weightedVertices;
+        GraphWriter gw = new GraphWriter(cc);
 
-		try {
-			PointsReader pr = new PointsReader(cc);
-			weightedVertices = pr.readWeightedPoints(resourcesDirectory + pathToPointsFile, true);
-		} catch (FileNotFoundException e) {
-			throw new RuntimeException("Can't read points from file: " + e.getMessage());
-		}
+        long startTime = System.currentTimeMillis();
 
-		LocalizationPoints lp = new LocalizationPoints(new HashSet<>(weightedVertices));
-		HashMap<VertexOfDualGraph, ArrayList<Vertex>> faceToVertices = lp.findFacesForPoints(preparedGraph);
-		try {
-			saveFacesToJson(faceToVertices, "faces.json", true, cc);
-		} catch (Exception ignored) {
-		}
+        HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph = preparation.getComparisonForDualGraph();
+        List<Set<VertexOfDualGraph>> partitionResultForFaces = partitioning.partition(graph, comparisonForDualGraph, preparedGraph, maxSumVerticesWeight);
+        for (Set<VertexOfDualGraph> hs : partitionResultForFaces) {
+            for (VertexOfDualGraph v : hs) {
+                Assertions.assertNotNull(v.getVerticesOfFace());
+            }
+        }
+        HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber = partitioning.dualVertexToPartNumber();
+        for (Set<VertexOfDualGraph> hs : partitionResultForFaces) {
+            for (VertexOfDualGraph v : hs) {
+                Assertions.assertNotNull(v.getVerticesOfFace());
+            }
+        }
+        Graph<PartitionGraphVertex> partitionGraph = PartitionGraphVertex.buildPartitionGraph(preparedGraph, partitionResultForFaces, dualVertexToPartNumber);
+        Balancer balancer = new Balancer(partitionGraph, preparedGraph, graph, maxSumVerticesWeight, comparisonForDualGraph, OUTPUT_DIRECTORY + pathToResultDirectory);
+        partitionResultForFaces = balancer.rebalancing();
+        HashMap<VertexOfDualGraph, Integer> newDualVertexToPartNumber = new HashMap<>();
+        for (int i = 0; i < partitionResultForFaces.size(); i++) {
+            for (VertexOfDualGraph vertex : partitionResultForFaces.get(i)) {
+                newDualVertexToPartNumber.put(vertex, i);
+            }
+        }
+        partitionGraph = PartitionGraphVertex.buildPartitionGraph(preparedGraph, partitionResultForFaces, newDualVertexToPartNumber);
+        try {
+            gw.printGraphToFile(partitionGraph,  OUTPUT_DIRECTORY + pathToResultDirectory, "part_graph.txt", true);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        double partitioningTime = ((double)(System.currentTimeMillis() - startTime)) / 1000.0;
+        logger.info("Partitioning time: {} seconds", partitioningTime);
 
-		for (VertexOfDualGraph v: preparedGraph.verticesArray()) {
-			v.setWeight(0);
-			if (faceToVertices.containsKey(v)) {
-				v.setWeight(faceToVertices.get(v).stream().mapToDouble(Vertex::getWeight).sum());
-			}
-		}
+        logger.info("Partition size: {}", partitionResultForFaces.size());
 
-		partitioning.bp.extractBigVertices(preparedGraph, maxSumVerticesWeight);
-    
-		GraphWriter gw = new GraphWriter(cc);
+        ArrayList<HashSet<Vertex>> partitionResult = new ArrayList<>();
+        List<Map.Entry<List<Vertex>, Double>> bounds = new ArrayList<>();
 
-		String pathToResultDirectory = args[5];
-        graph.buildEdgeToDualVertexMap(preparedGraph);
+        int countPartsWithNonFittingRadius = 0;
+        for (int i = 0; i < partitionResultForFaces.size(); i++) {
+            partitionResult.add(new HashSet<>());
+            for (VertexOfDualGraph face : partitionResultForFaces.get(i)) {
+                partitionResult.get(i).addAll(comparisonForDualGraph.get(face).getVerticesOfFace());
+            }
+            if (BoundSearcher.findRadius(new ArrayList<>(partitionResult.get(i))) > maxRegionRadiusMeters) {
+                countPartsWithNonFittingRadius++;
+            }
+            bounds.add(Map.entry(BoundSearcher.findBound(graph, partitionResultForFaces.get(i), comparisonForDualGraph), partitionResultForFaces.get(i).stream().mapToDouble(Vertex::getWeight).sum()));
+        }
 
-		long startTime = System.currentTimeMillis();
-		
-		HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph = preparation.getComparisonForDualGraph();
-		ArrayList<HashSet<VertexOfDualGraph>> partitionResultForFaces = partitioning.partition(graph, comparisonForDualGraph, preparedGraph, maxSumVerticesWeight);
-		for (HashSet<VertexOfDualGraph> hs : partitionResultForFaces) {
-			for (VertexOfDualGraph v : hs) {
-				Assertions.assertNotNull(v.getVerticesOfFace());
-			}
-		}
-		HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber = partitioning.dualVertexToPartNumber();
-		for (HashSet<VertexOfDualGraph> hs : partitionResultForFaces) {
-			for (VertexOfDualGraph v : hs) {
-				Assertions.assertNotNull(v.getVerticesOfFace());
-			}
-		}
-		Graph<PartitionGraphVertex> partitionGraph = PartitionGraphVertex.buildPartitionGraph(preparedGraph, partitionResultForFaces, dualVertexToPartNumber);
-		Balancer balancer = new Balancer(partitionGraph, preparedGraph, graph, maxSumVerticesWeight, comparisonForDualGraph, outputDirectory + pathToResultDirectory);
-		partitionResultForFaces = balancer.rebalancing();
-		HashMap<VertexOfDualGraph, Integer> newDualVertexToPartNumber = new HashMap<>();
-		for (int i = 0; i < partitionResultForFaces.size(); i++) {
-			for (VertexOfDualGraph vertex : partitionResultForFaces.get(i)) {
-				newDualVertexToPartNumber.put(vertex, i);
-			}
-		}
-		partitionGraph = PartitionGraphVertex.buildPartitionGraph(preparedGraph, partitionResultForFaces, newDualVertexToPartNumber);
-		gw.printGraphToFile(partitionGraph,  outputDirectory + pathToResultDirectory, "part_graph.txt", true);
-		double partitioningTime = ((double)(System.currentTimeMillis() - startTime)) / 1000.0;
+        logger.info("Number of parts: {}, number of parts with radius > max: {}", partitionResultForFaces.size(), countPartsWithNonFittingRadius);
 
-		System.out.println("Partition size: " + partitionResultForFaces.size());
+        List<Point> centers = BalancedPartitioning.calculatePartCenters(partitionResultForFaces);
 
-		ArrayList<HashSet<Vertex>> partitionResult = new ArrayList<>();
-		List<Map.Entry<List<Vertex>, Double>> bounds = new ArrayList<>();
+        try {
+            gw.printDualGraphWithWeightsToFile(preparedGraph, OUTPUT_DIRECTORY + pathToResultDirectory, "dual.txt", true);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
-		int countPartsWithNonFittingRadius = 0;
-		for (int i = 0; i < partitionResultForFaces.size(); i++) {
-			partitionResult.add(new HashSet<>());
-			for (VertexOfDualGraph face : partitionResultForFaces.get(i)) {
-				partitionResult.get(i).addAll(comparisonForDualGraph.get(face).getVerticesOfFace());
-			}
-			if (BoundSearcher.findRadius(new ArrayList<>(partitionResult.get(i))) > maxRegionRadiusMeters) {
-				countPartsWithNonFittingRadius++;
-			}
-			bounds.add(Map.entry(BoundSearcher.findBound(graph, partitionResultForFaces.get(i), comparisonForDualGraph), partitionResultForFaces.get(i).stream().mapToDouble(Vertex::getWeight).sum()));
-		}
+        Runtime runtime = Runtime.getRuntime();
+        runtime.gc();
+        long usedMemory = (runtime.totalMemory() - runtime.freeMemory()) / 1024 / 1024; // convert to MB
+        logger.info("Without GC, used memory: {} MB", usedMemory);
+        PartitionWriter pw = new PartitionWriter(cc);
+        pw.savePartitionToDirectory(partitioning, partitioning.bp,OUTPUT_DIRECTORY + pathToResultDirectory, partitionResultForFaces, true, partitioningTime, usedMemory);
+        try {
+            pw.printBound(bounds, OUTPUT_DIRECTORY + pathToResultDirectory, true, cc.referencePoint);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        pw.printPartCenters(centers, OUTPUT_DIRECTORY + pathToResultDirectory, "centers.txt", true, cc.referencePoint);
+    }
 
-		System.out.println("Number of parts: " + partitionResultForFaces.size() + ", number of parts with radius > max: " + countPartsWithNonFittingRadius);
-
-		List<Point> centers = BalancedPartitioning.calculatePartCenters(partitionResultForFaces);
-
-		gw.printDualGraphWithWeightsToFile(preparedGraph, outputDirectory + pathToResultDirectory, "dual.txt", true);
-
-		Runtime runtime = Runtime.getRuntime();
-		runtime.gc();
-		long usedMemory = runtime.totalMemory() - runtime.freeMemory();
-		System.out.println("Without GC, used memory: " + (usedMemory / 1024 / 1024) + " MB");
-		PartitionWriter pw = new PartitionWriter(cc);
-		pw.savePartitionToDirectory(partitioning, partitioning.bp,outputDirectory + pathToResultDirectory, partitionResultForFaces, true, partitioningTime, cc.referencePoint, usedMemory / 1024 / 1024);
-		pw.printBound(bounds, outputDirectory + pathToResultDirectory, true, cc.referencePoint);
-		pw.printPartCenters(centers, outputDirectory + pathToResultDirectory, "centers.txt", true, cc.referencePoint);
-	}
-
+    public static void main(String[] args) {
+        int exitCode = new CommandLine(new Main()).execute(args);
+        System.exit(exitCode);
+    }
 }

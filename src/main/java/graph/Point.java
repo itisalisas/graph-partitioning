@@ -65,20 +65,13 @@ public class Point {
 			return false;
 		} 
 		if ((a.x - this.x) == 0) {
-			if ((a.y - this.y) == 0 || (b.x - this.x) == 0) {
-				return true;
-			} else {
-				return false;
-			}
+            return (a.y - this.y) == 0 || (b.x - this.x) == 0;
 		}
 		if (a.x - b.x == 0) {
 			return false;
 		}
-		if ((this.y - a.y) * (b.x - a.x) == (b.y - a.y) * (this.x - a.x)) {
-			return true;
-		}
-		return false;
-	}
+        return (this.y - a.y) * (b.x - a.x) == (b.y - a.y) * (this.x - a.x);
+    }
 	
 	/**
 	 * @return is point in rectangle
@@ -95,46 +88,40 @@ public class Point {
 	}
 	
 	/**
-	 * @param <T extends Point>
 	 * @return vertex is in polygon
 	 */
 	public <T extends Point> boolean inFaceGeom(ArrayList<T> vertexIn) {
 		Point begin = vertexIn.get(vertexIn.size() - 1);
 		int count = 0;
-		for (int i = 0; i < vertexIn.size(); i++) {
-			if (this.inSegment(begin, vertexIn.get(i))) {
-				begin = vertexIn.get(i);
-				return true;
-			}
-			if (begin.y == vertexIn.get(i).y) {
-				begin = vertexIn.get(i);
-				continue;
-			}
-			if (this.y == Math.max(begin.y, vertexIn.get(i).y) 
-					&& this.x < Math.min(begin.x, vertexIn.get(i).x)) {
-				count++;
-				begin = vertexIn.get(i);
-				continue;
-			}
-			if (this.y == Math.min(begin.y, vertexIn.get(i).y)) {
-				begin = vertexIn.get(i);
-				continue;
-			}
-			if ((this.y - begin.y) * (this.y - vertexIn.get(i).y) < 0 &&
-					this.x < begin.x + (this.y - begin.y) * (vertexIn.get(i).x - begin.x) / (vertexIn.get(i).y - begin.y)) {
-				count++;
-				begin = vertexIn.get(i);
-				continue;
-			}
-			
-			begin = vertexIn.get(i);
-		}
+        for (T t : vertexIn) {
+            if (this.inSegment(begin, t)) {
+                return true;
+            }
+            if (begin.y == t.y) {
+                begin = t;
+                continue;
+            }
+            if (this.y == Math.max(begin.y, t.y)
+                    && this.x < Math.min(begin.x, t.x)) {
+                count++;
+                begin = t;
+                continue;
+            }
+            if (this.y == Math.min(begin.y, t.y)) {
+                begin = t;
+                continue;
+            }
+            if ((this.y - begin.y) * (this.y - t.y) < 0 &&
+                    this.x < begin.x + (this.y - begin.y) * (t.x - begin.x) / (t.y - begin.y)) {
+                count++;
+                begin = t;
+                continue;
+            }
+
+            begin = t;
+        }
 		//System.out.println(count);
-		if (count % 2 == 0) {
-			return false;
-		} else {
-			return true;
-		}
+        return count % 2 != 0;
 	}
 
 	public void printPointToFile(File outFile) throws IOException {

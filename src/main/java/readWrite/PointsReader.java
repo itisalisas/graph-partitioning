@@ -7,21 +7,20 @@ import java.util.List;
 import java.util.Scanner;
 
 import graph.Vertex;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class PointsReader {
 
-    public CoordinateConversion coordConver;
-
-	public PointsReader() {
-
-	}
+    private static final Logger logger = LoggerFactory.getLogger(PointsReader.class);
+    public CoordinateConversion coordinateConversion;
 	
-	public PointsReader(CoordinateConversion coordConver) {
-		this.coordConver = coordConver;
+	public PointsReader(CoordinateConversion coordinateConversion) {
+		this.coordinateConversion = coordinateConversion;
 	}
 
 	// TODO - fix order x - y
-	public Vertex readVertex(Scanner sc, boolean geodetic, boolean first) {
+	public Vertex readVertex(Scanner sc, boolean geodetic) {
 		long name = sc.nextLong();
 		String xStr = sc.next().replace(',', '.');
 		String yStr = sc.next().replace(',', '.');
@@ -32,18 +31,21 @@ public class PointsReader {
 		double vertexWeight = length * width / 10.0;
 		Vertex ans = new Vertex(name, x, y, vertexWeight);
 		if (geodetic) {
-			coordConver.toEuclidean(ans);
+            coordinateConversion.toEuclidean(ans);
 		}
 		return ans;
 	}
 
-	public List<Vertex> readWeightedPoints(String inFilename, boolean geodetic) throws FileNotFoundException {
+	public List<Vertex> readWeightedPoints(String inFilename, boolean geodetic) {
 		List<Vertex> vertices = new ArrayList<>();
         try (Scanner sc = new Scanner(new File(inFilename))) {
             int n = sc.nextInt();
             for (int i = 0; i < n && sc.hasNext(); i++) {
-                vertices.add(readVertex(sc, geodetic, i == 0));
+                vertices.add(readVertex(sc, geodetic));
             }
+        } catch (FileNotFoundException e) {
+            logger.error("File for weighted points not found: {}", inFilename);
+            throw new RuntimeException(e);
         }
 		return vertices;
 	}

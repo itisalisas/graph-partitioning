@@ -11,9 +11,12 @@ import graph.Edge;
 import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
-import partitioning.models.FlowResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import partitioning.entities.FlowResult;
 
 public class MaxFlowDinic implements MaxFlow {
+    private static final Logger logger = LoggerFactory.getLogger(MaxFlowDinic.class);
     Graph<VertexOfDualGraph> graph;
     HashMap<VertexOfDualGraph, Integer> lastNeighbourIndex;
     VertexOfDualGraph source;
@@ -48,7 +51,8 @@ public class MaxFlowDinic implements MaxFlow {
                 flow += pushed;
             }
         }
-        System.out.println("Number of bfs iterations in dinic: " + countIterations + ", vertices: " + graph.verticesNumber() + ", edges: " + graph.edgesNumber());
+        logger.info("Number of bfs iterations in dinic: {}, vertices: {}, edges: {}", 
+                countIterations, graph.verticesNumber(), graph.edgesNumber());
         return new FlowResult(flow, graph, source, sink);
     }
 

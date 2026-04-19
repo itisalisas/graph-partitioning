@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -79,17 +80,17 @@ public class BoundSearcher {
     }
 
     public static List<Vertex> findBound(Graph<Vertex> graph,
-                                         HashSet<VertexOfDualGraph> part,
-                                         HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph) {
+                                         Set<VertexOfDualGraph> part,
+                                         Map<Vertex, VertexOfDualGraph> comparisonForDualGraph) {
 
         final int partSize = part.size();
         final int estimatedVertices = partSize * 4;
 
         List<VertexOfDualGraph> orderedFaces = new ArrayList<>(part);
         List<List<Vertex>> verticesByFaces = new ArrayList<>(partSize);
-        List<HashMap<Vertex, Integer>> vertexPositionInFace = new ArrayList<>(partSize);
-        HashMap<Vertex, Integer> numberOfFaces = new HashMap<>(estimatedVertices);
-        HashMap<Long, Integer> edgeToFaceIndex = new HashMap<>(estimatedVertices * 2);
+        List<Map<Vertex, Integer>> vertexPositionInFace = new ArrayList<>(partSize);
+        Map<Vertex, Integer> numberOfFaces = new HashMap<>(estimatedVertices);
+        Map<Long, Integer> edgeToFaceIndex = new HashMap<>(estimatedVertices * 2);
         Set<Vertex> allVertices = new HashSet<>(estimatedVertices);
 
         for (int i = 0; i < partSize; i++) {
@@ -113,7 +114,7 @@ public class BoundSearcher {
         Graph<Vertex> partSubgraph = graph.createSubgraphFromFaces(verticesByFaces).makeUndirectedGraph();
         //Assertions.assertTrue(partSubgraph.isConnected());
 
-        HashMap<Vertex, TreeSet<EdgeOfGraph<Vertex>>> arrangedEdges = partSubgraph.arrangeByAngle();
+        Map<Vertex, TreeSet<EdgeOfGraph<Vertex>>> arrangedEdges = partSubgraph.arrangeByAngle();
 
         Vertex start = findLeftmostVertex(allVertices);
         List<Vertex> bound = new ArrayList<>(allVertices.size());
@@ -121,8 +122,8 @@ public class BoundSearcher {
 
         EdgeOfGraph<Vertex> startEdge = findMaxEdgeLessThanPiOver2(arrangedEdges.get(start));
 
-        Assertions.assertTrue((0 <= startEdge.getCorner() && startEdge.getCorner() < Math.PI / 2.0) ||
-                (3.0 * Math.PI / 2.0) <= startEdge.getCorner() && startEdge.getCorner() < 2 * Math.PI);
+        Assertions.assertTrue((0 <= startEdge.getAngle() && startEdge.getAngle() < Math.PI / 2.0) ||
+                (3.0 * Math.PI / 2.0) <= startEdge.getAngle() && startEdge.getAngle() < 2 * Math.PI);
 
         EdgeOfGraph<Vertex> prevEdge = new EdgeOfGraph<>(startEdge.end, startEdge.begin, 0);
         Vertex current = startEdge.end;
@@ -148,8 +149,6 @@ public class BoundSearcher {
             current = next;
         }
 
-        Assertions.assertTrue(bound.size() >= 3);
-
         return bound;
     }
 
@@ -159,7 +158,7 @@ public class BoundSearcher {
     }
 
     private static int findCommonFaceFast(Vertex v1, Vertex v2,
-                                          HashMap<Long, Integer> edgeToFaceIndex) {
+                                          Map<Long, Integer> edgeToFaceIndex) {
         long key = computeEdgeKey(v1, v2);
         Integer faceIndex = edgeToFaceIndex.get(key);
 
@@ -200,7 +199,7 @@ public class BoundSearcher {
         double bestAngle = -1;
 
         for (EdgeOfGraph<Vertex> edge : sortedEdges) {
-            double angle = edge.getCorner();
+            double angle = edge.getAngle();
 
             if (angle < Math.PI / 2 && angle > bestAngle) {
                 bestAngle = angle;

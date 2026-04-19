@@ -6,23 +6,31 @@ import java.util.stream.Collectors;
 import graph.*;
 import jakarta.validation.constraints.NotNull;
 import org.junit.jupiter.api.Assertions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import partitioning.BalancedPartitioning;
 import partitioning.algorithms.InertialFlowPartitioning;
 
 public class Balancer {
+    private static final Logger logger = LoggerFactory.getLogger(Balancer.class);
 
     Graph<PartitionGraphVertex> partitionGraph;
     Graph<VertexOfDualGraph> dualGraph;
     Graph<Vertex> startGraph;
-    HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph;
-    HashSet<HashSet<VertexOfDualGraph>> wasMerged = new HashSet<>();
+    Map<Vertex, VertexOfDualGraph> comparisonForDualGraph;
+    Set<Set<VertexOfDualGraph>> wasMerged = new HashSet<>();
     int maxWeight;
     String pathToResultDirectory;
 
-    public Balancer() {}
-
-    public Balancer(Graph<PartitionGraphVertex> partitionGraph, Graph<VertexOfDualGraph> dualGraph, Graph<Vertex> startGraph, int maxWeight, HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph, String pathToResultDirectory) {
+    public Balancer(
+            Graph<PartitionGraphVertex> partitionGraph,
+            Graph<VertexOfDualGraph> dualGraph,
+            Graph<Vertex> startGraph,
+            int maxWeight,
+            HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph,
+            String pathToResultDirectory
+    ) {
         this.partitionGraph = partitionGraph;
         this.dualGraph = dualGraph;
         this.startGraph = startGraph.makeUndirectedGraph();
@@ -45,34 +53,37 @@ public class Balancer {
 
             PartitionGraphVertex nonModifiedBestNeighbor = null;
             PartitionGraphVertex bestNeighbor = null;
-            List<HashSet<VertexOfDualGraph>> bestPartition = null;
-            HashSet<VertexOfDualGraph> bestVerticesSet = null;
+            List<Set<VertexOfDualGraph>> bestPartition = null;
+            Set<VertexOfDualGraph> bestVerticesSet = null;
             double bestDiff = Double.MAX_VALUE;
             double bestMin = smallestVertexWeight;
 
             for (PartitionGraphVertex neighbor: neighbors) {
                 PartitionGraphVertex biggestNeighbor = neighbor.copy();
 
-                HashSet<VertexOfDualGraph> balancingVerticesSet = new HashSet<>();
+                Set<VertexOfDualGraph> balancingVerticesSet = new HashSet<>();
                 balancingVerticesSet.addAll(smallestVertex.vertices);
                 balancingVerticesSet.addAll(biggestNeighbor.vertices);
 
                 Graph<VertexOfDualGraph> regionsSubgraph = dualGraph.createSubgraph(balancingVerticesSet);
-                HashMap<HashSet<VertexOfDualGraph>, Double> cutBefore = calculateCutWeights(regionsSubgraph, List.of(new HashSet<>(smallestVertex.vertices), new HashSet<>(biggestNeighbor.vertices)));
+                Map<Set<VertexOfDualGraph>, Double> cutBefore = calculateCutWeights(regionsSubgraph, List.of(new HashSet<>(smallestVertex.vertices), new HashSet<>(biggestNeighbor.vertices)));
 
                 Assertions.assertEquals(balancingVerticesSet.size(), regionsSubgraph.verticesNumber());
+                if (!regionsSubgraph.isConnected()) {
+                    continue; // FIXME
+                }
                 Assertions.assertTrue(regionsSubgraph.isConnected());
                 double coefficient = 1 - (double) maxWeight / (balancingVerticesSet.stream().mapToDouble(Vertex::getWeight).sum());
-                BalancedPartitioning bp = new BalancedPartitioning(new InertialFlowPartitioning(coefficient));
-                ArrayList<HashSet<VertexOfDualGraph>> newPartition = bp.partition(startGraph, comparisonForDualGraph, regionsSubgraph, maxWeight);
+                BalancedPartitioning bp = new BalancedPartitioning(new InertialFlowPartitioning(coefficient, true));
+                List<Set<VertexOfDualGraph>> newPartition = bp.partition(startGraph, comparisonForDualGraph, regionsSubgraph, maxWeight);
                 if (newPartition.size() > 2) {
                     continue;
                 }
 
                 if (newPartition.size() == 1) {
-                    HashSet<VertexOfDualGraph> mergedPart = newPartition.get(0);
+                    Set<VertexOfDualGraph> mergedPart = newPartition.get(0);
 
-                    ArrayList<HashSet<VertexOfDualGraph>> newParts = new ArrayList<>();
+                    List<Set<VertexOfDualGraph>> newParts = new ArrayList<>();
                     for (PartitionGraphVertex v : partitionGraph.verticesArray()) {
                         if (v == sm || v == neighbor)
                             continue;
@@ -82,7 +93,7 @@ public class Balancer {
 
                     Assertions.assertEquals(partitionGraph.verticesNumber() - 1, newParts.size());
 
-                    HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber = new HashMap<>();
+                    Map<VertexOfDualGraph, Integer> dualVertexToPartNumber = new HashMap<>();
                     for (int i = 0; i < newParts.size(); i++) {
                         for (VertexOfDualGraph vertex : newParts.get(i)) {
                             dualVertexToPartNumber.put(vertex, i);
@@ -108,7 +119,7 @@ public class Balancer {
                 double maxNew = Math.max(w1, w2);
                 double diff = maxNew - minNew;
 
-                HashMap<HashSet<VertexOfDualGraph>, Double> cutAfter = calculateCutWeights(regionsSubgraph, newPartition);
+                Map<Set<VertexOfDualGraph>, Double> cutAfter = calculateCutWeights(regionsSubgraph, newPartition);
                 if (cutBefore.values().stream().mapToDouble(v -> v).sum() * ((sm.getWeight() < 0.5 * maxWeight && minNew >= 0.5 * maxWeight) ? 1.5 : 1) < cutAfter.values().stream().mapToDouble(v -> v).sum()) {
                     continue;
                 }
@@ -136,7 +147,7 @@ public class Balancer {
 
                 bestNeighbor.changeVertices(new ArrayList<>(bestPartition.get(1)));
 
-                ArrayList<HashSet<VertexOfDualGraph>> newParts = new ArrayList<>();
+                List<Set<VertexOfDualGraph>> newParts = new ArrayList<>();
                 for (PartitionGraphVertex v : partitionGraph.verticesArray()) {
                     if (v == sm || v == nonModifiedBestNeighbor)
                         continue;
@@ -166,7 +177,7 @@ public class Balancer {
         return false;
     }
 
-    public ArrayList<HashSet<VertexOfDualGraph>> rebalancing() {
+    public List<Set<VertexOfDualGraph>> rebalancing() {
         while (removeSmallestRegion()) {
             // сontinue removing until no more regions can be removed
         }
@@ -182,7 +193,10 @@ public class Balancer {
         for (PartitionGraphVertex vertex : partitionGraph.verticesArray()) {
             Assertions.assertTrue(vertex.getWeight() <= maxWeight);
         }
-        return partitionGraph.verticesArray().stream().map(v -> new HashSet<VertexOfDualGraph>(v.vertices)).collect(Collectors.toCollection(ArrayList::new));
+        return partitionGraph.verticesArray()
+                .stream()
+                .map(v -> new HashSet<>(v.vertices))
+                .collect(Collectors.toList());
     }
 
     private double calculateVariance() {
@@ -206,7 +220,7 @@ public class Balancer {
         List<PartitionGraphVertex> goodNeighbors = new ArrayList<>();
         List<PartitionGraphVertex> neighbors = partitionGraph.sortNeighbors(vertex);
         for (PartitionGraphVertex currentNeighbor : neighbors) {
-            HashSet<VertexOfDualGraph> mergeSet = new HashSet<>();
+            Set<VertexOfDualGraph> mergeSet = new HashSet<>();
             mergeSet.addAll(currentNeighbor.vertices);
             mergeSet.addAll(vertex.vertices);
             if (!wasMerged.contains(mergeSet)) {
@@ -232,7 +246,7 @@ public class Balancer {
             }
 
             List<VertexOfDualGraph> verticesToRedistribute = new ArrayList<>(smallestVertex.vertices);
-            HashSet<VertexOfDualGraph> wasRedistributed = new HashSet<>();
+            Set<VertexOfDualGraph> wasRedistributed = new HashSet<>();
             Map<VertexOfDualGraph, VertexOfDualGraph> vertexToBestNeighbor = new HashMap<>();
 
             PriorityQueue<Comp> priorityQueue = new PriorityQueue<>(
@@ -276,7 +290,7 @@ public class Balancer {
                 continue;
             }
             
-            ArrayList<HashSet<VertexOfDualGraph>> newParts = new ArrayList<>();
+            List<Set<VertexOfDualGraph>> newParts = new ArrayList<>();
             for (PartitionGraphVertex v : partitionGraph.verticesArray()) {
                 if (v == sm) continue;
                 if (!partitionGraph.sortNeighbors(sm).contains(v)) {
@@ -290,7 +304,7 @@ public class Balancer {
             }
 
 
-            HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber = new HashMap<>();
+            Map<VertexOfDualGraph, Integer> dualVertexToPartNumber = new HashMap<>();
             for (int i = 0; i < newParts.size(); i++) {
                 for (VertexOfDualGraph vertex : newParts.get(i)) {
                     dualVertexToPartNumber.put(vertex, i);
@@ -338,15 +352,15 @@ public class Balancer {
         }
     }
 
-    private HashMap<HashSet<VertexOfDualGraph>, Double> calculateCutWeights(@NotNull Graph<VertexOfDualGraph> graph, List<HashSet<VertexOfDualGraph>> partitions) {
-        HashMap<HashSet<VertexOfDualGraph>, Double> cutEdgesMap = new HashMap<>();
+    private Map<Set<VertexOfDualGraph>, Double> calculateCutWeights(@NotNull Graph<VertexOfDualGraph> graph, List<Set<VertexOfDualGraph>> partitions) {
+        Map<Set<VertexOfDualGraph>, Double> cutEdgesMap = new HashMap<>();
         if (graph == null) {
-            System.out.println("graph - null1");
+            logger.warn("graph is null (check 1)");
         }
-        for (HashSet<VertexOfDualGraph> partition : partitions) {
+        for (Set<VertexOfDualGraph> partition : partitions) {
             double cutEdgesWeightSum = 0;
             if (graph == null) {
-                System.out.println("graph - null2");
+                logger.warn("graph is null (check 2)");
             }
             for (EdgeOfGraph<VertexOfDualGraph> edge : graph.edgesArray()) {
                 VertexOfDualGraph u = edge.begin;

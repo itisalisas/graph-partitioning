@@ -50,7 +50,7 @@ if withRivers:
         water_graph = osmnx.graph_from_point((center_lat, center_lon), dist=d, truncate_by_edge=True, simplify=False, retain_all=True, custom_filter=['[waterway=river]','[waterway=canal]'])
 
         for u, v, data in water_graph.edges(data=True):
-            data['length'] = 0
+            data['length'] = 0.1
             data['water'] = True
     except ValueError:
         water_graph = nx.MultiDiGraph()

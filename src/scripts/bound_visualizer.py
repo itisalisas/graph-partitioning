@@ -1,3 +1,4 @@
+# TODO причесать, ридми как запускать, аргументы
 import folium
 import pandas as pd
 import os

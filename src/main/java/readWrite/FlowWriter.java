@@ -5,18 +5,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import graph.BoundSearcher;
 import graph.Edge;
 import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
-import partitioning.models.DijkstraResult;
-import partitioning.models.NeighborSplit;
+import partitioning.entities.DijkstraResult;
+import partitioning.entities.NeighborSplit;
 
 public class FlowWriter {
+    private static final Logger logger = LoggerFactory.getLogger(FlowWriter.class);
 
     public static void dumpVisualizationData(List<Vertex> externalBoundary, List<Vertex> sourceBoundary,
                                                   List<Vertex> sinkBoundary, List<Vertex> stPath, List<Vertex> bestPath,
-                                                  Map<Long, NeighborSplit> neighborSplits,
                                                   HashSet<VertexOfDualGraph> sourceNeighbors,
                                                   HashSet<VertexOfDualGraph> sinkNeighbors,
                                                   double size,
@@ -44,14 +47,12 @@ public class FlowWriter {
                 writeVertexListToFile(outputDir + "best_path.txt", bestPath, coordConversion);
             }
 
-            writeNeighborSplitsToFile(outputDir + "neighbor_splits.txt", neighborSplits, coordConversion);
             writeDualGraph(outputDir + "dual_graph.txt", dualGraph, source, sink, coordConversion);
-            writeDualGraphWithFlow(outputDir + "dual_graph_flow.txt", dualGraph, source, sink, coordConversion);
             writePrimalGraph(outputDir + "primal_graph.txt", graph, sourceNeighbors, sinkNeighbors, coordConversion);
 
-            System.out.println("Visualization data saved to " + outputDir);
+            logger.info("Visualization data saved to {}", outputDir);
         } catch (Exception e) {
-            System.err.println("Error saving visualization data: " + e.getMessage());
+            logger.error("Error saving visualization data: {}", e.getMessage());
         }
     }
 
@@ -64,41 +65,6 @@ public class FlowWriter {
         }
     }
 
-    private static void writeNeighborSplitsToFile(String filename, Map<Long, NeighborSplit> neighborSplits, CoordinateConversion coordConversion) throws java.io.IOException {
-        System.out.println("Writing neighbor splits, total: " + neighborSplits.size());
-        try (java.io.FileWriter writer = new java.io.FileWriter(filename)) {
-
-            for (Map.Entry<Long, NeighborSplit> entry : neighborSplits.entrySet()) {
-                NeighborSplit split = entry.getValue();
-
-                // Используем сохраненную в NeighborSplit вершину
-                Vertex vertex = split.vertex();
-                Vertex geoVertex = coordConversion.fromEuclidean(vertex);
-                writer.write(String.format("%d %.10f %.10f\n", geoVertex.getName(), geoVertex.x, geoVertex.y));
-
-                for (Vertex neighbor : split.pathNeighbors()) {
-                    Vertex geoNeighbor = coordConversion.fromEuclidean(neighbor);
-                    writer.write(String.format("PATH %d %.10f %.10f\n",
-                            geoNeighbor.getName(), geoNeighbor.x, geoNeighbor.y));
-                }
-
-                for (Vertex neighbor : split.leftNeighbors()) {
-                    Vertex geoNeighbor = coordConversion.fromEuclidean(neighbor);
-                    writer.write(String.format("LEFT %d %.10f %.10f\n",
-                            geoNeighbor.getName(), geoNeighbor.x, geoNeighbor.y));
-                }
-
-                for (Vertex neighbor : split.rightNeighbors()) {
-                    Vertex geoNeighbor = coordConversion.fromEuclidean(neighbor);
-                    writer.write(String.format("RIGHT %d %.10f %.10f\n",
-                            geoNeighbor.getName(), geoNeighbor.x, geoNeighbor.y));
-                }
-
-                writer.write("---\n");
-            }
-            System.out.println("Neighbor splits file written");
-        }
-    }
 
     private static void writePrimalGraph(String filename, Graph<Vertex> graph,
                                          HashSet<VertexOfDualGraph> sourceNeighbors,
@@ -117,7 +83,7 @@ public class FlowWriter {
                         v.getName(), geoVertex.x, geoVertex.y));
                 vertexCount++;
             }
-            System.out.println("Wrote " + vertexCount + " vertices to primal graph");
+            logger.debug("Wrote {} vertices to primal graph", vertexCount);
 
             // Записываем рёбра (неориентированные, каждое только один раз)
             writer.write("EDGES\n");
@@ -141,7 +107,7 @@ public class FlowWriter {
                     }
                 }
             }
-            System.out.println("Wrote " + edgeCount + " edges to primal graph");
+            logger.debug("Wrote {} edges to primal graph", edgeCount);
         }
     }
 
@@ -201,71 +167,6 @@ public class FlowWriter {
         }
     }
 
-    private static void writeDualGraphWithFlow(String filename, Graph<VertexOfDualGraph> dualGraph,
-                                               VertexOfDualGraph source, VertexOfDualGraph sink,
-                                               CoordinateConversion coordConversion) throws java.io.IOException {
-        try (java.io.FileWriter writer = new java.io.FileWriter(filename)) {
-            // Сначала записываем вершины двойственного графа (центроиды граней)
-            writer.write("VERTICES\n");
-            for (VertexOfDualGraph face : dualGraph.verticesArray()) {
-                // Вычисляем центроид грани
-                List<Vertex> faceVertices = face.getVerticesOfFace();
-                if (faceVertices == null || faceVertices.isEmpty()) continue;
-
-                double sumX = 0, sumY = 0;
-                for (Vertex v : faceVertices) {
-                    sumX += v.x;
-                    sumY += v.y;
-                }
-                double centroidX = sumX / faceVertices.size();
-                double centroidY = sumY / faceVertices.size();
-
-                // Конвертируем в географические координаты
-                Vertex euclideanCentroid = new Vertex(face.getName(), centroidX, centroidY, 0);
-                Vertex geoCentroid = coordConversion.fromEuclidean(euclideanCentroid);
-
-                // Определяем тип вершины
-                String type = "NORMAL";
-                if (face.equals(source)) type = "SOURCE";
-                else if (face.equals(sink)) type = "SINK";
-
-                writer.write(String.format("%d %.10f %.10f %s\n",
-                        face.getName(), geoCentroid.x, geoCentroid.y, type));
-            }
-
-            // Затем записываем рёбра с информацией о потоке
-            writer.write("EDGES\n");
-            Set<String> recordedEdges = new HashSet<>();
-
-            for (VertexOfDualGraph face : dualGraph.verticesArray()) {
-                if (dualGraph.getEdges().get(face) == null) continue;
-
-                for (Map.Entry<VertexOfDualGraph, Edge> edgeEntry : dualGraph.getEdges().get(face).entrySet()) {
-                    VertexOfDualGraph neighbor = edgeEntry.getKey();
-                    Edge edge = edgeEntry.getValue();
-
-                    // Создаём уникальный ключ для ребра (неориентированного)
-                    long id1 = face.getName();
-                    long id2 = neighbor.getName();
-                    String edgeKey = (id1 < id2) ? (id1 + "_" + id2) : (id2 + "_" + id1);
-
-                    // Записываем каждое ребро только один раз (как неориентированное)
-                    if (!recordedEdges.contains(edgeKey)) {
-                        recordedEdges.add(edgeKey);
-
-                        double bandwidth = edge.getBandwidth();
-                        double flow = edge.flow;
-                        boolean isSaturated = Math.abs(flow - bandwidth) < 1e-9 && flow > 1e-9;
-
-                        // Записываем в порядке возрастания ID для единообразия
-                        writer.write(String.format("%d %d %.6f %.6f %s\n",
-                                Math.min(id1, id2), Math.max(id1, id2), bandwidth, flow,
-                                isSaturated ? "SATURATED" : "NORMAL"));
-                    }
-                }
-            }
-        }
-    }
     public static void dumpSPTVisualizationData(
             DijkstraResult spt1, DijkstraResult spt2,
             Vertex root1, Vertex root2,
@@ -273,7 +174,9 @@ public class FlowWriter {
             HashSet<VertexOfDualGraph> sourceNeighbors,
             HashSet<VertexOfDualGraph> sinkNeighbors,
             double size,
-            CoordinateConversion coordConversion) {
+            CoordinateConversion coordConversion,
+            Graph<Vertex> initGraph,
+            Map<Vertex, VertexOfDualGraph> comparisonForDualGraph) {
         try {
             String subDirName = String.format("flow_%d_%d_%f", sourceNeighbors.size(), sinkNeighbors.size(), size);
             String baseDir = "src/main/output/reif_flow_debug/";
@@ -283,22 +186,32 @@ public class FlowWriter {
             if (!dir.exists()) {
                 dir.mkdirs();
             }
+            long time0 = System.currentTimeMillis();
+            logger.info("Started dump spt data");
 
             // Dump SPT 1 (from splitVertex1)
-            writeSPTToFile(outputDir + "spt1.txt", spt1, root1, splitToOriginalMap, "SPT1", coordConversion);
+            writeSPTToFile(outputDir + "spt1.txt", spt1, root1, splitToOriginalMap, "SPT1",
+                    coordConversion, initGraph, comparisonForDualGraph);
+            long time1 = System.currentTimeMillis();
+            logger.info("SPT1 saved in {} ms", time1 - time0);
 
             // Dump SPT 2 (from splitVertex2)
-            writeSPTToFile(outputDir + "spt2.txt", spt2, root2, splitToOriginalMap, "SPT2", coordConversion);
+            writeSPTToFile(outputDir + "spt2.txt", spt2, root2, splitToOriginalMap, "SPT2",
+                    coordConversion, initGraph, comparisonForDualGraph);
+            long time2 = System.currentTimeMillis();
+            logger.info("SPT2 saved in {} ms", time2 - time1);
 
-            System.out.println("SPT visualization data saved to " + outputDir);
+            logger.info("SPT visualization data saved to {}", outputDir);
         } catch (Exception e) {
-            System.err.println("Error saving SPT visualization data: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error saving SPT visualization data: {}", e.getMessage(), e);
         }
     }
 
     private static void writeSPTToFile(String filename, DijkstraResult spt, Vertex root,
-                                Map<Vertex, Vertex> splitToOriginalMap, String sptName, CoordinateConversion coordConversion) throws java.io.IOException {
+                                Map<Vertex, Vertex> splitToOriginalMap, String sptName,
+                                CoordinateConversion coordConversion,
+                                Graph<Vertex> initGraph,
+                                Map<Vertex, VertexOfDualGraph> comparisonForDualGraph) throws java.io.IOException {
         try (java.io.FileWriter writer = new java.io.FileWriter(filename)) {
             // Header with metadata
             writer.write("# " + sptName + " - Shortest Path Tree with Region Weights\n");
@@ -322,22 +235,235 @@ public class FlowWriter {
             writer.write("BOUNDARY_LEAVES\n");
             writer.write("# vertex_id longitude latitude cumulative_left_weight boundary_index\n");
 
-            System.out.println("Writing " + spt.boundaryLeaves().size() + " boundary leaves for " + sptName);
-            System.out.println("  leftRegionWeights map has " + spt.leftRegionWeights().size() + " entries");
+            logger.debug("Writing {} boundary leaves for {}", spt.boundaryLeaves().size(), sptName);
+            logger.debug("IN LEAF INDICES {}", spt.leafIndices().size());
+            logger.debug("  leftRegionWeights map has {} entries", spt.weights().size());
 
-            for (int leafIdx = 0; leafIdx < spt.boundaryLeaves().size(); leafIdx++) {
+            int numLeaves = spt.leafIndices().size();
+            int numWeights = spt.weights().size();
+
+            for (int leafIdx = 0; leafIdx < numLeaves; leafIdx++) {
                 Vertex leaf = spt.boundaryLeaves().get(leafIdx);
                 Vertex originalLeaf = splitToOriginalMap.getOrDefault(leaf, leaf);
                 Vertex geoLeaf = coordConversion.fromEuclidean(originalLeaf);
-                double leftWeight = spt.leftRegionWeights().getOrDefault(leaf, -1.0);
+
+                double leftWeight = spt.leafIndices().get(leafIdx) < 0 ? 0 : spt.weights().get(spt.leafIndices().get(leafIdx));
 
                 // Debug: check if leaf is in the map
-                boolean foundInMap = spt.leftRegionWeights().containsKey(leaf);
-                System.out.println("  Leaf " + leafIdx + ": vertex " + leaf.getName() +
-                        ", inMap=" + foundInMap + ", leftWeight=" + leftWeight);
+                // System.out.println("  Leaf " + leafIdx + ": vertex " + leaf.getName() + ", leftWeight=" + leftWeight);
 
                 writer.write(String.format("%d %.10f %.10f %.6f %d\n",
                         geoLeaf.getName(), geoLeaf.x, geoLeaf.y, leftWeight, leafIdx));
+            }
+            writer.write("\n");
+            
+            // Write region weights (weight between consecutive leaves)
+            writer.write("REGION_WEIGHTS\n");
+            writer.write("# region_index region_vertex_id from_leaf_index to_leaf_index weight centroid_lon centroid_lat\n");
+            
+            int numRegions = spt.regions() != null ? spt.regions().size() : 0;
+            logger.debug("Writing {} regions for {}", numRegions, sptName);
+            
+            for (int regionIdx = 0; regionIdx < numWeights; regionIdx++) {
+                int fromLeafIdx = regionIdx;
+                int toLeafIdx = (regionIdx + 1) % numWeights;
+                
+                double fromWeight = spt.weights().get(fromLeafIdx);
+                double toWeight = (toLeafIdx < numWeights) ?
+                                  spt.weights().get(toLeafIdx) : spt.totalRegionWeight();
+                
+                // Handle wrap-around: last region weight
+                double regionWeight;
+                if (toLeafIdx == 0) {
+                    // Last region: from last leaf to first leaf (wrapping around)
+                    regionWeight = spt.totalRegionWeight() - fromWeight;
+                } else {
+                    regionWeight = toWeight - fromWeight;
+                }
+                
+                // Use actual dual graph vertex coordinates (centroid of face)
+                double centroidLon, centroidLat;
+                long regionVertexId = -1;
+                
+                if (spt.regions() != null && regionIdx < spt.regions().size()) {
+                    VertexOfDualGraph regionVertex = spt.regions().get(regionIdx);
+                    regionVertexId = regionVertex.getName();
+                    
+                    // Convert from Euclidean to geographic coordinates
+                    Vertex geoRegion = coordConversion.fromEuclidean(regionVertex);
+                    centroidLon = geoRegion.x;
+                    centroidLat = geoRegion.y;
+                    
+                    //System.out.println("  Region " + regionIdx + ": vertex " + regionVertexId +
+                    //                   " at (" + centroidLon + ", " + centroidLat + "), weight=" + regionWeight);
+                } else {
+                    // Fallback: calculate centroid between the two leaves if regions list is not available
+                    logger.warn("Region {} not found in regions list, using fallback", regionIdx);
+                    Vertex fromLeaf = spt.boundaryLeaves().get(fromLeafIdx);
+                    Vertex toLeaf = spt.boundaryLeaves().get(toLeafIdx);
+                    Vertex originalFromLeaf = splitToOriginalMap.getOrDefault(fromLeaf, fromLeaf);
+                    Vertex originalToLeaf = splitToOriginalMap.getOrDefault(toLeaf, toLeaf);
+                    Vertex geoFromLeaf = coordConversion.fromEuclidean(originalFromLeaf);
+                    Vertex geoToLeaf = coordConversion.fromEuclidean(originalToLeaf);
+                    
+                    centroidLon = (geoFromLeaf.x + geoToLeaf.x) / 2.0;
+                    centroidLat = (geoFromLeaf.y + geoToLeaf.y) / 2.0;
+                }
+                
+                writer.write(String.format("%d %d %d %d %.6f %.10f %.10f\n",
+                        regionIdx, regionVertexId, fromLeafIdx, toLeafIdx, regionWeight, centroidLon, centroidLat));
+            }
+            writer.write("\n");
+
+            // Write region boundaries (boundary for each individual region)
+            writer.write("REGION_BOUNDARIES\n");
+            writer.write("# region_index region_vertex_id num_vertices\n");
+            writer.write("# lon lat (for each vertex)\n");
+            writer.write("# ---\n");
+            
+            if (initGraph != null && comparisonForDualGraph != null && spt.regions() != null) {
+                logger.debug("Writing {} region boundaries for {}", numRegions, sptName);
+                
+                int successCount = 0;
+                int failCount = 0;
+                
+                for (int regionIdx = 0; regionIdx < numRegions; regionIdx++) {
+                    VertexOfDualGraph regionVertex = spt.regions().get(regionIdx);
+                    long regionVertexId = regionVertex.getName();
+                    
+                    // Create a set with only this region's face
+                    HashSet<VertexOfDualGraph> singleFaceSet = new HashSet<>();
+                    singleFaceSet.add(regionVertex);
+                    
+                    try {
+                        List<Vertex> boundary = BoundSearcher.findBound(initGraph, singleFaceSet, comparisonForDualGraph);
+                        if (boundary != null && boundary.size() >= 3) {
+                            writer.write(String.format("%d %d %d\n", regionIdx, regionVertexId, boundary.size()));
+                            for (Vertex v : boundary) {
+                                Vertex originalV = splitToOriginalMap.getOrDefault(v, v);
+                                Vertex geoV = coordConversion.fromEuclidean(originalV);
+                                writer.write(String.format("%.10f %.10f\n", geoV.x, geoV.y));
+                            }
+                            successCount++;
+                        } else {
+                            logger.debug("Region {} has invalid boundary (size: {})", regionIdx, boundary != null ? boundary.size() : 0);
+                            writer.write(String.format("%d %d 0\n", regionIdx, regionVertexId));
+                        }
+                    } catch (Exception e) {
+                        failCount++;
+                        logger.debug("Failed to compute boundary for region {}: {}", regionIdx, e.getMessage());
+                        writer.write(String.format("%d %d 0\n", regionIdx, regionVertexId));
+                    }
+                    writer.write("---\n");
+                }
+                logger.debug("  {}: {} successful region boundaries, {} failed", sptName, successCount, failCount);
+            }
+            writer.write("\n");
+
+            // Write leaf indices (mapping from leaf index to region/weights index)
+            writer.write("LEAF_INDICES\n");
+            writer.write("# leaf_index region_index\n");
+            for (int leafIdx = 0; leafIdx < spt.leafIndices().size(); leafIdx++) {
+                writer.write(String.format("%d %d\n", leafIdx, spt.leafIndices().get(leafIdx)));
+            }
+            writer.write("\n");
+
+            // Write leaf group boundaries (boundary polygons for regions between consecutive leaves)
+            writer.write("LEAF_GROUP_BOUNDARIES\n");
+            writer.write("# group_index weight num_vertices\n");
+            writer.write("# lon lat (for each vertex)\n");
+            writer.write("# ---\n");
+
+            if (initGraph != null && comparisonForDualGraph != null
+                    && spt.leafIndices() != null && spt.regions() != null) {
+                int numRegionsTotal = spt.regions().size();
+                // N leaves => N+1 linear groups (no wrap-around):
+                //   Group 0: before leaf 0          → regions [0 .. leafIndices[0]]
+                //   Group i: between leaf i-1 and i → regions [leafIndices[i-1]+1 .. leafIndices[i]]
+                //   Group N: after leaf N-1          → regions [leafIndices[N-1]+1 .. end]
+                int numGroups = numLeaves + 1;
+
+                // Helper to safely read cumulative weight at a leafIndex (-1 means 0)
+                java.util.function.IntFunction<Double> safeWeightAt = leafIdx -> {
+                    int li = spt.leafIndices().get(leafIdx);
+                    return (li >= 0 && li < spt.weights().size()) ? spt.weights().get(li) : 0.0;
+                };
+
+                // Assign each unique face to the group where it first appears (Euler tour order)
+                java.util.HashMap<VertexOfDualGraph, Integer> faceToGroup = new java.util.HashMap<>();
+                for (int groupIdx = 0; groupIdx < numGroups; groupIdx++) {
+                    int from, to;
+                    if (groupIdx == 0) {
+                        // Before first leaf
+                        from = 0;
+                        to = Math.max(spt.leafIndices().get(0), -1);
+                    } else if (groupIdx < numGroups - 1) {
+                        // Between leaf (groupIdx-1) and leaf (groupIdx)
+                        from = Math.max(spt.leafIndices().get(groupIdx - 1) + 1, 0);
+                        to = spt.leafIndices().get(groupIdx);
+                    } else {
+                        // After last leaf
+                        from = Math.max(spt.leafIndices().get(numLeaves - 1) + 1, 0);
+                        to = numRegionsTotal - 1;
+                    }
+                    for (int r = from; r <= to; r++) {
+                        faceToGroup.putIfAbsent(spt.regions().get(r), groupIdx);
+                    }
+                }
+
+                // Invert: group -> set of faces
+                java.util.HashMap<Integer, java.util.HashSet<VertexOfDualGraph>> groupToFaces = new java.util.HashMap<>();
+                for (var entry : faceToGroup.entrySet()) {
+                    groupToFaces.computeIfAbsent(entry.getValue(), k -> new java.util.HashSet<>())
+                            .add(entry.getKey());
+                }
+
+                // Count faces not assigned to any group
+                int totalDualFaces = 0;
+                if (comparisonForDualGraph != null) {
+                    totalDualFaces = comparisonForDualGraph.size();
+                }
+                logger.debug("Leaf group stats for {}: {} leaves, {} groups, {} total region entries, {} unique faces assigned, total dual faces: {}", 
+                        sptName, numLeaves, numGroups, numRegionsTotal, faceToGroup.size(), totalDualFaces);
+
+                int emptyGroups = 0;
+                int failedGroups = 0;
+                for (int groupIdx = 0; groupIdx < numGroups; groupIdx++) {
+                    double groupWeight;
+                    if (groupIdx == 0) {
+                        groupWeight = safeWeightAt.apply(0);
+                    } else if (groupIdx < numGroups - 1) {
+                        groupWeight = safeWeightAt.apply(groupIdx) - safeWeightAt.apply(groupIdx - 1);
+                    } else {
+                        groupWeight = spt.totalRegionWeight() - safeWeightAt.apply(numLeaves - 1);
+                    }
+
+                    java.util.HashSet<VertexOfDualGraph> groupFaces =
+                            groupToFaces.getOrDefault(groupIdx, new java.util.HashSet<>());
+
+                    if (groupFaces.isEmpty()) {
+                        emptyGroups++;
+                        writer.write(String.format("%d %.6f 0\n", groupIdx, groupWeight));
+                        writer.write("---\n");
+                        continue;
+                    }
+
+                    try {
+                        List<Vertex> boundary = BoundSearcher.findBound(initGraph, groupFaces, comparisonForDualGraph);
+                        writer.write(String.format("%d %.6f %d\n", groupIdx, groupWeight, boundary.size()));
+                        for (Vertex v : boundary) {
+                            Vertex originalV = splitToOriginalMap.getOrDefault(v, v);
+                            Vertex geoV = coordConversion.fromEuclidean(originalV);
+                            writer.write(String.format("%.10f %.10f\n", geoV.x, geoV.y));
+                        }
+                    } catch (Exception e) {
+                        failedGroups++;
+                        logger.warn("Failed to compute boundary for group {} ({} faces): {}", groupIdx, groupFaces.size(), e.getMessage());
+                        writer.write(String.format("%d %.6f 0\n", groupIdx, groupWeight));
+                    }
+                    writer.write("---\n");
+                }
+                logger.debug("  {}: {} empty groups, {} failed boundary computations", sptName, emptyGroups, failedGroups);
             }
             writer.write("\n");
 
@@ -367,7 +493,7 @@ public class FlowWriter {
                 Vertex geoChild = coordConversion.fromEuclidean(originalChild);
                 Vertex geoParent = coordConversion.fromEuclidean(originalParent);
 
-                double distance = spt.distances().getOrDefault(child, 0.0);
+                double distance = spt.dijkstraDistances().getOrDefault(child, 0.0);
 
                 writer.write(String.format("%d %.10f %.10f %d %.10f %.10f %.6f\n",
                         geoParent.getName(), geoParent.x, geoParent.y,
@@ -379,7 +505,7 @@ public class FlowWriter {
             // Write all vertices in the SPT with their distances
                 writer.write("VERTICES\n");
                 writer.write("# vertex_id longitude latitude distance_from_root\n");
-                for (Map.Entry<Vertex, Double> entry : spt.distances().entrySet()) {
+                for (Map.Entry<Vertex, Double> entry : spt.dijkstraDistances().entrySet()) {
                 Vertex v = entry.getKey();
                 Double dist = entry.getValue();
 

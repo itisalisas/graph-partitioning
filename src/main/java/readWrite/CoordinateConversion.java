@@ -8,7 +8,7 @@ import graph.Vertex;
 public class CoordinateConversion {
 
     public Point referencePoint;
-    private double c = 111321.377778;//meters in degree
+    private final double METERS_IN_DEGREE = 111321.377778;
 
 
     public CoordinateConversion() {
@@ -43,8 +43,8 @@ public class CoordinateConversion {
     public <T extends Point> void toEuclidean(T p) {
         double lat = p.x;
         double lon = p.y;
-        p.x = c * Math.cos(referencePoint.y * Math.PI / 180) * (lat - referencePoint.x);
-        p.y = c * (lon - referencePoint.y);
+        p.x = METERS_IN_DEGREE * Math.cos(referencePoint.y * Math.PI / 180) * (lat - referencePoint.x);
+        p.y = METERS_IN_DEGREE * (lon - referencePoint.y);
     }
 
 
@@ -52,8 +52,8 @@ public class CoordinateConversion {
         T ver = (T) p.copy();
         double x = p.x;
         double y = p.y;
-        ver.y = y / c + referencePoint.y;
-        ver.x = x / c /  Math.cos(referencePoint.y * Math.PI / 180) + referencePoint.x;
+        ver.y = y / METERS_IN_DEGREE + referencePoint.y;
+        ver.x = x / METERS_IN_DEGREE /  Math.cos(referencePoint.y * Math.PI / 180) + referencePoint.x;
         return ver;
     }
 }

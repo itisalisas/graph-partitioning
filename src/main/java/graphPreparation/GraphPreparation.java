@@ -1,8 +1,6 @@
 package graphPreparation;
 
 
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,81 +15,61 @@ import readWrite.CoordinateConversion;
 import readWrite.GraphWriter;
 
 import org.junit.jupiter.api.Assertions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GraphPreparation {
-	private boolean isPlanar;
-	private boolean isDual;
-	private HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph;
+	private static final Logger logger = LoggerFactory.getLogger(GraphPreparation.class);
+	private final boolean isPlanar;
+	private final boolean isDual;
+	private final HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph;
 	public GraphPreparation() {
 		this.isPlanar = false;
 		this.isDual = false;
-		comparisonForDualGraph = new HashMap<Vertex, VertexOfDualGraph>();
+		comparisonForDualGraph = new HashMap<>();
 	}
 	public GraphPreparation(boolean isPlanar, boolean isDual) {
 		this.isPlanar = isPlanar;
 		this.isDual = isDual;
-		comparisonForDualGraph = new HashMap<Vertex, VertexOfDualGraph>();
+		comparisonForDualGraph = new HashMap<>();
 	}
 	
 	public HashMap<Vertex, VertexOfDualGraph> getComparisonForDualGraph() {
 		return this.comparisonForDualGraph;
 	}
 	
-	public Graph<VertexOfDualGraph> prepareGraph(Graph<Vertex> gph, double inaccuracy, String outputDirectory, CoordinateConversion cc) throws IOException {
-		System.out.println("Number of 0 weight vertex, before correction: " + gph.countZeroWeightVertices());
+	public Graph<VertexOfDualGraph> prepareGraph(Graph<Vertex> gph, double inaccuracy) throws IOException {
+        long startTime = System.currentTimeMillis();
+		logger.info("Number of 0 weight vertex, before correction: {}", gph.countZeroWeightVertices());
 		gph.correctVerticesWeight();
-		System.out.println("Number of 0 weight vertex, before sweepLine: " + gph.countZeroWeightVertices());
-		System.out.println("Start graph weight: " + gph.verticesSumWeight());
-		
-		// draw swepline
-		if (cc != null) {
-			GraphWriter gw = new GraphWriter(cc);
-			Path dirPath = Paths.get("./SweepLine");
-			try {
-				Files.createDirectories(dirPath); 
-			} catch (IOException e) {
-				e.printStackTrace(); 
-			}
-			gw.printGraphToFile(gph, outputDirectory + "//SweepLine", "beforeSweepLine.txt", true);
-		}
+        long time1 = System.currentTimeMillis();
+        logger.info("Time for correcting vertices weight: {} seconds", (time1 - startTime) / 1000.0);
+		logger.info("Number of 0 weight vertex, before sweepLine: {}", gph.countZeroWeightVertices());
+		logger.info("Start graph weight: {}", gph.verticesSumWeight());
 		
         Assertions.assertTrue(gph.isConnected());
-		Graph<Vertex> graph = null;
-		if (!isPlanar) {
-			SweepLine sl = new SweepLine(inaccuracy);
-			graph = sl.makePlanar(gph);
-		} else {
-			graph = gph;
-		}
+		Graph<Vertex> graph;
+        if (!isPlanar) {
+            SweepLine sl = new SweepLine(inaccuracy);
+            graph = sl.makePlanar(gph);
+            gph.replaceWith(graph);
+        } else {
+            graph = gph;
+        }
 		
         Assertions.assertTrue(graph.isConnected());
-		// draw swepline
-		if (cc != null) {
-			// gw.printGraphToFile(graph, outputDirectory + "//SweepLine", "afterSweepLine.txt", true);
-		}
-	
-		ArrayList<Vertex> zeroWeight = new ArrayList<Vertex>();
+
+        ArrayList<Vertex> zeroWeight = new ArrayList<>();
 		for (Vertex v : graph.getEdges().keySet()) {
 			if (v.getWeight() == 0) {
 				zeroWeight.add(v);
-				//System.out.println(v.name);	 
 			}
 		}
+        long time2 = System.currentTimeMillis();
+        logger.info("Time for sweepLine: {} seconds", (time2 - time1) / 1000.0);
 		
-		// draw swepline
-		File file = new File(outputDirectory + "SweepLine\\0vertex.txt");
-		file.delete();
-		file = new File(outputDirectory + "SweepLine\\0vertex.txt");
-		FileWriter out = new FileWriter(file, true);
-		out.write(zeroWeight.size() + "\n");
-		out.close();
-		if (cc != null) {
-			// gw.printVerticesToFile(zeroWeight, file, true);
-		}
-		
-		System.out.println("Number of 0 weight vertex, after sweepLine: " + gph.countZeroWeightVertices());
-		System.out.println("After sweepline graph weight: " + gph.verticesSumWeight());
-		
+		logger.info("Number of 0 weight vertex, after sweepLine: {}", gph.countZeroWeightVertices());
+		logger.info("After sweepline graph weight: {}", gph.verticesSumWeight());
 
 		MakingDualGraph dg = new MakingDualGraph();
 		Graph<VertexOfDualGraph> dualGraph = dg.buildDualGraph(graph);
@@ -104,7 +82,7 @@ public class GraphPreparation {
 		Assertions.assertTrue(dualGraph.isConnected());
 		comparisonForDualGraph.clear();
 		comparisonForDualGraph.putAll(dg.getComparison());
-		System.out.println("Dual graph weight: " + dualGraph.verticesSumWeight());
+		logger.info("Dual graph weight: {}", dualGraph.verticesSumWeight());
 		return dualGraph;
 	}
 	

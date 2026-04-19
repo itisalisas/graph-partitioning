@@ -9,6 +9,7 @@ public class CoordinateConstraintsForFace {
 	private double minX;
 	private double maxY;
 	private double minY;
+
 	public CoordinateConstraintsForFace(ArrayList<Vertex> verticesOfFace) {
 		for (int i = 0 ; i < verticesOfFace.size(); i++) {
 			if (i == 0) {
@@ -28,25 +29,13 @@ public class CoordinateConstraintsForFace {
 	public double getMinX() {
 		return minX;
 	}
-	public void setMinX(double minX) {
-		this.minX = minX;
-	}
 	public double getMaxX() {
 		return maxX;
-	}
-	public void setMaxX(double maxX) {
-		this.maxX = maxX;
 	}
 	public double getMaxY() {
 		return maxY;
 	}
-	public void setMaxY(double maxY) {
-		this.maxY = maxY;
-	}
 	public double getMinY() {
 		return minY;
-	}
-	public void setMinY(double minY) {
-		this.minY = minY;
 	}
 }

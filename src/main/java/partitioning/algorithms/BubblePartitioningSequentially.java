@@ -6,36 +6,40 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 
 import graph.BoundSearcher;
 import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
-import partitioning.models.Bubble;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import partitioning.entities.Bubble;
 
 public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanarGraphs {
+    private static final Logger logger = LoggerFactory.getLogger(BubblePartitioningSequentially.class);
 
     Comparator<VertexOfDualGraph> vertexComparator = (o1, o2) -> Double.compare(o1.x, o2.x);
 
     @Override
     public void balancedPartitionAlgorithm(Graph<Vertex> simpleGraph, 
-										   HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph, 
+										   Map<Vertex, VertexOfDualGraph> comparisonForDualGraph,
 										   Graph<VertexOfDualGraph> graph, 
 								           int maxSumVerticesWeight) {
         this.graph = graph;
 
         //list
         TreeSet<VertexOfDualGraph> unused = new TreeSet<>(vertexComparator);
-        HashMap<VertexOfDualGraph , Bubble> bubbles = new HashMap<>();
-        Bubble bubble = null;
+        Map<VertexOfDualGraph , Bubble> bubbles = new HashMap<>();
+        Bubble bubble;
 		List<Map.Entry<List<Vertex>, Double>> bounds = new ArrayList<>();
         VertexOfDualGraph center = null;
         unused.addAll(graph.getEdges().keySet());
         int iterCounter = 0;
         while (!unused.isEmpty()) {
             if (iterCounter > graph.getEdges().size()) {
-                System.out.println("    check while rule");
+                logger.debug("    check while rule");
                 break;
             }
             //method prepare
@@ -45,7 +49,7 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
             bubbles.put(center, new Bubble(bubble));
             iterCounter++;
         }
-        System.out.println("    bubbles were grown");
+        logger.debug("    bubbles were grown");
         // HashMap<VertexOfDualGraph, Bubble> zeroBubbles = findZeroWeightBubbles(bubbles);
         // //find close bubble to zero bubble
         // HashSet<VertexOfDualGraph> closeToZeroBubble = new HashSet<>();
@@ -90,7 +94,7 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
         for (VertexOfDualGraph seed : bubbles.keySet()) {
             partition.add(bubbles.get(seed).vertexSet);
         }
-        System.out.println("    end bubble");
+        logger.debug("    end bubble");
         
     }
 
@@ -128,12 +132,14 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
 
 
     //bubble class 
-    private Double addVertexToBubble(Graph<VertexOfDualGraph> graph,
-                                   Bubble bubble,
-                                   TreeSet<VertexOfDualGraph> unused, 
-                                   HashSet<VertexOfDualGraph> nextVertices, 
-                                   double sumBubbleWeight,
-                                   int maxBubbleWeight) {
+    private Double addVertexToBubble(
+            Graph<VertexOfDualGraph> graph,
+            Bubble bubble,
+            TreeSet<VertexOfDualGraph> unused,
+            Set<VertexOfDualGraph> nextVertices,
+            double sumBubbleWeight,
+            int maxBubbleWeight
+    ) {
         Double coefWeight = 0.0;
         // Double coefPerimeter = 10.0;
         Double coefPerimeter = Math.sqrt(graph.verticesSumWeight() / maxBubbleWeight);
@@ -204,7 +210,7 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
     private void growFullBubble(int bubbleNumber,
                                 List<Map.Entry<List<Vertex>, Double>> bounds, 
                                 Graph<Vertex> simpleGraph, 
-                                HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph,
+                                Map<Vertex, VertexOfDualGraph> comparisonForDualGraph,
                                 Graph<VertexOfDualGraph> graph,
                                 int maxSumVerticesWeight, 
                                 Bubble bubble, 
@@ -212,14 +218,14 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
         //prepare
         int iter = 0;
         unused.remove(bubble.center);
-        HashSet<VertexOfDualGraph> nextVertices = new HashSet<VertexOfDualGraph>();
+        Set<VertexOfDualGraph> nextVertices = new HashSet<>();
         for (VertexOfDualGraph v : graph.getEdges().get(bubble.center).keySet()) {
             if (unused.contains(v)) {
                 nextVertices.add(v);
             }
         }
         if (nextVertices.isEmpty()) {
-            System.out.println("check 1 vertex bubble");
+            logger.debug("check 1 vertex bubble");
             return;
         }
         double sumBubbleWeight = bubble.weight;
@@ -245,7 +251,6 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
             // try {
             //     pw.printBound(bounds, str , true);
             // } catch (IOException e) {
-            //     // TODO Auto-generated catch block
             //     e.printStackTrace();
             // }
             // pw.printCenter(centerToFile, str, true);

@@ -1,18 +1,17 @@
 package graph;
 
 import java.util.ArrayList;
-import java.util.Objects;
 
 import geometry.Geometry;
 
 public class VertexOfDualGraph extends Vertex{
 	
-	private ArrayList<Vertex> verticesOfFace;
+	private final ArrayList<Vertex> verticesOfFace;
 	public double area;
 	
 	public VertexOfDualGraph(Vertex center, double weightSum, ArrayList<Vertex> verticesOfFace) {
 		super(center.getName(), center, weightSum);
-		this.verticesOfFace = new ArrayList<Vertex>();
+		this.verticesOfFace = new ArrayList<>();
 		this.verticesOfFace.addAll(verticesOfFace);
 		this.area = Geometry.area(verticesOfFace);
 	}
@@ -20,19 +19,19 @@ public class VertexOfDualGraph extends Vertex{
 	
 	public VertexOfDualGraph(long name, Vertex center, double weightSum) {
 		super(name, center, weightSum);
-		this.verticesOfFace = new ArrayList<Vertex>();
+		this.verticesOfFace = new ArrayList<>();
 	}
 	
 	
 	public VertexOfDualGraph(long name, Point center, double weightSum) {
 		super(name, center, weightSum);
-		this.verticesOfFace = new ArrayList<Vertex>();
+		this.verticesOfFace = new ArrayList<>();
 	}
 	
 	
 	public VertexOfDualGraph(long name, Vertex center, double weightSum, ArrayList<Vertex> verticesOfFace) {
 		super(name, center, weightSum);
-		this.verticesOfFace = new ArrayList<Vertex>();
+		this.verticesOfFace = new ArrayList<>();
 		this.verticesOfFace.addAll(verticesOfFace);
 		this.area = Geometry.area(verticesOfFace);
 	}
@@ -40,7 +39,7 @@ public class VertexOfDualGraph extends Vertex{
 	
 	public VertexOfDualGraph(long name, Point center, double weightSum, ArrayList<Vertex> verticesOfFace) {
 		super(name, center, weightSum);
-		this.verticesOfFace = new ArrayList<Vertex>();
+		this.verticesOfFace = new ArrayList<>();
 		this.verticesOfFace.addAll(verticesOfFace);
 		this.area = Geometry.area(verticesOfFace);
 
@@ -49,18 +48,18 @@ public class VertexOfDualGraph extends Vertex{
 	
 	public VertexOfDualGraph(long name, double x, double y) {
 		super(name, x , y);
-		this.verticesOfFace = new ArrayList<Vertex>();
+		this.verticesOfFace = new ArrayList<>();
 		area = 0.;
 	}
 	
 	public VertexOfDualGraph(long name) {
 		super(name);
-		this.verticesOfFace = new ArrayList<Vertex>();
+		this.verticesOfFace = new ArrayList<>();
 	}
 	
 	public VertexOfDualGraph(long name, double x, double y, double weight) {
 		super(name, x , y, weight);
-		this.verticesOfFace = new ArrayList<Vertex>();
+		this.verticesOfFace = new ArrayList<>();
 	}
 	
 	public VertexOfDualGraph(VertexOfDualGraph v) {
@@ -91,15 +90,8 @@ public class VertexOfDualGraph extends Vertex{
 	@Override
 	public boolean equals(Object obj) {
 		if (obj == this) return true;
-		if (! (obj instanceof VertexOfDualGraph)) return false;
-		VertexOfDualGraph v = (VertexOfDualGraph) obj;
-		return v.x == this.x
+		if (! (obj instanceof VertexOfDualGraph v)) return false;
+        return v.x == this.x
 				&& v.y == this.y && v.getName() == this.getName();
 	}
-	
-	@Override
-	public int hashCode() { 
-		return Objects.hash(this.x, this.y, this.getName());
-	}
-	
 }

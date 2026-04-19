@@ -11,10 +11,13 @@ import java.util.PriorityQueue;
 import graph.Edge;
 import graph.Graph;
 import graph.Vertex;
-import partitioning.models.DijkstraResult;
-import partitioning.models.VertexDistance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import partitioning.entities.DijkstraResult;
+import partitioning.entities.VertexDistance;
 
 public class Dijkstra {
+    private static final Logger logger = LoggerFactory.getLogger(Dijkstra.class);
 
     /**
      * Внутреннее состояние алгоритма Dijkstra
@@ -42,17 +45,18 @@ public class Dijkstra {
     public static Optional<DijkstraResult> dijkstraMultiSource(
             Graph<Vertex> graph,
             List<Vertex> sourceVertices,
-            List<Vertex> targetBoundary) {
+            List<Vertex> targetBoundary,
+            CornerConstraints cornerConstraints) {
 
-        logDebugInfo(graph, sourceVertices, targetBoundary);
+        logDebugInfo(graph, sourceVertices, targetBoundary, cornerConstraints);
 
         DijkstraState state = new DijkstraState();
         initializeDistances(state, graph, sourceVertices);
 
-        processGraph(state, graph, targetBoundary);
+        processGraph(state, graph, targetBoundary, cornerConstraints);
 
         if (state.targetVertex == null) {
-            System.out.println("  No target vertex found!");
+            logger.debug("  No target vertex found!");
             return Optional.empty();
         }
 
@@ -67,15 +71,23 @@ public class Dijkstra {
     private static void logDebugInfo(
             Graph<Vertex> graph,
             List<Vertex> sourceVertices,
-            List<Vertex> targetBoundary) {
+            List<Vertex> targetBoundary,
+            CornerConstraints cornerConstraints) {
 
-        System.out.println("=== Dijkstra Multi-Source Debug ===");
-        System.out.println("  Graph vertices: " + graph.verticesArray().size());
-        System.out.println("  Source vertices: " + sourceVertices.size() + " " +
-                                   sourceVertices.stream().map(Vertex::getName).toList());
-        System.out.println("  Target boundary: " + targetBoundary.size() + " vertices");
+        logger.debug("=== Dijkstra Multi-Source Debug ===");
+        logger.debug("  Graph vertices: {}", graph.verticesArray().size());
+        logger.debug("  Source vertices: {} {}", sourceVertices.size(), 
+                sourceVertices.stream().map(Vertex::getName).toList());
+        logger.debug("  Target boundary: {} vertices", targetBoundary.size());
+        logger.debug("  Corner constraints: {}", cornerConstraints.getCornerVertices().stream().toList());
+        for (var v: cornerConstraints.getCornerVertices()) {
+            var u = cornerConstraints.getAllowedEdgesForCorner();
+            for (var e: u.get(v)) {
+                logger.debug("    {} -> {}", e.begin.name, e.end.name);
+            }
+        }
 
-        logSourceVerticesInfo(graph, sourceVertices);
+        // logSourceVerticesInfo(graph, sourceVertices);
     }
 
     /**
@@ -89,11 +101,12 @@ public class Dijkstra {
                         .map(Vertex::getName)
                         .toList();
 
-                System.out.println("  Source vertex " + src.getName() +
-                                           " has " + graph.getEdges().get(src).size() +
-                                           " neighbors: " + neighborIds);
+
+                logger.debug("  Source vertex {} (isOnBoundary)= {} has {} neighbors: {}", 
+                        src.getName(), src.getIsOnBoundary(), graph.getEdges().get(src).size(), neighborIds);
+
             } else {
-                System.out.println("  Source vertex " + src.getName() + " NOT IN GRAPH!");
+                logger.debug("  Source vertex {} NOT IN GRAPH!", src.getName());
             }
         }
     }
@@ -124,7 +137,8 @@ public class Dijkstra {
     private static void processGraph(
             DijkstraState state,
             Graph<Vertex> graph,
-            List<Vertex> targetBoundary) {
+            List<Vertex> targetBoundary,
+            CornerConstraints cornerConstraints) {
 
         while (!state.queue.isEmpty()) {
             VertexDistance current = state.queue.poll();
@@ -135,14 +149,23 @@ public class Dijkstra {
             }
 
             // Проверяем достигли ли целевой границы
-            if (targetBoundary.contains(current.vertex()) && current.vertex().getIsOnBoundary()) {
+            if (isBoundaryContainsVertex(targetBoundary, current.vertex()) && current.vertex().getIsOnBoundary()) {
                 updateTarget(state, current);
-                continue;
+                // continue;
             }
 
             // Обрабатываем соседей текущей вершины
-            processNeighbors(state, graph, current);
+            processNeighbors(state, graph, current, cornerConstraints);
         }
+    }
+
+    private static boolean isBoundaryContainsVertex(List<Vertex> boundary, Vertex vertex) {
+        if (boundary.contains(vertex)) {
+            return true;
+        }
+        // проверяем что основная вершина для разделенной вершины на границе
+        Vertex vertexMain = new Vertex(vertex.name / 1000, vertex.x, vertex.y);
+        return boundary.contains(vertexMain);
     }
 
     /**
@@ -159,8 +182,8 @@ public class Dijkstra {
         if (current.distance() < state.minDistance) {
             state.minDistance = current.distance();
             state.targetVertex = current.vertex();
-            System.out.println("  Found target vertex: " + current.vertex().getName() +
-                                       " with distance: " + current.distance());
+            logger.debug("  Found target vertex: {} with distance: {}", 
+                    current.vertex().getName(), current.distance());
         }
     }
 
@@ -170,7 +193,8 @@ public class Dijkstra {
     private static void processNeighbors(
             DijkstraState state,
             Graph<Vertex> graph,
-            VertexDistance current) {
+            VertexDistance current,
+            CornerConstraints cornerConstraints) {
 
         Map<Vertex, Edge> neighbors = graph.getEdges().get(current.vertex());
         if (neighbors == null) {
@@ -178,6 +202,11 @@ public class Dijkstra {
         }
 
         for (Map.Entry<Vertex, Edge> entry : neighbors.entrySet()) {
+            Vertex neighbor = entry.getKey();
+
+            if (!cornerConstraints.isNeighborAllowed(current.vertex(), neighbor)) {
+                continue;
+            }
             processNeighbor(state, current.vertex(), entry.getKey(), entry.getValue());
         }
     }
@@ -217,13 +246,6 @@ public class Dijkstra {
             current = previous.get(current);
         }
 
-        System.out.println("  Reconstructed path length: " + path.size() +
-                                   " vertices: " + path.stream()
-                .limit(5)
-                .map(Vertex::getName)
-                .toList() +
-                                   (path.size() > 5 ? "..." : ""));
-
         return path;
     }
 
@@ -236,9 +258,12 @@ public class Dijkstra {
                 state.minDistance,
                 state.previous,
                 state.distances,
-                new ArrayList<>(),      // boundaryLeaves - заполняется позже
-                new HashMap<>(),        // leftRegionWeights - заполняется позже
-                0.0                     // totalRegionWeight - заполняется позже
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                0.0
         );
     }
 
@@ -248,8 +273,9 @@ public class Dijkstra {
     public static Optional<DijkstraResult> dijkstraSingleSource(
             Graph<Vertex> graph,
             Vertex sourceVertex,
-            List<Vertex> targetBoundary) {
-        return dijkstraMultiSource(graph, List.of(sourceVertex), targetBoundary);
+            List<Vertex> targetBoundary,
+            CornerConstraints cornerConstraints) {
+        return dijkstraMultiSource(graph, List.of(sourceVertex), targetBoundary, cornerConstraints);
     }
 
 }
