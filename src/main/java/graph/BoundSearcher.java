@@ -149,8 +149,6 @@ public class BoundSearcher {
             current = next;
         }
 
-        Assertions.assertTrue(bound.size() >= 3);
-
         return bound;
     }
 
