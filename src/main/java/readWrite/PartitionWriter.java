@@ -30,15 +30,14 @@ public class PartitionWriter {
 	static CoordinateConversion cc;
 
 	public PartitionWriter(CoordinateConversion cc) {
-		this.cc = cc;
+		PartitionWriter.cc = cc;
 	}
 	
 	public static <T extends Vertex> void writePartitionToFile(
             Set<T> part,
             Double cutWeight,
             File outFile,
-            boolean geodetic,
-            Point center
+            boolean geodetic
     ) throws IOException {
 		FileWriter out = new FileWriter(outFile, false);
 		out.write(String.format("%f\n", cutWeight));
@@ -75,20 +74,6 @@ public class PartitionWriter {
 		gw.printPointsToFile(centers, centersFile, geodetic, refPoint);
 	}
 	
-
-	public void printHull(List<Vertex> hull, String outputDirectory, String fileName, boolean geodetic, Point refPoint) {
-		createOutputDirectory(outputDirectory);
-		File boundFile = new File(outputDirectory + File.separator + fileName);
-		try {
-			boundFile.createNewFile();
-		} catch (IOException e) {
-			throw new RuntimeException("Can't create bound file");
-		}
-		GraphWriter gw = new GraphWriter();
-		gw.printVerticesToFile(hull, boundFile, geodetic, refPoint);
-	}
-	
-	
 	public void printBound(List<Map.Entry<List<Vertex>, Double>> bounds, String outputDirectory, boolean geodetic, Point refPoint) throws IOException {
 		createOutputDirectory(outputDirectory);
 		for (int i = 0; i < bounds.size(); i++) {
@@ -106,33 +91,6 @@ public class PartitionWriter {
 		}
 	}
 
-	public void printCenter(Set<VertexOfDualGraph> center, String outputDirectory, boolean geodetic, Point refPoint) {
-		GraphWriter gw = new GraphWriter();
-		List<Vertex> centerList = new ArrayList<Vertex>(center);
-		File outputDirectoryFile = new File(outputDirectory);
-		if (!outputDirectoryFile.exists()) {
-			if (!outputDirectoryFile.mkdirs()) {
-				throw new RuntimeException("Can't create output directory");
-			}
-		}
-		File centerFile = new File(outputDirectory + File.separatorChar + "center.txt");
-		try {
-			centerFile.createNewFile();
-		} catch (IOException e) {
-			throw new RuntimeException("Can't create bound file");
-		}
-		FileWriter out;
-		try {
-			out = new FileWriter(centerFile, true);
-			out.write(String.valueOf(centerList.size() + "\n"));
-			out.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		gw.printVerticesToFile(centerList, centerFile, true, refPoint);
-	}
-
-
 	public void savePartitionToDirectory(
             BalancedPartitioning balancedPartitioning,
             BalancedPartitioningOfPlanarGraphs bp,
@@ -140,7 +98,6 @@ public class PartitionWriter {
             List<Set<VertexOfDualGraph>> partitionResult,
             boolean geodetic,
             double partitionTime,
-            Point refPoint,
             long memory
     ) {
 		createOutputDirectory(outputDirectory);
@@ -160,7 +117,7 @@ public class PartitionWriter {
 				throw new RuntimeException("Can't create output file");
 			}
 			try {
-				PartitionWriter.writePartitionToFile(part, balancedPartitioning.cutEdgesMap.get(part), outputFile, geodetic, refPoint);
+				PartitionWriter.writePartitionToFile(part, balancedPartitioning.cutEdgesMap.get(part), outputFile, geodetic);
 			} catch (Exception e) {
 				throw new RuntimeException("Can't write partition to file: " + e.getMessage());
 			}
@@ -254,30 +211,4 @@ public class PartitionWriter {
 			}
 
 	}
-
-	public void printRedistributedVerticesDirections(Map<VertexOfDualGraph, VertexOfDualGraph> vertexToBestNeighbor, String outputDirectory, boolean geodetic) {
-		createOutputDirectory(outputDirectory);
-		File edgesFile = new File(outputDirectory + File.separator + "edges.txt");
-		try {
-			edgesFile.createNewFile();
-		} catch (IOException e) {
-			throw new RuntimeException("Can't create edges file");
-		}
-		try (FileWriter writer = new FileWriter(edgesFile, false)) {
-			for (Map.Entry<VertexOfDualGraph, VertexOfDualGraph> edge: vertexToBestNeighbor.entrySet()) {
-				VertexOfDualGraph start = edge.getKey();
-				VertexOfDualGraph end = edge.getValue();
-				if (geodetic) {
-					start = cc.fromEuclidean(start);
-					end = cc.fromEuclidean(end);
-				}
-				writer.write(start.x + " " + start.y + " " + end.x + " " + end.y + "\n");
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-			throw new RuntimeException("Can't write edges to file: ");
-		}
-	}
-
-
 }

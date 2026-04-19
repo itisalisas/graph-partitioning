@@ -196,7 +196,7 @@ public class Graph<T extends Vertex> {
     public ArrayList<HashSet<T>> splitForConnectedComponents() {
         // make undirected
         Graph<T> undirGraph = makeUndirectedGraph();
-        ArrayList<HashSet<T>> component = new ArrayList<HashSet<T>>();
+        ArrayList<HashSet<T>> component = new ArrayList<>();
         HashSet<T> visited = new HashSet<T>();
         HashSet<T> actualComp = new HashSet<T>();
         for (T begin : edges.keySet()) {
@@ -247,46 +247,6 @@ public class Graph<T extends Vertex> {
             }
         }
         return graph;
-    }
-
-    public void dfsBridges(HashSet<T> vertexInComponent,
-                           T begin,
-                           T prev,
-                           HashSet<T> used,
-                           int timer,
-                           HashMap<T, Integer> inTime,
-                           HashMap<T, Integer> returnTime,
-                           ArrayList<EdgeOfGraph<T>> bridges) {
-        used.add(begin);
-        timer++;
-        inTime.put(begin, timer);
-        returnTime.put(begin, timer);
-        if (edges.get(begin) == null) {
-            return;
-        }
-        for (T out : edges.get(begin).keySet()) {
-            if (!vertexInComponent.contains(out))
-                continue;
-            if (out.equals(prev))
-                continue;
-            if (used.contains(out)) {
-                if (inTime.containsKey(out) && inTime.get(out) < returnTime.get(begin)) {
-                    returnTime.replace(begin, returnTime.get(begin), inTime.get(out));
-                }
-            } else {
-                this.dfsBridges(vertexInComponent, out, begin, used, timer, inTime, returnTime, bridges);
-                if (returnTime.containsKey(out) && returnTime.get(out) < returnTime.get(begin)) {
-                    returnTime.replace(begin, returnTime.get(begin), returnTime.get(out));
-                }
-                if (!returnTime.containsKey(out) || (returnTime.containsKey(out) && inTime.get(begin) < returnTime.get(out))) {
-                    // delete bridge
-                    bridges.add(new EdgeOfGraph<>(begin, out, edges.get(begin).get(out).length));
-//					undirGraph.deleteEdge(begin, out);
-//					undirGraph.deleteEdge(out, begin);
-                }
-
-            }
-        }
     }
 
     public Graph<T> createSubgraph(Set<T> verticesOfSubgraph) {
@@ -362,12 +322,16 @@ public class Graph<T extends Vertex> {
     }
 
     public void correctVerticesWeight() {
+        HashMap<T, T> vertexMap = new HashMap<>();
+        for (T vertex : edges.keySet()) {
+            vertexMap.put(vertex, vertex);
+        }
+
         for (T begin : edges.keySet()) {
             for (T end : edges.get(begin).keySet()) {
-                for (T check : edges.keySet()) {
-                    if (end.equals(check)) {
-                        end.setWeight(check.getWeight());
-                    }
+                T canonical = vertexMap.get(end);
+                if (canonical != null) {
+                    end.setWeight(canonical.getWeight());
                 }
             }
         }
@@ -384,7 +348,7 @@ public class Graph<T extends Vertex> {
     }
 
     public HashMap<T, Integer> initVertexInFaceCounter() {
-        HashMap<T, Integer> res = new HashMap<T, Integer>();
+        HashMap<T, Integer> res = new HashMap<>();
         for (T v : this.edges.keySet()) {
             res.put(v, 0);
         }

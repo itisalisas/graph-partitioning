@@ -90,7 +90,7 @@ public class Main implements Runnable {
 
         Graph<VertexOfDualGraph> preparedGraph;
         try {
-            preparedGraph = preparation.prepareGraph(graph, 1, OUTPUT_DIRECTORY, cc);
+            preparedGraph = preparation.prepareGraph(graph, 1);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -101,12 +101,8 @@ public class Main implements Runnable {
 
         List<Vertex> weightedVertices;
 
-        try {
-            PointsReader pr = new PointsReader(cc);
-            weightedVertices = pr.readWeightedPoints(RESOURCES_DIRECTORY + pathToPointsFile, true);
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException("Can't read points from file: " + e.getMessage());
-        }
+        PointsReader pr = new PointsReader(cc);
+        weightedVertices = pr.readWeightedPoints(RESOURCES_DIRECTORY + pathToPointsFile, true);
 
         LocalizationPoints lp = new LocalizationPoints(new HashSet<>(weightedVertices));
         HashMap<VertexOfDualGraph, ArrayList<Vertex>> faceToVertices = lp.findFacesForPoints(preparedGraph);
@@ -187,7 +183,7 @@ public class Main implements Runnable {
         long usedMemory = (runtime.totalMemory() - runtime.freeMemory()) / 1024 / 1024; // convert to MB
         logger.info("Without GC, used memory: {} MB", usedMemory);
         PartitionWriter pw = new PartitionWriter(cc);
-        pw.savePartitionToDirectory(partitioning, partitioning.bp,OUTPUT_DIRECTORY + pathToResultDirectory, partitionResultForFaces, true, partitioningTime, cc.referencePoint, usedMemory);
+        pw.savePartitionToDirectory(partitioning, partitioning.bp,OUTPUT_DIRECTORY + pathToResultDirectory, partitionResultForFaces, true, partitioningTime, usedMemory);
         try {
             pw.printBound(bounds, OUTPUT_DIRECTORY + pathToResultDirectory, true, cc.referencePoint);
         } catch (IOException e) {

@@ -38,23 +38,14 @@ public class GraphPreparation {
 		return this.comparisonForDualGraph;
 	}
 	
-	public Graph<VertexOfDualGraph> prepareGraph(Graph<Vertex> gph, double inaccuracy, String outputDirectory, CoordinateConversion cc) throws IOException {
+	public Graph<VertexOfDualGraph> prepareGraph(Graph<Vertex> gph, double inaccuracy) throws IOException {
+        long startTime = System.currentTimeMillis();
 		logger.info("Number of 0 weight vertex, before correction: {}", gph.countZeroWeightVertices());
 		gph.correctVerticesWeight();
+        long time1 = System.currentTimeMillis();
+        logger.info("Time for correcting vertices weight: {} seconds", (time1 - startTime) / 1000.0);
 		logger.info("Number of 0 weight vertex, before sweepLine: {}", gph.countZeroWeightVertices());
 		logger.info("Start graph weight: {}", gph.verticesSumWeight());
-		
-		// draw swepline
-		if (cc != null) {
-			GraphWriter gw = new GraphWriter(cc);
-			Path dirPath = Paths.get("./SweepLine");
-			try {
-				Files.createDirectories(dirPath); 
-			} catch (IOException e) {
-				e.printStackTrace(); 
-			}
-			gw.printGraphToFile(gph, outputDirectory + "//SweepLine", "beforeSweepLine.txt", true);
-		}
 		
         Assertions.assertTrue(gph.isConnected());
 		Graph<Vertex> graph;
@@ -74,11 +65,11 @@ public class GraphPreparation {
 				zeroWeight.add(v);
 			}
 		}
+        long time2 = System.currentTimeMillis();
+        logger.info("Time for sweepLine: {} seconds", (time2 - time1) / 1000.0);
 		
-		// draw swepline
 		logger.info("Number of 0 weight vertex, after sweepLine: {}", gph.countZeroWeightVertices());
 		logger.info("After sweepline graph weight: {}", gph.verticesSumWeight());
-		
 
 		MakingDualGraph dg = new MakingDualGraph();
 		Graph<VertexOfDualGraph> dualGraph = dg.buildDualGraph(graph);

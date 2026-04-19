@@ -19,7 +19,6 @@ enum ActionType {
 record Action(double x, int edgeNum, Vertex vertex, ActionType type) {
 }
 
-
 public class SweepLine {
 	private static final Logger logger = LoggerFactory.getLogger(SweepLine.class);
 	double inaccuracy;
@@ -44,11 +43,18 @@ public class SweepLine {
 
 
 	public Graph<Vertex> makePlanar(Graph<Vertex> gph) {
+        long t0 = System.currentTimeMillis();
 		ArrayList<EdgeOfGraph<Vertex>> edgesList = gph.undirEdgesArray();
 		ArrayList<ArrayList<Vertex>> intersectionPoints = findPointsOfIntersection(edgesList);
+        long t1 = System.currentTimeMillis();
+        logger.info("findPointsOfIntersection: {} ms, edges: {}", t1 - t0, edgesList.size());
 		HashMap<Vertex, Vertex> copyPointsGraphPoints = checkCopyPoints(gph, intersectionPoints);
+        long t2 = System.currentTimeMillis();
+        logger.info("checkCopyPoints: {} ms", t2 - t1);
 		
 		addIntersectionPoints(gph, edgesList, intersectionPoints, copyPointsGraphPoints);
+        long t3 = System.currentTimeMillis();
+        logger.info("addIntersectionPoints: {} ms", t3 - t2);
 		
 		int smallEdgesNum = 0;
 		for (Vertex begin : gph.getEdges().keySet()) {
@@ -82,7 +88,7 @@ public class SweepLine {
 			}
 		}
 		for (Vertex begin : gph.getEdges().keySet()) {
-			Vertex newBegin = null;
+			Vertex newBegin;
 			if (begin.name == 0) {
 				newBegin = verName.get(begin);
 			} else {
@@ -96,45 +102,85 @@ public class SweepLine {
 				}
 			}
 		}
-		HashSet<Vertex> toDelete = new HashSet<>();
-		for (Vertex v1 : graph.getEdges().keySet()) {
-			if (v1.getWeight() != 0) continue;
-			for (Vertex v2 : graph.getEdges().keySet()) {
-				if (v2.getWeight() != 0) continue;
-				if (v2.equals(v1)) continue;
-				if (toDelete.contains(v1) || toDelete.contains(v2)) continue;
-				if (v1.getLength(v2) <= inaccuracy) {
-					HashMap<Vertex, Edge> tmp = graph.getEdges().get(v2);
-					for (Vertex v : tmp.keySet()) {
-						graph.addEdge(v1, v, tmp.get(v).length);
-					}
-					toDelete.add(v2);
-				}
-			}
-		}
-		for (Vertex v : toDelete) {
-			graph.deleteVertex(v);
-		}
+        HashSet<Vertex> toDelete = new HashSet<>();
+        ArrayList<Vertex> zeroWeightVertices = new ArrayList<>();
+        for (Vertex v : graph.getEdges().keySet()) {
+            if (v.getWeight() == 0) {
+                zeroWeightVertices.add(v);
+            }
+        }
+
+        // Сортируем по X для эффективного поиска близких вершин
+        zeroWeightVertices.sort(Comparator.comparingDouble(v -> v.x));
+
+        for (int i = 0; i < zeroWeightVertices.size(); i++) {
+            Vertex v1 = zeroWeightVertices.get(i);
+            if (toDelete.contains(v1)) continue;
+
+            // Проверяем только вершины, близкие по X
+            for (int j = i + 1; j < zeroWeightVertices.size(); j++) {
+                Vertex v2 = zeroWeightVertices.get(j);
+                if (v2.x - v1.x > inaccuracy) break;
+                
+                if (toDelete.contains(v2)) continue;
+                if (v1.getLength(v2) <= inaccuracy) {
+                    HashMap<Vertex, Edge> tmp = graph.getEdges().get(v2);
+                    for (Vertex v : tmp.keySet()) {
+                        graph.addEdge(v1, v, tmp.get(v).length);
+                    }
+                    toDelete.add(v2);
+                }
+            }
+        }
+        for (Vertex v : toDelete) {
+            graph.deleteVertex(v);
+        }
+        long t4 = System.currentTimeMillis();
+        logger.info("vertex merging + graph rebuild: {} ms", t4 - t3);
+        logger.info("makePlanar total: {} ms", t4 - t0);
 	
 	
 		logger.info("small edges num after sweepline: {}", smallEdgesNum);
 		return graph;
 	}
 
-	private HashMap<Vertex, Vertex> checkCopyPoints(Graph<Vertex> gph, ArrayList<ArrayList<Vertex>> intersectionPoints) {
-		HashMap<Vertex, Vertex> ans = new HashMap<>();
-		for (ArrayList<Vertex> currArrayList : intersectionPoints) {
-			for (Vertex curVertex : currArrayList) {
-				for (Vertex verOfGraph : gph.getEdges().keySet()) {
-					if (curVertex.getLength(verOfGraph) <= inaccuracy) {
-						ans.put(curVertex, verOfGraph);
-					}
-				}
-			}
-		}
-		
-		return ans;
-	}
+    private HashMap<Vertex, Vertex> checkCopyPoints(Graph<Vertex> gph, ArrayList<ArrayList<Vertex>> intersectionPoints) {
+        HashMap<Vertex, Vertex> ans = new HashMap<>();
+        HashMap<Vertex, Double> bestDist = new HashMap<>();
+
+        // Собираем и сортируем вершины графа по X
+        ArrayList<Vertex> graphVertices = new ArrayList<>(gph.getEdges().keySet());
+        Comparator<Vertex> byX = Comparator.comparingDouble(v -> v.x);
+        graphVertices.sort(byX);
+
+        // Фиктивная вершина для бинарного поиска
+        Vertex searchKey = new Vertex(0, 0, 0);
+
+        for (ArrayList<Vertex> currArrayList : intersectionPoints) {
+            for (Vertex curVertex : currArrayList) {
+                // Бинарный поиск: находим начало диапазона вершин, близких по X
+                searchKey.x = curVertex.x - inaccuracy;
+                int idx = Collections.binarySearch(graphVertices, searchKey, byX);
+                int left = idx >= 0 ? idx : -idx - 1;
+                
+                // Проверяем только вершины в диапазоне [x - inaccuracy, x + inaccuracy]
+                for (int i = left; i < graphVertices.size(); i++) {
+                    Vertex verOfGraph = graphVertices.get(i);
+                    if (verOfGraph.x > curVertex.x + inaccuracy) break;
+                    
+                    double dist = curVertex.getLength(verOfGraph);
+                    if (dist <= inaccuracy) {
+                        Double prev = bestDist.get(curVertex);
+                        if (prev == null || dist < prev) {
+                            ans.put(curVertex, verOfGraph);
+                            bestDist.put(curVertex, dist);
+                        }
+                    }
+                }
+            }
+        }
+        return ans;
+    }
 	
 	
 	private void addIntersectionPoints(Graph<Vertex> gph,
@@ -194,58 +240,89 @@ public class SweepLine {
 
 	}
 
+	/**
+	 * Sweep line с Interval Tree для индексации по Y.
+	 * Гарантированно находит все пересечения.
+	 * Асимптотика: O(n log n + k), где k — число пересечений.
+	 * 
+	 * Interval Tree позволяет:
+	 * - Вставка интервала: O(log n)
+	 * - Удаление интервала: O(log n)  
+	 * - Поиск всех пересекающихся интервалов: O(log n + k)
+	 */
 	public ArrayList<ArrayList<Vertex>> findPointsOfIntersection(ArrayList<EdgeOfGraph<Vertex>> edgesList) {
-			ArrayList<ArrayList<Vertex>> intersectionPoints = new ArrayList<ArrayList<Vertex>>();
-			for (int i = 0; i < edgesList.size(); i++) {
-				intersectionPoints.add(new ArrayList<>());
+		ArrayList<ArrayList<Vertex>> intersectionPoints = new ArrayList<>();
+		for (int i = 0; i < edgesList.size(); i++) {
+			intersectionPoints.add(new ArrayList<>());
+		}
+
+		if (edgesList.isEmpty()) {
+			return intersectionPoints;
+		}
+
+		IntervalTree yIntervalTree = new IntervalTree();
+		HashMap<Integer, double[]> edgeYIntervals = new HashMap<>();
+
+		ArrayList<Action> actions = initActions(edgesList);
+		actions.sort((a1, a2) -> a1.x() < a2.x() ? -1
+				: a1.x() > a2.x() ? 1
+				: a1.type() == ActionType.ADD ? 1
+				: a2.type() == ActionType.ADD ? -1 : 0);
+
+		HashMap<Integer, EdgeOfGraph<Vertex>> actualEdge = new HashMap<>();
+
+		for (Action currAct : actions) {
+			int currEdgeInd = currAct.edgeNum();
+			EdgeOfGraph<Vertex> currEdge = edgesList.get(currEdgeInd);
+
+			if (currAct.type() != ActionType.ADD) {
+				actualEdge.remove(currEdgeInd);
+				double[] interval = edgeYIntervals.remove(currEdgeInd);
+				if (interval != null) {
+					yIntervalTree.delete(interval[0], currEdgeInd);
+				}
+				continue;
 			}
-			ArrayList<Action> actions = initActions(edgesList);
-			actions.sort((a1, a2) -> a1.x() < a2.x() ? -1
-                    : a1.x() > a2.x() ? 1
-                    : a1.type() == ActionType.ADD ? 1
-                    : a2.type() == ActionType.ADD ? -1 : 0);
-			HashMap<Integer, EdgeOfGraph<Vertex>> actualEdge = new HashMap<Integer, EdgeOfGraph<Vertex>>();
-        for (Action currAct : actions) {
-            int currEdgeInd = currAct.edgeNum();
-            EdgeOfGraph<Vertex> currEdge = edgesList.get(currEdgeInd);
-            if (currAct.type() != ActionType.ADD) {
-                actualEdge.remove(currEdgeInd);
-                continue;
-            }
-            for (int edgeNum : actualEdge.keySet()) {
-                //EdgeOfGraph<Vertex> edgeToCheck = edgesList[edgeNum];
-                EdgeOfGraph<Vertex> actEdge = actualEdge.get(edgeNum);
-                if (currEdge.equals(actEdge)) {
-                    continue;
-                }
-                if (!currEdge.intersect(actEdge)) {
-                    continue;
-                }
-                // check vertical
-                if (currEdge.vertical() && actEdge.vertical()) {
-                    checkVerticalEdges(currEdgeInd, edgeNum, edgesList, intersectionPoints);
-                    // check horizontal
-                } else if (currEdge.horizontal() && actEdge.horizontal()) {
-                    checkHorizontalEdges(currEdgeInd, edgeNum, edgesList, intersectionPoints);
-                    // check normal (not vertical, not horizontal)
-                } else {
-                    Vertex intersecPoint = currEdge.intersectionPoint(actEdge);
-                    if (intersecPoint != null) {
 
-                        if ((actEdge.begin.x == intersecPoint.x && actEdge.begin.y == intersecPoint.y) ||
-                                (actEdge.end.x == intersecPoint.x && actEdge.end.y == intersecPoint.y) ||
-                                (currEdge.begin.x == intersecPoint.x && currEdge.begin.y == intersecPoint.y) ||
-                                (currEdge.end.x == intersecPoint.x && currEdge.end.y == intersecPoint.y)) {
-                            continue;
-                        }
-                        intersectionPoints.get(currEdgeInd).add(intersecPoint);
-                        intersectionPoints.get(edgeNum).add(intersecPoint);
-                    }
-                }
+			double edgeMinY = Math.min(currEdge.begin.y, currEdge.end.y);
+			double edgeMaxY = Math.max(currEdge.begin.y, currEdge.end.y);
 
-            }
-            actualEdge.put(currAct.edgeNum(), edgesList.get(currAct.edgeNum()));
-        }
+			HashSet<Integer> candidateEdges = new HashSet<>();
+			yIntervalTree.queryOverlapping(edgeMinY, edgeMaxY, candidateEdges);
+
+			for (int edgeNum : candidateEdges) {
+				EdgeOfGraph<Vertex> actEdge = actualEdge.get(edgeNum);
+				if (actEdge == null || currEdge.equals(actEdge)) {
+					continue;
+				}
+				if (!currEdge.intersect(actEdge)) {
+					continue;
+				}
+
+				if (currEdge.vertical() && actEdge.vertical()) {
+					checkVerticalEdges(currEdgeInd, edgeNum, edgesList, intersectionPoints);
+				} else if (currEdge.horizontal() && actEdge.horizontal()) {
+					checkHorizontalEdges(currEdgeInd, edgeNum, edgesList, intersectionPoints);
+				} else {
+					Vertex intersecPoint = currEdge.intersectionPoint(actEdge);
+					if (intersecPoint != null) {
+						if ((actEdge.begin.x == intersecPoint.x && actEdge.begin.y == intersecPoint.y) ||
+								(actEdge.end.x == intersecPoint.x && actEdge.end.y == intersecPoint.y) ||
+								(currEdge.begin.x == intersecPoint.x && currEdge.begin.y == intersecPoint.y) ||
+								(currEdge.end.x == intersecPoint.x && currEdge.end.y == intersecPoint.y)) {
+							continue;
+						}
+						intersectionPoints.get(currEdgeInd).add(intersecPoint);
+						intersectionPoints.get(edgeNum).add(intersecPoint);
+					}
+				}
+			}
+
+			actualEdge.put(currEdgeInd, currEdge);
+			yIntervalTree.insert(edgeMinY, edgeMaxY, currEdgeInd);
+			edgeYIntervals.put(currEdgeInd, new double[]{edgeMinY, edgeMaxY});
+		}
+
 		return intersectionPoints;
 	}
 
@@ -325,10 +402,10 @@ public class SweepLine {
 																  HashMap<EdgeOfGraph<Vertex>,
 																  VertexOfDualGraph> returnFromSimplification,
 																  HashSet<Vertex> newVertices) {
-		HashMap<Vertex, VertexOfDualGraph> res = new HashMap<Vertex, VertexOfDualGraph>();
+		HashMap<Vertex, VertexOfDualGraph> res = new HashMap<>();
 		ArrayList<Action> actions = initActions(diagList);
 		addPointToActions(actions, newVertices);
-		// System.out.println("action size: " + actions.size());
+
 		actions.sort((a1, a2) -> a1.x() < a2.x() ? -1 :
                 a1.x() > a2.x() ? 1 :
                         a1.type() == ActionType.ADD ? 1 :
@@ -336,93 +413,79 @@ public class SweepLine {
                                         0);
 		TreeMap<Double, HashSet<EdgeOfGraph<Vertex>>> actualEdges = new TreeMap<>(
                 Double::compareTo);
-		//HashMap<Integer, EdgeOfGraph> actualEdge = new HashMap<Integer, EdgeOfGraph>();
-		for (int i = 0; i < actions.size(); i++) {
-			if (actions.get(i).type() == ActionType.DELETE) {
-				//System.out.println("DELETE");
-				//actualEdge.remove(actions.get(i).edgeNum());
 
-				EdgeOfGraph<Vertex> actionEdge = diagList.get(actions.get(i).edgeNum());
-				SortedMap<Double, HashSet<EdgeOfGraph<Vertex>>> tmp = actualEdges.subMap(actionEdge.begin.y, 
-																						 actionEdge.end.y);
-				for (Double d : tmp.keySet()) {
-					if (actualEdges.get(d) != null) {
-						actualEdges.get(d).remove(actionEdge);
-						// if (actualEdges.get(d).size() == 0) {
-						// 	actualEdges.remove(d);
-						// }
-					}
-				}
-				
-				if (actualEdges.get(actionEdge.begin.y) != null) {
-					actualEdges.get(actionEdge.begin.y).remove(actionEdge);
-					if (actualEdges.get(actionEdge.begin.y).isEmpty()) {
-						actualEdges.remove(actionEdge.begin.y);
-					}
-				}
-				
-				if (actualEdges.get(actionEdge.end.y) != null) {
-					actualEdges.get(actionEdge.end.y).remove(actionEdge);
-					if (actualEdges.get(actionEdge.end.y).isEmpty()) {
-						actualEdges.remove(actionEdge.end.y);
-					}
-				}				
-				continue;
-			}
-			if (actions.get(i).type() == ActionType.ADD) {
-				//System.out.println("ADD");
+        for (Action action : actions) {
+            if (action.type() == ActionType.DELETE) {
+                EdgeOfGraph<Vertex> actionEdge = diagList.get(action.edgeNum());
+                SortedMap<Double, HashSet<EdgeOfGraph<Vertex>>> tmp = actualEdges.subMap(actionEdge.begin.y,
+                        actionEdge.end.y);
+                for (Double d : tmp.keySet()) {
+                    if (actualEdges.get(d) != null) {
+                        actualEdges.get(d).remove(actionEdge);
+                    }
+                }
 
-				//actualEdge.put(actions.get(i).edgeNum(), actionEdge);
-				
-				EdgeOfGraph<Vertex> actionEdge = diagList.get(actions.get(i).edgeNum());
-				
-				HashSet<EdgeOfGraph<Vertex>> intersectingFacesBegin = null;
-				if (actualEdges.floorKey(actionEdge.begin.y) != null) {
-					intersectingFacesBegin = actualEdges.get(actualEdges.floorKey(actionEdge.begin.y));
-				}
-				
-				HashSet<EdgeOfGraph<Vertex>> intersectingFacesEnd = null;
-				if (actualEdges.floorKey(actionEdge.end.y) !=null) {
-					intersectingFacesEnd = actualEdges.get(actualEdges.floorKey(actionEdge.end.y));
-				}
-				
-				if (intersectingFacesBegin == null) {
-					intersectingFacesBegin = new HashSet<>();
-				}
-				actualEdges.put(actionEdge.begin.y, intersectingFacesBegin);
-				
-				if (intersectingFacesEnd == null) {
-					intersectingFacesEnd = new HashSet<>();
-				}
-				actualEdges.put(actionEdge.end.y, intersectingFacesEnd);
+                if (actualEdges.get(actionEdge.begin.y) != null) {
+                    actualEdges.get(actionEdge.begin.y).remove(actionEdge);
+                    if (actualEdges.get(actionEdge.begin.y).isEmpty()) {
+                        actualEdges.remove(actionEdge.begin.y);
+                    }
+                }
 
-				SortedMap<Double, HashSet<EdgeOfGraph<Vertex>>> tmp = actualEdges.subMap(actionEdge.begin.y, actionEdge.end.y);
-				for (Double d : tmp.keySet()) {
-					if (actionEdge != null) {
-						//System.out.println("edge " + actionEdge.begin.y() + " " + actionEdge.end.y());
-						actualEdges.get(d).add(actionEdge);
-						//System.out.println(d + " " + actualEdges.get(d).size() + "  " + actualEdges.get(d));
-					}
-				}
+                if (actualEdges.get(actionEdge.end.y) != null) {
+                    actualEdges.get(actionEdge.end.y).remove(actionEdge);
+                    if (actualEdges.get(actionEdge.end.y).isEmpty()) {
+                        actualEdges.remove(actionEdge.end.y);
+                    }
+                }
+                continue;
+            }
+            if (action.type() == ActionType.ADD) {
+                EdgeOfGraph<Vertex> actionEdge = diagList.get(action.edgeNum());
 
-				continue;
-			}
-			//System.out.println("POINT");
-			Vertex vertex = actions.get(i).vertex();
+                HashSet<EdgeOfGraph<Vertex>> intersectingFacesBegin = null;
+                if (actualEdges.floorKey(actionEdge.begin.y) != null) {
+                    intersectingFacesBegin = actualEdges.get(actualEdges.floorKey(actionEdge.begin.y));
+                }
 
-			if (actualEdges.floorKey(vertex.y) == null) {
-				continue;
-			}
-			for (EdgeOfGraph<Vertex> vert : actualEdges.get(actualEdges.floorKey(vertex.y))) {
-				if (!vertex.inRectangle(vert.begin, vert.end)) {
-					continue;
-				}
-				
-				if (vertex.inFaceGeom(returnFromSimplification.get(vert).getVerticesOfFace())) {
-					res.put(vertex, returnFromSimplification.get(vert));
-				}
-			}
-		}
+                HashSet<EdgeOfGraph<Vertex>> intersectingFacesEnd = null;
+                if (actualEdges.floorKey(actionEdge.end.y) != null) {
+                    intersectingFacesEnd = actualEdges.get(actualEdges.floorKey(actionEdge.end.y));
+                }
+
+                if (intersectingFacesBegin == null) {
+                    intersectingFacesBegin = new HashSet<>();
+                }
+                actualEdges.put(actionEdge.begin.y, intersectingFacesBegin);
+
+                if (intersectingFacesEnd == null) {
+                    intersectingFacesEnd = new HashSet<>();
+                }
+                actualEdges.put(actionEdge.end.y, intersectingFacesEnd);
+
+                SortedMap<Double, HashSet<EdgeOfGraph<Vertex>>> tmp = actualEdges.subMap(actionEdge.begin.y, actionEdge.end.y);
+                for (Double d : tmp.keySet()) {
+                    actualEdges.get(d).add(actionEdge);
+                }
+
+                continue;
+            }
+
+            Vertex vertex = action.vertex();
+
+            if (actualEdges.floorKey(vertex.y) == null) {
+                continue;
+            }
+            for (EdgeOfGraph<Vertex> vert : actualEdges.get(actualEdges.floorKey(vertex.y))) {
+                if (!vertex.inRectangle(vert.begin, vert.end)) {
+                    continue;
+                }
+
+                if (vertex.inFaceGeom(returnFromSimplification.get(vert).getVerticesOfFace())) {
+                    res.put(vertex, returnFromSimplification.get(vert));
+                }
+            }
+        }
 		return res;
 	}
 

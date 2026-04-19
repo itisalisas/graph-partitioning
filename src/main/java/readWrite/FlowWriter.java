@@ -186,14 +186,20 @@ public class FlowWriter {
             if (!dir.exists()) {
                 dir.mkdirs();
             }
+            long time0 = System.currentTimeMillis();
+            logger.info("Started dump spt data");
 
             // Dump SPT 1 (from splitVertex1)
             writeSPTToFile(outputDir + "spt1.txt", spt1, root1, splitToOriginalMap, "SPT1",
                     coordConversion, initGraph, comparisonForDualGraph);
+            long time1 = System.currentTimeMillis();
+            logger.info("SPT1 saved in {} ms", time1 - time0);
 
             // Dump SPT 2 (from splitVertex2)
             writeSPTToFile(outputDir + "spt2.txt", spt2, root2, splitToOriginalMap, "SPT2",
                     coordConversion, initGraph, comparisonForDualGraph);
+            long time2 = System.currentTimeMillis();
+            logger.info("SPT2 saved in {} ms", time2 - time1);
 
             logger.info("SPT visualization data saved to {}", outputDir);
         } catch (Exception e) {

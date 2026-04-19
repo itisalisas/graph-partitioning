@@ -41,7 +41,6 @@ public class GraphWriter {
 					Vertex nEnd = coordConver.fromEuclidean(end);
 					out.write(String.format("%d %f %f %f ", end.getName(), nEnd.x, nEnd.y,
 					graph.getEdges().get(begin).get(end).length));
-					continue;
 				} else {
 				out.write(String.format("%d %f %f %f ", end.getName(), end.x, end.y,
 						graph.getEdges().get(begin).get(end).length));
@@ -70,43 +69,6 @@ public class GraphWriter {
 			for (Vertex end : graph.getEdges().get(begin).keySet()) {
 				if (geodetic) {
 					Vertex nEnd = coordConver.fromEuclidean(end);
-					out.write(String.format("%d %f %f %f ", end.getName(), nEnd.x, nEnd.y,
-							graph.getEdges().get(begin).get(end).length));
-							continue;
-				}
-				out.write(String.format("%d %f %f %f ", end.getName(), end.x, end.y,
-						graph.getEdges().get(begin).get(end).length));
-			}
-			out.append('\n');
-		}
-		out.close();
-	}
-
-	public <T extends Vertex> void printDualGraphToFile(Graph<VertexOfDualGraph> graph, 
-														HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber,
-														int partsNumber,
-														String outputDirectory, 
-														String outFileName,
-														boolean geodetic) throws IOException {
-		PartitionWriter.createOutputDirectory(outputDirectory);
-		FileWriter out = new FileWriter(outputDirectory + File.separator + outFileName, false);
-		out.write(String.format("%d %d\n", graph.getEdges().size(), partsNumber));
-		CoordinateConversion cc = null;
-		if (geodetic) {
-			cc = new CoordinateConversion();
-		}
-		for (Vertex begin : graph.getEdges().keySet()) {
-			if (geodetic) {
-				Vertex nBegin = cc.fromEuclidean(begin);
-				out.write(String.format("%d %d %f %f %d ", begin.getName(), dualVertexToPartNumber.get(begin), 
-						nBegin.x, nBegin.y, graph.getEdges().get(begin).size()));
-			}else{
-				out.write(String.format("%d %d %f %f %d ", begin.getName(), dualVertexToPartNumber.get(begin), 
-						begin.x, begin.y, graph.getEdges().get(begin).size()));
-			}
-			for (Vertex end : graph.getEdges().get(begin).keySet()) {
-				if (geodetic) {
-					Vertex nEnd = cc.fromEuclidean(end);
 					out.write(String.format("%d %f %f %f ", end.getName(), nEnd.x, nEnd.y,
 							graph.getEdges().get(begin).get(end).length));
 							continue;

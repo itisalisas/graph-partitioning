@@ -135,7 +135,6 @@ public class Vertex extends Point {
 		
 		Map<T, Double> edgeWeight = countEdgeWeightForVertices(vertexIn);
 		center = countVerticesEdgeWeightCenter(vertexIn, edgeWeight);
-		
 		return center;
 	}
 
@@ -171,16 +170,6 @@ public class Vertex extends Point {
 		return new Point(xSum / fullLengthSum2, ySum / fullLengthSum2);
 	}
 
-
-	public static double sumVertexWeight(ArrayList<Vertex> vertexIn) {
-		double sum = 0;
-		for (Vertex v : vertexIn) {
-			sum = sum + v.getWeight();
-		}
-		return sum;
-	}
-	
-	
 	public Vertex copy() {
 		return new Vertex(this.getName(), this, this.getWeight());
 	}
