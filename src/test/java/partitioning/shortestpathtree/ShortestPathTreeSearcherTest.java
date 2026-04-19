@@ -55,7 +55,7 @@ public class ShortestPathTreeSearcherTest {
             graph.addEdge(edge.end, edge.begin, edge.length);
         }
         GraphPreparation preparation = new GraphPreparation();
-        Graph<VertexOfDualGraph> dualGraph = preparation.prepareGraph(graph, 0.0001, "", null);
+        Graph<VertexOfDualGraph> dualGraph = preparation.prepareGraph(graph, 0.0001);
         for (VertexOfDualGraph v: dualGraph.verticesArray()) {
             System.out.println(v.getName() + " : " + v.getVerticesOfFace().stream().map(Vertex::getName).toList() + ", w = " + v.getWeight());
         }

@@ -72,12 +72,6 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             new Vector2D(new Point(2, -1))
     );
 
-    private Graph<VertexOfDualGraph> getLargestConnectedComponent(Graph<VertexOfDualGraph> graph) {
-        List<HashSet<VertexOfDualGraph>> connectivityComponents = graph.makeUndirectedGraph().splitForConnectedComponents();
-        HashSet<VertexOfDualGraph> largestComponent = connectivityComponents.stream().max(Comparator.comparingInt(HashSet::size)).orElseThrow();
-        return graph.createSubgraph(largestComponent);
-    }
-
     @Override
     public void balancedPartitionAlgorithm(Graph<Vertex> simpleGraph, 
 										   Map<Vertex, VertexOfDualGraph> comparisonForDualGraph,
@@ -85,7 +79,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 										   int maxSumVerticesWeight) {
 
         Stack<Graph<VertexOfDualGraph>> stack = new Stack<>();
-        graph = getLargestConnectedComponent(graph);
+        graph = graph.getLargestConnectedComponent();
         this.graph = graph;
         long startTime = System.currentTimeMillis();
 
@@ -511,7 +505,11 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
     }
 
 
-    void markComponent(Graph<VertexOfDualGraph> graph, VertexOfDualGraph source, Map<VertexOfDualGraph, Boolean> isConnectedWithSource) {
+    void markComponent(
+            Graph<VertexOfDualGraph> graph,
+            VertexOfDualGraph source,
+            Map<VertexOfDualGraph, Boolean> isConnectedWithSource
+    ) {
         LinkedList<VertexOfDualGraph> queue = new LinkedList<>();
         queue.add(source);
         isConnectedWithSource.put(source, true);
@@ -537,15 +535,6 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
     ) {
         Graph<VertexOfDualGraph> newGraph = currentGraph.clone();
 
-        for (VertexOfDualGraph u : newGraph.verticesArray()) {
-            for (Entry<VertexOfDualGraph, Edge> entry : newGraph.getEdges().get(u).entrySet()) {
-                Edge edge = entry.getValue();
-                if (edge.getBandwidth() == 0) {
-                    edge.setBandwidth(0.1);
-                }
-            }
-        }
-
         for (VertexOfDualGraph s : sourceSet) {
             newGraph.addEdge(source, s, 0, Integer.MAX_VALUE);
             newGraph.addEdge(s, source, 0, Integer.MAX_VALUE);
@@ -560,7 +549,6 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
     }
 
     private List<Graph<VertexOfDualGraph>> partitionGraphReif(FlowResult flow) {
-        List<Vertex> path = flow.pathInOriginalGraph();
         Graph<VertexOfDualGraph> graph = flow.graphWithFlow().clone();
         
         VertexOfDualGraph source = flow.source();
@@ -583,7 +571,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
         graph.deleteVertex(source);
         graph.deleteVertex(sink);
         
-        ArrayList<HashSet<VertexOfDualGraph>> components = graph.splitForConnectedComponents();
+        List<Set<VertexOfDualGraph>> components = graph.splitForConnectedComponents();
 
         List<Graph<VertexOfDualGraph>> subpartition = new ArrayList<>();
         

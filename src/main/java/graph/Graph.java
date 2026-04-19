@@ -193,25 +193,25 @@ public class Graph<T extends Vertex> {
         }
     }
 
-    public ArrayList<HashSet<T>> splitForConnectedComponents() {
+    public List<Set<T>> splitForConnectedComponents() {
         // make undirected
         Graph<T> undirGraph = makeUndirectedGraph();
-        ArrayList<HashSet<T>> component = new ArrayList<>();
-        HashSet<T> visited = new HashSet<T>();
-        HashSet<T> actualComp = new HashSet<T>();
+        List<Set<T>> component = new ArrayList<>();
+        Set<T> visited = new HashSet<>();
+        Set<T> actualComp = new HashSet<>();
         for (T begin : edges.keySet()) {
             if (!visited.contains(begin)) {
                 actualComp.add(begin);
                 visited.add(begin);
                 undirGraph.dfsComponents(begin, actualComp, visited);
                 component.add(actualComp);
-                actualComp = new HashSet<T>();
+                actualComp = new HashSet<>();
             }
         }
         return component;
     }
 
-    private void dfsComponents(T begin, HashSet<T> actualComp, HashSet<T> visited) {
+    private void dfsComponents(T begin, Set<T> actualComp, Set<T> visited) {
         Stack<T> stack = new Stack<>();
         stack.push(begin);
         visited.add(begin);
@@ -304,9 +304,9 @@ public class Graph<T extends Vertex> {
     }
 
     public Graph<T> getLargestConnectedComponent() {
-        List<HashSet<T>> connectivityComponents = this.makeUndirectedGraph().splitForConnectedComponents();
-        HashSet<T> largestComponent = connectivityComponents.stream().max(Comparator.comparingInt(HashSet::size)).orElseThrow();
-        return this.createSubgraph(largestComponent);
+        List<Set<T>> connectivityComponents = makeUndirectedGraph().splitForConnectedComponents();
+        Set<T> largestComponent = connectivityComponents.stream().max(Comparator.comparingInt(Set::size)).orElseThrow();
+        return createSubgraph(largestComponent);
     }
 
     public boolean isConnected() {
