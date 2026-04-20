@@ -22,20 +22,15 @@ public class GraphPreparation {
 	private static final Logger logger = LoggerFactory.getLogger(GraphPreparation.class);
 	private final boolean isPlanar;
 	private final boolean isDual;
-	private final HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph;
+
 	public GraphPreparation() {
 		this.isPlanar = false;
 		this.isDual = false;
-		comparisonForDualGraph = new HashMap<>();
 	}
+
 	public GraphPreparation(boolean isPlanar, boolean isDual) {
 		this.isPlanar = isPlanar;
 		this.isDual = isDual;
-		comparisonForDualGraph = new HashMap<>();
-	}
-	
-	public HashMap<Vertex, VertexOfDualGraph> getComparisonForDualGraph() {
-		return this.comparisonForDualGraph;
 	}
 	
 	public Graph<VertexOfDualGraph> prepareGraph(Graph<Vertex> gph, double inaccuracy) throws IOException {
@@ -80,8 +75,6 @@ public class GraphPreparation {
 		Assertions.assertTrue(dualGraph.isConnected());
 		dg.removeExternalFace(dualGraph);
 		Assertions.assertTrue(dualGraph.isConnected());
-		comparisonForDualGraph.clear();
-		comparisonForDualGraph.putAll(dg.getComparison());
 		logger.info("Dual graph weight: {}", dualGraph.verticesSumWeight());
 		return dualGraph;
 	}

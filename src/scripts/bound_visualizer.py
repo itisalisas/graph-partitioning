@@ -11,7 +11,7 @@ def load_vertex_data(file_path):
     with open(file_path, 'r') as file:
         lines = file.readlines()
         # Пропускаем последнюю строку (содержит метаданные, а не вершину)
-        data = [[int(parts[0]), float(parts[1].replace(',', '.')), float(parts[2].replace(',', '.'))]
+        data = [[int(parts[0]), float(parts[1]), float(parts[2])]
                 for line in lines[:-1]  # Исключаем последнюю строку
                 for parts in [line.strip().split()]]
     return pd.DataFrame(data, columns=['id', 'longitude', 'latitude'])

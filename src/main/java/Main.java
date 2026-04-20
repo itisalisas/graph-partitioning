@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -120,8 +121,7 @@ public class Main implements Runnable {
 
         long startTime = System.currentTimeMillis();
 
-        HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph = preparation.getComparisonForDualGraph();
-        List<Set<VertexOfDualGraph>> partitionResultForFaces = partitioning.partition(graph, comparisonForDualGraph, preparedGraph, maxSumVerticesWeight);
+        List<Set<VertexOfDualGraph>> partitionResultForFaces = partitioning.partition(graph, preparedGraph, maxSumVerticesWeight);
         for (Set<VertexOfDualGraph> hs : partitionResultForFaces) {
             for (VertexOfDualGraph v : hs) {
                 Assertions.assertNotNull(v.getVerticesOfFace());
@@ -134,7 +134,7 @@ public class Main implements Runnable {
             }
         }
         Graph<PartitionGraphVertex> partitionGraph = PartitionGraphVertex.buildPartitionGraph(preparedGraph, partitionResultForFaces, dualVertexToPartNumber);
-        Balancer balancer = new Balancer(partitionGraph, preparedGraph, graph, maxSumVerticesWeight, comparisonForDualGraph, OUTPUT_DIRECTORY + pathToResultDirectory);
+        Balancer balancer = new Balancer(partitionGraph, preparedGraph, graph, maxSumVerticesWeight, OUTPUT_DIRECTORY + pathToResultDirectory);
         partitionResultForFaces = balancer.rebalancing();
         HashMap<VertexOfDualGraph, Integer> newDualVertexToPartNumber = new HashMap<>();
         for (int i = 0; i < partitionResultForFaces.size(); i++) {
@@ -160,12 +160,12 @@ public class Main implements Runnable {
         for (int i = 0; i < partitionResultForFaces.size(); i++) {
             partitionResult.add(new HashSet<>());
             for (VertexOfDualGraph face : partitionResultForFaces.get(i)) {
-                partitionResult.get(i).addAll(comparisonForDualGraph.get(face).getVerticesOfFace());
+                partitionResult.get(i).addAll(face.getVerticesOfFace());
             }
             if (BoundSearcher.findRadius(new ArrayList<>(partitionResult.get(i))) > maxRegionRadiusMeters) {
                 countPartsWithNonFittingRadius++;
             }
-            bounds.add(Map.entry(BoundSearcher.findBound(graph, partitionResultForFaces.get(i), comparisonForDualGraph), partitionResultForFaces.get(i).stream().mapToDouble(Vertex::getWeight).sum()));
+            bounds.add(Map.entry(BoundSearcher.findBound(graph, partitionResultForFaces.get(i)), partitionResultForFaces.get(i).stream().mapToDouble(Vertex::getWeight).sum()));
         }
 
         logger.info("Number of parts: {}, number of parts with radius > max: {}", partitionResultForFaces.size(), countPartsWithNonFittingRadius);
@@ -193,6 +193,8 @@ public class Main implements Runnable {
     }
 
     public static void main(String[] args) {
+        // Pin numeric formatting to dot-decimal so all outputs are locale-independent
+        Locale.setDefault(Locale.ROOT);
         int exitCode = new CommandLine(new Main()).execute(args);
         System.exit(exitCode);
     }

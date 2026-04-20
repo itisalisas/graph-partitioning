@@ -3,8 +3,9 @@ package readWrite;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.HashMap;
+
 import java.util.List;
+import java.util.Locale;
 
 import graph.Graph;
 import graph.Point;
@@ -15,9 +16,7 @@ public class GraphWriter {
 
 	public CoordinateConversion coordConver;
 
-	public GraphWriter() {
-
-	}
+	public GraphWriter() {}
 
 	public GraphWriter(CoordinateConversion coordConver) {
 		this.coordConver = coordConver;
@@ -26,23 +25,23 @@ public class GraphWriter {
 	public <T extends Vertex> void printGraphToFile(Graph<T> graph, String outputDirectory, String outFileName, boolean geodetic) throws IOException {
 		PartitionWriter.createOutputDirectory(outputDirectory);
 		FileWriter out = new FileWriter(outputDirectory + File.separator + outFileName, false);
-		out.write(String.format("%d %n", graph.getEdges().size()));
+		out.write(String.format(Locale.ROOT, "%d %n", graph.getEdges().size()));
 		
 		for (Vertex begin : graph.getEdges().keySet()) {
 			Vertex nBegin;
 			if (geodetic) {
 				nBegin = coordConver.fromEuclidean(begin);
-				out.write(String.format("%d %f %f %d ", begin.getName(), nBegin.x, nBegin.y, graph.getEdges().get(begin).size()));
+				out.write(String.format(Locale.ROOT, "%d %f %f %d ", begin.getName(), nBegin.x, nBegin.y, graph.getEdges().get(begin).size()));
 			} else {
-				out.write(String.format("%d %f %f %d ", begin.getName(), begin.x, begin.y, graph.getEdges().get(begin).size()));
+				out.write(String.format(Locale.ROOT, "%d %f %f %d ", begin.getName(), begin.x, begin.y, graph.getEdges().get(begin).size()));
 			}
 			for (Vertex end : graph.getEdges().get(begin).keySet()) {
 				if (geodetic) {
 					Vertex nEnd = coordConver.fromEuclidean(end);
-					out.write(String.format("%d %f %f %f ", end.getName(), nEnd.x, nEnd.y,
+					out.write(String.format(Locale.ROOT, "%d %f %f %f ", end.getName(), nEnd.x, nEnd.y,
 					graph.getEdges().get(begin).get(end).length));
 				} else {
-				out.write(String.format("%d %f %f %f ", end.getName(), end.x, end.y,
+				out.write(String.format(Locale.ROOT, "%d %f %f %f ", end.getName(), end.x, end.y,
 						graph.getEdges().get(begin).get(end).length));
 				}
 			}
@@ -57,23 +56,23 @@ public class GraphWriter {
 														boolean geodetic) throws IOException {
 		PartitionWriter.createOutputDirectory(outputDirectory);
 		FileWriter out = new FileWriter(outputDirectory + File.separator + outFileName, false);
-		out.write(String.format("%d\n", graph.getEdges().size()));
+		out.write(String.format(Locale.ROOT, "%d\n", graph.getEdges().size()));
 		
 		for (Vertex begin : graph.getEdges().keySet()) {
 			if (geodetic) {
 				Vertex nBegin = coordConver.fromEuclidean(begin);
-				out.write(String.format("%d %f %f %f %d ", begin.getName(), nBegin.x, nBegin.y, begin.getWeight(), graph.getEdges().get(begin).size()));
+				out.write(String.format(Locale.ROOT, "%d %f %f %f %d ", begin.getName(), nBegin.x, nBegin.y, begin.getWeight(), graph.getEdges().get(begin).size()));
 			} else {
-				out.write(String.format("%d %f %f %f %d ", begin.getName(), begin.x, begin.y, begin.getWeight(), graph.getEdges().get(begin).size()));
+				out.write(String.format(Locale.ROOT, "%d %f %f %f %d ", begin.getName(), begin.x, begin.y, begin.getWeight(), graph.getEdges().get(begin).size()));
 			}
 			for (Vertex end : graph.getEdges().get(begin).keySet()) {
 				if (geodetic) {
 					Vertex nEnd = coordConver.fromEuclidean(end);
-					out.write(String.format("%d %f %f %f ", end.getName(), nEnd.x, nEnd.y,
+					out.write(String.format(Locale.ROOT, "%d %f %f %f ", end.getName(), nEnd.x, nEnd.y,
 							graph.getEdges().get(begin).get(end).length));
 							continue;
 				}
-				out.write(String.format("%d %f %f %f ", end.getName(), end.x, end.y,
+				out.write(String.format(Locale.ROOT, "%d %f %f %f ", end.getName(), end.x, end.y,
 						graph.getEdges().get(begin).get(end).length));
 			}
 			out.append('\n');

@@ -34,8 +34,8 @@ with open(file_path, "r") as file:
 
         main_vertex_id = int(data[0])
         main_part_num = int(data[1])
-        main_x = float(data[2].replace(',', '.'))
-        main_y = float(data[3].replace(',', '.'))
+        main_x = float(data[2])
+        main_y = float(data[3])
         G.add_node(main_vertex_id, x=main_x, y=main_y)
         vertex_part_map[main_vertex_id] = main_part_num
 
@@ -44,9 +44,9 @@ with open(file_path, "r") as file:
         idx = 5
         for _ in range(num_edges):
             neighbor_id = int(data[idx])
-            neighbor_x = float(data[idx + 1].replace(',', '.'))
-            neighbor_y = float(data[idx + 2].replace(',', '.'))
-            length = float(data[idx + 3].replace(',', '.'))
+            neighbor_x = float(data[idx + 1])
+            neighbor_y = float(data[idx + 2])
+            length = float(data[idx + 3])
 
             if neighbor_id not in G.nodes:
                 G.add_node(neighbor_id, x=neighbor_x, y=neighbor_y)

@@ -79,9 +79,10 @@ public class BoundSearcher {
         return lastVec.x * newVec.y - lastVec.y * newVec.x;
     }
 
-    public static List<Vertex> findBound(Graph<Vertex> graph,
-                                         Set<VertexOfDualGraph> part,
-                                         Map<Vertex, VertexOfDualGraph> comparisonForDualGraph) {
+    public static List<Vertex> findBound(
+            Graph<Vertex> graph,
+            Set<VertexOfDualGraph> part
+    ) {
 
         final int partSize = part.size();
         final int estimatedVertices = partSize * 4;
@@ -94,7 +95,7 @@ public class BoundSearcher {
         Set<Vertex> allVertices = new HashSet<>(estimatedVertices);
 
         for (int i = 0; i < partSize; i++) {
-            List<Vertex> faceVertices = comparisonForDualGraph.get(orderedFaces.get(i)).getVerticesOfFace();
+            List<Vertex> faceVertices = orderedFaces.get(i).getVerticesOfFace();
             verticesByFaces.add(faceVertices);
 
             final int faceSize = faceVertices.size();

@@ -27,7 +27,6 @@ public class BubblePartitioning extends BalancedPartitioningOfPlanarGraphs {
     @Override
     public void balancedPartitionAlgorithm(
             Graph<Vertex> simpleGraph,
-            Map<Vertex, VertexOfDualGraph> comparisonForDualGraph,
             Graph<VertexOfDualGraph> graph,
             int maxSumVerticesWeight
     ) {

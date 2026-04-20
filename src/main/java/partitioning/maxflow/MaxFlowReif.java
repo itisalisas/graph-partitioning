@@ -30,7 +30,6 @@ public class MaxFlowReif implements MaxFlow {
     VertexOfDualGraph sink;
     double flow;
     CoordinateConversion conversion;
-    Map<Vertex, VertexOfDualGraph> comparisonForDualGraph;
 
     private record PathCandidate(
             Vertex splitVertex1,
@@ -46,15 +45,13 @@ public class MaxFlowReif implements MaxFlow {
     public MaxFlowReif(Graph<Vertex> initGraph,
                        Graph<VertexOfDualGraph> dualGraph,
                        VertexOfDualGraph source,
-                       VertexOfDualGraph sink,
-                       Map<Vertex, VertexOfDualGraph> comparisonForDualGraph
+                       VertexOfDualGraph sink
     ) {
         this.initGraph = initGraph;
         this.dualGraph = dualGraph;
         this.source = source;
         this.sink = sink;
         this.conversion = new CoordinateConversion();
-        this.comparisonForDualGraph = comparisonForDualGraph;
     }
 
     @Override
@@ -64,9 +61,7 @@ public class MaxFlowReif implements MaxFlow {
         HashSet<VertexOfDualGraph> sinkNeighbors = collectNeighbors(sink);
         long startTime = System.currentTimeMillis();
 
-        BoundariesData boundaries = computeBoundaries(
-                sourceNeighbors, sinkNeighbors, comparisonForDualGraph
-        );
+        BoundariesData boundaries = computeBoundaries(sourceNeighbors, sinkNeighbors);
         long time1 = System.currentTimeMillis();
         logger.info("Time for computing boundaries: {} seconds", (time1 - startTime) / 1000.0);
 
@@ -180,15 +175,11 @@ public class MaxFlowReif implements MaxFlow {
      */
     private BoundariesData computeBoundaries(
             Set<VertexOfDualGraph> sourceNeighbors,
-            Set<VertexOfDualGraph> sinkNeighbors,
-            Map<Vertex, VertexOfDualGraph> comparisonForDualGraph) {
+            Set<VertexOfDualGraph> sinkNeighbors
+    ) {
 
-        List<Vertex> sourceBoundary = BoundSearcher.findBound(
-                initGraph, sourceNeighbors, comparisonForDualGraph
-        );
-        List<Vertex> sinkBoundary = BoundSearcher.findBound(
-                initGraph, sinkNeighbors, comparisonForDualGraph
-        );
+        List<Vertex> sourceBoundary = BoundSearcher.findBound(initGraph, sourceNeighbors);
+        List<Vertex> sinkBoundary = BoundSearcher.findBound(initGraph, sinkNeighbors);
 
         HashSet<VertexOfDualGraph> allDualVerticesSet = new HashSet<>(
                 dualGraph.verticesArray()
@@ -196,9 +187,7 @@ public class MaxFlowReif implements MaxFlow {
         allDualVerticesSet.remove(source);
         allDualVerticesSet.remove(sink);
 
-        List<Vertex> externalBoundary = BoundSearcher.findBound(
-                initGraph, allDualVerticesSet, comparisonForDualGraph
-        );
+        List<Vertex> externalBoundary = BoundSearcher.findBound(initGraph, allDualVerticesSet);
 
         return new BoundariesData(sourceBoundary, sinkBoundary, externalBoundary);
     }
@@ -639,7 +628,7 @@ public class MaxFlowReif implements MaxFlow {
                 best.splitVertex2(),
                 splitToOriginalMap,
                 sourceNeighbors, sinkNeighbors, flow, conversion,
-                initGraph, comparisonForDualGraph
+                initGraph
         );
     }
 

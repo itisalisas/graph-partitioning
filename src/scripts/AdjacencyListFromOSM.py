@@ -54,7 +54,7 @@ if withRivers:
             data['water'] = True
     except ValueError:
         water_graph = nx.MultiDiGraph()
-    
+
     # объединяем графы
     G = nx.compose_all([G, water_graph])
 
@@ -65,70 +65,65 @@ boundary_box_coords = list(boundary_box.exterior.coords)[:-1]
 
 nodes_to_remove = set()
 nodes_to_add = []
-nodes_to_add_coords = set()
+added_coord_to_id = {}
 edges_to_add = []
 max_id = max(G.nodes)
 
-edges_data = G.edges(data=True)
+# O(1) coordinate lookup for existing nodes (replaces per-edge O(N) scan)
+coord_to_node = {(ndata['x'], ndata['y']): nid for nid, ndata in G.nodes(data=True)}
 
-for u, v, data in edges_data:
-    is_water = data.get('water', False)
+edges_data = list(G.edges(data=True))
+
+for u, v, edata in edges_data:
+    is_water = edata.get('water', False)
     # Получаем координаты начальной и конечной точек ребра
-    u_point = Point(G.nodes[u]["x"], G.nodes[u]["y"])
-    v_point = Point(G.nodes[v]["x"], G.nodes[v]["y"])
+    ux, uy = G.nodes[u]["x"], G.nodes[u]["y"]
+    vx, vy = G.nodes[v]["x"], G.nodes[v]["y"]
+    u_point = Point(ux, uy)
+    v_point = Point(vx, vy)
     edge_line = LineString([u_point, v_point])
 
-    if not boundary_box.contains(u_point) and not boundary_box.contains(v_point):
+    u_inside = boundary_box.contains(u_point)
+    v_inside = boundary_box.contains(v_point)
+
+    if not u_inside and not v_inside:
         nodes_to_remove.add(u)
         nodes_to_remove.add(v)
         continue
 
     # Проверяем, пересекает ли ребро границу
-    if not boundary_box.contains(u_point) or not boundary_box.contains(v_point):
+    if not u_inside or not v_inside:
         intersection = boundary_box.intersection(edge_line)
 
         if not intersection.is_empty:
-            if (isinstance(intersection, Point)):
+            if isinstance(intersection, Point):
                 intersection_point = intersection
-            elif (isinstance(intersection, LineString)):
+            elif isinstance(intersection, LineString):
                 vertex = intersection.intersection(edge_line)
                 intersection_points = [Point(pt) for pt in intersection.coords]
-                if (vertex == intersection_points[0]):
+                if vertex == intersection_points[0]:
                     intersection_point = intersection_points[1]
                 else:
                     intersection_point = intersection_points[0]
 
-            new_node_id = None
-            for node_id, data in G.nodes(data=True):
-                if Point(data['x'], data['y']).equals(intersection_point):
-                    new_node_id = node_id
-                    break
+            ip_key = (intersection_point.x, intersection_point.y)
+            new_node_id = coord_to_node.get(ip_key)
 
             if new_node_id is None:
-                if intersection_point not in nodes_to_add_coords:
+                new_node_id = added_coord_to_id.get(ip_key)
+                if new_node_id is None:
                     new_node_id = max_id + 1
                     nodes_to_add.append((new_node_id, intersection_point.x, intersection_point.y))
-                    nodes_to_add_coords.add(intersection_point)
+                    added_coord_to_id[ip_key] = new_node_id
                     max_id += 1
-                else:
-                    for node_id, x, y in nodes_to_add:
-                        if Point(x, y).equals(intersection_point):
-                            new_node_id = node_id
-                            break
 
             # Заменяем ребро на часть внутри границы
-            if boundary_box.contains(u_point):
-                # Расстояние между u_point и intersection_point
-                u_lat, u_lon = u_point.y, u_point.x
-                i_lat, i_lon = intersection_point.y, intersection_point.x
-                distance = 0 if is_water else geodesic((u_lat, u_lon), (i_lat, i_lon)).meters
+            if u_inside:
+                distance = 0 if is_water else geodesic((uy, ux), (intersection_point.y, intersection_point.x)).meters
                 nodes_to_remove.add(v)
                 edges_to_add.append((u, new_node_id, {"length": distance}))
-            elif boundary_box.contains(v_point):
-                # Расстояние между v_point и intersection_point
-                v_lat, v_lon = v_point.y, v_point.x
-                i_lat, i_lon = intersection_point.y, intersection_point.x
-                distance = 0 if is_water else geodesic((v_lat, v_lon), (i_lat, i_lon)).meters
+            elif v_inside:
+                distance = 0 if is_water else geodesic((vy, vx), (intersection_point.y, intersection_point.x)).meters
                 nodes_to_remove.add(u)
                 edges_to_add.append((new_node_id, v, {"length": distance}))
 
@@ -150,30 +145,27 @@ def calculate_angle(point):
 
 nodes_to_add = sorted(nodes_to_add, key=calculate_angle)
 
-for i in range(len(nodes_to_add)):
-    node1 = nodes_to_add[i][0]
-    node2 = nodes_to_add[(i + 1) % len(nodes_to_add)][0]
-    distance = geodesic((nodes_to_add[i][1], nodes_to_add[i][2]), (nodes_to_add[(i + 1) % len(nodes_to_add)][1], nodes_to_add[(i + 1) % len(nodes_to_add)][2])).meters
-    G.add_edge(node1, node2, length=distance)
+n_boundary = len(nodes_to_add)
+for i in range(n_boundary):
+    id1, x1, y1 = nodes_to_add[i]
+    id2, x2, y2 = nodes_to_add[(i + 1) % n_boundary]
+    distance = geodesic((y1, x1), (y2, x2)).meters
+    G.add_edge(id1, id2, length=distance)
 
-file = open("graph_" + str(center_lat) + "_" + str(center_lon) + "_" + str(d) + ".txt", "w")
-file.write(str(G.number_of_nodes()) + " ")
-file.write('\n')
+node_xy = {nid: (ndata["x"], ndata["y"]) for nid, ndata in G.nodes(data=True)}
 
-for line in nx.generate_adjlist(G):
-    word_list = line.split()
-    size = len(word_list) - 1
-    first = True
-    node = 0
-    for num in word_list:
-        file.write(num + " " + str(G.nodes[int(num)]["x"]).replace('.', ',') + " " + str(G.nodes[int(num)]["y"]).replace('.', ',') + " ")
-        if first:
-            file.write(str(size).replace('.', ',') + " ")
-            node = int(num)
-            first = False
-        else:
-            file.write(str(G.get_edge_data(node, int(num), 0)["length"]).replace('.', ',') + " ")
-
-    file.write('\n')
-
-file.close()
+out_path = "graph_" + str(center_lat) + "_" + str(center_lon) + "_" + str(d) + ".txt"
+with open(out_path, "w") as file:
+    parts = [str(G.number_of_nodes()), " \n"]
+    for line in nx.generate_adjlist(G):
+        word_list = line.split()
+        ids = [int(w) for w in word_list]
+        head = ids[0]
+        hx, hy = node_xy[head]
+        parts.append(f"{head} {hx} {hy} {len(ids) - 1} ")
+        for nb in ids[1:]:
+            nx_, ny_ = node_xy[nb]
+            length = G.get_edge_data(head, nb, 0)["length"]
+            parts.append(f"{nb} {nx_} {ny_} {length} ")
+        parts.append("\n")
+    file.write("".join(parts))

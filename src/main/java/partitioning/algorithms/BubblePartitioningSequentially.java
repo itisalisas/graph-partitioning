@@ -23,8 +23,7 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
     Comparator<VertexOfDualGraph> vertexComparator = (o1, o2) -> Double.compare(o1.x, o2.x);
 
     @Override
-    public void balancedPartitionAlgorithm(Graph<Vertex> simpleGraph, 
-										   Map<Vertex, VertexOfDualGraph> comparisonForDualGraph,
+    public void balancedPartitionAlgorithm(Graph<Vertex> simpleGraph,
 										   Graph<VertexOfDualGraph> graph, 
 								           int maxSumVerticesWeight) {
         this.graph = graph;
@@ -45,7 +44,7 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
             //method prepare
             center = unused.first();
             bubble = new Bubble(center, graph, maxSumVerticesWeight);
-            growFullBubble(iterCounter, bounds, simpleGraph, comparisonForDualGraph, graph, maxSumVerticesWeight, bubble, unused);
+            growFullBubble(iterCounter, bounds, simpleGraph, graph, maxSumVerticesWeight, bubble, unused);
             bubbles.put(center, new Bubble(bubble));
             iterCounter++;
         }
@@ -209,8 +208,7 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
 
     private void growFullBubble(int bubbleNumber,
                                 List<Map.Entry<List<Vertex>, Double>> bounds, 
-                                Graph<Vertex> simpleGraph, 
-                                Map<Vertex, VertexOfDualGraph> comparisonForDualGraph,
+                                Graph<Vertex> simpleGraph,
                                 Graph<VertexOfDualGraph> graph,
                                 int maxSumVerticesWeight, 
                                 Bubble bubble, 
@@ -242,7 +240,7 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
                                             sumBubbleWeight,
                                             maxSumVerticesWeight);
             //step picture
-            bounds.add(Map.entry(BoundSearcher.findBound(simpleGraph, bubble.vertexSet, comparisonForDualGraph), bubble.vertexSet.stream().mapToDouble(Vertex::getWeight).sum()));
+            bounds.add(Map.entry(BoundSearcher.findBound(simpleGraph, bubble.vertexSet), bubble.vertexSet.stream().mapToDouble(Vertex::getWeight).sum()));
             // TODO - add ref point!!
             // PartitionWriter pw = new PartitionWriter();
             // String str = "src/main/output/testDumpBubbleSeq/".replace('/', File.separatorChar) + bubbleNumber + "_" + center.name + "_"+ iter;

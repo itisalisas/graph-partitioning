@@ -73,8 +73,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
     );
 
     @Override
-    public void balancedPartitionAlgorithm(Graph<Vertex> simpleGraph, 
-										   Map<Vertex, VertexOfDualGraph> comparisonForDualGraph,
+    public void balancedPartitionAlgorithm(Graph<Vertex> simpleGraph,
 										   Graph<VertexOfDualGraph> graph, 
 										   int maxSumVerticesWeight) {
 
@@ -240,7 +239,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
             MaxFlow maxFlow;
             if (USE_REIF) {
-                maxFlow = new MaxFlowReif(simpleGraph, copyGraph, source, sink, comparisonForDualGraph);
+                maxFlow = new MaxFlowReif(simpleGraph, copyGraph, source, sink);
             } else {
                 maxFlow = new MaxFlowDinic(copyGraph, source, sink);
             }

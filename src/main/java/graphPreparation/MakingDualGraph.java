@@ -11,14 +11,6 @@ import org.junit.jupiter.api.Assertions;
 
 public class MakingDualGraph {
   private static final Logger logger = LoggerFactory.getLogger(MakingDualGraph.class);
-  private final HashMap<Vertex, VertexOfDualGraph> comparison;
-  public MakingDualGraph() {
-    this.comparison = new HashMap<Vertex, VertexOfDualGraph>();
-  }
-
-  public HashMap<Vertex, VertexOfDualGraph> getComparison() {
-    return this.comparison;
-  }
 
   public Graph<VertexOfDualGraph> buildDualGraph(Graph<Vertex> gph) {
     Graph<VertexOfDualGraph> res = new Graph<>();
@@ -77,7 +69,6 @@ public class MakingDualGraph {
                                                     VertexOfDualGraph.sumVertexWeight(verticesOfFace), 
                                                     verticesOfFace);
       res.addVertex(vert);
-      comparison.put(vert, vert);
       for (EdgeOfGraph<Vertex> edge : inActualFace) {
         inFace.put(edge, vert);
       }
@@ -100,7 +91,7 @@ public class MakingDualGraph {
   private double countFaceWeight(VertexOfDualGraph v, 
                                 HashMap<Vertex, Integer> vertexInFaceNumber) {
     double ans = 0;
-    for (Vertex ver : comparison.get(v).getVerticesOfFace()) {
+    for (Vertex ver : v.getVerticesOfFace()) {
       ans = ans + ver.getWeight() / vertexInFaceNumber.get(ver);
     }
     return ans;

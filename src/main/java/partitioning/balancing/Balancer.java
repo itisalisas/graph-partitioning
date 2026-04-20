@@ -18,7 +18,6 @@ public class Balancer {
     Graph<PartitionGraphVertex> partitionGraph;
     Graph<VertexOfDualGraph> dualGraph;
     Graph<Vertex> startGraph;
-    Map<Vertex, VertexOfDualGraph> comparisonForDualGraph;
     Set<Set<VertexOfDualGraph>> wasMerged = new HashSet<>();
     int maxWeight;
     String pathToResultDirectory;
@@ -28,14 +27,12 @@ public class Balancer {
             Graph<VertexOfDualGraph> dualGraph,
             Graph<Vertex> startGraph,
             int maxWeight,
-            HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph,
             String pathToResultDirectory
     ) {
         this.partitionGraph = partitionGraph;
         this.dualGraph = dualGraph;
         this.startGraph = startGraph.makeUndirectedGraph();
         this.maxWeight = maxWeight;
-        this.comparisonForDualGraph = comparisonForDualGraph;
         this.pathToResultDirectory = pathToResultDirectory;
     }
 
@@ -75,7 +72,7 @@ public class Balancer {
                 Assertions.assertTrue(regionsSubgraph.isConnected());
                 double coefficient = 1 - (double) maxWeight / (balancingVerticesSet.stream().mapToDouble(Vertex::getWeight).sum());
                 BalancedPartitioning bp = new BalancedPartitioning(new InertialFlowPartitioning(coefficient, true));
-                List<Set<VertexOfDualGraph>> newPartition = bp.partition(startGraph, comparisonForDualGraph, regionsSubgraph, maxWeight);
+                List<Set<VertexOfDualGraph>> newPartition = bp.partition(startGraph, regionsSubgraph, maxWeight);
                 if (newPartition.size() > 2) {
                     continue;
                 }

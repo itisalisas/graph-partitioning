@@ -21,7 +21,6 @@ public abstract class BalancedPartitioningOfPlanarGraphs {
 
 	public abstract void balancedPartitionAlgorithm(
             Graph<Vertex> simpleGraph,
-            Map<Vertex, VertexOfDualGraph> comparisonForDualGraph,
             Graph<VertexOfDualGraph> graph,
             int maxSumVerticesWeight
     );

@@ -38,8 +38,8 @@ def load_centers_from_file(centers_path):
             for line in f:
                 parts = line.strip().split()
                 if len(parts) >= 2:
-                    lon = float(parts[0].replace(',', '.'))
-                    lat = float(parts[1].replace(',', '.'))
+                    lon = float(parts[0])
+                    lat = float(parts[1])
                     centers.append((lat, lon))
     except FileNotFoundError:
         print(f"Centers file not found: {centers_path}")
@@ -75,17 +75,17 @@ def add_graph_layer(map_osm, graph_path):
         for line in lines[1:]:
             data = line.split()
             main_vertex_id = int(data[0])
-            main_x = float(data[1].replace(',', '.'))
-            main_y = float(data[2].replace(',', '.'))
+            main_x = float(data[1])
+            main_y = float(data[2])
             G.add_node(main_vertex_id, x=main_x, y=main_y)
 
             num_edges = int(data[3])
             idx = 4
             for _ in range(num_edges):
                 neighbor_id = int(data[idx])
-                neighbor_x = float(data[idx+1].replace(',', '.'))
-                neighbor_y = float(data[idx+2].replace(',', '.'))
-                length = float(data[idx+3].replace(',', '.'))
+                neighbor_x = float(data[idx+1])
+                neighbor_y = float(data[idx+2])
+                length = float(data[idx+3])
 
                 if neighbor_id not in G.nodes:
                     G.add_node(neighbor_id, x=neighbor_x, y=neighbor_y)
@@ -126,12 +126,12 @@ def add_bounds_layer(map_osm, bounds_dir):
                 return [], 0.0
 
             coords = [
-                [float(coord.replace(',', '.')) for coord in line.strip().split()[1:3][::-1]]
+                [float(coord) for coord in line.strip().split()[1:3][::-1]]
                 for line in lines[:-1]
             ]
 
             try:
-                weight = float(lines[-1].strip().replace(',', '.'))
+                weight = float(lines[-1].strip())
             except (ValueError, IndexError):
                 weight = 0.0
 
@@ -190,10 +190,10 @@ def add_points_layer(map_osm, points_file):
                     continue
 
                 try:
-                    lat = float(parts[1].replace(',', '.'))
-                    lon = float(parts[2].replace(',', '.'))
-                    value1 = float(parts[3].replace(',', '.'))
-                    value2 = float(parts[4].replace(',', '.'))
+                    lat = float(parts[1])
+                    lon = float(parts[2])
+                    value1 = float(parts[3])
+                    value2 = float(parts[4])
 
                     weight = (value1 * value2) / 10.0
                     points_data.append({
@@ -259,9 +259,9 @@ def add_dual_graph_layer(map_osm, bounds_dir):
             try:
                 # Парсим основную вершину
                 main_id = int(parts[0])
-                main_x = float(parts[1].replace(',', '.'))
-                main_y = float(parts[2].replace(',', '.'))
-                main_weight = float(parts[3].replace(',', '.'))
+                main_x = float(parts[1])
+                main_y = float(parts[2])
+                main_weight = float(parts[3])
                 num_neighbors = int(parts[4])
 
                 G.add_node(main_id,
@@ -276,9 +276,9 @@ def add_dual_graph_layer(map_osm, bounds_dir):
                         break
 
                     neighbor_id = int(parts[idx])
-                    neighbor_x = float(parts[idx+1].replace(',', '.'))
-                    neighbor_y = float(parts[idx+2].replace(',', '.'))
-                    length = float(parts[idx+3].replace(',', '.'))
+                    neighbor_x = float(parts[idx+1])
+                    neighbor_y = float(parts[idx+2])
+                    length = float(parts[idx+3])
 
                     G.add_node(neighbor_id,
                              x=neighbor_x,
@@ -355,9 +355,9 @@ def add_bubble_centers(map_osm, bounds_dir):
 
                 try:
                     point_id = parts[0]
-                    lon = float(parts[1].replace(',', '.'))
-                    lat = float(parts[2].replace(',', '.'))
-                    value = float(parts[3].replace(',', '.'))
+                    lon = float(parts[1])
+                    lat = float(parts[2])
+                    value = float(parts[3])
 
                     # Создаем маркер с всплывающей подсказкой
                     folium.Marker(

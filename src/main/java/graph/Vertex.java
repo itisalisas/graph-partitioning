@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
@@ -112,7 +113,7 @@ public class Vertex extends Point {
 	
 	public void printVertexToFile(File outFile) throws IOException {
 		FileWriter out = new FileWriter(outFile, true);
-		out.write(String.format("%d %f %f %f\n", this.getName(), this.x, this.y, this.getWeight()));
+		out.write(String.format(Locale.ROOT, "%d %f %f %f\n", this.getName(), this.x, this.y, this.getWeight()));
 		out.close();
 	}
 	

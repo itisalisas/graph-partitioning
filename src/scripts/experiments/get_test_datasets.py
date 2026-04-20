@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 from pathlib import Path
 import traceback
 
@@ -58,7 +59,7 @@ for city, coordinates in cities.items():
         try:
             print(f"Starting graph creation for {city}/{size}...")
             graph_process = subprocess.Popen(
-                ["python", str(graph_script_path)],
+                [sys.executable, str(graph_script_path)],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -89,7 +90,7 @@ for city, coordinates in cities.items():
         try:
             print(f"Starting buildings creation for {city}/{size}...")
             buildings_process = subprocess.Popen(
-                ["python", str(buildings_script_path)],
+                [sys.executable, str(buildings_script_path)],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,

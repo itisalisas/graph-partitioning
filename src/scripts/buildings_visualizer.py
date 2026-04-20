@@ -22,8 +22,8 @@ def visualize_buildings(file_name, map_osm):
             data = line.split()
 
             main_vertex_id = int(data[0])
-            main_x = float(data[2].replace(',', '.'))
-            main_y = float(data[1].replace(',', '.'))
+            main_x = float(data[2])
+            main_y = float(data[1])
             G.add_node(main_vertex_id, x=main_x, y=main_y)
 
     # Определение центральной точки для карты
