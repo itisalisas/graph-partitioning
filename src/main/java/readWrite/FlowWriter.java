@@ -13,7 +13,6 @@ import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
 import partitioning.entities.DijkstraResult;
-import partitioning.entities.NeighborSplit;
 
 public class FlowWriter {
     private static final Logger logger = LoggerFactory.getLogger(FlowWriter.class);
@@ -374,7 +373,7 @@ public class FlowWriter {
             writer.write("# lon lat (for each vertex)\n");
             writer.write("# ---\n");
 
-            if (initGraph != null && spt.leafIndices() != null && spt.regions() != null) {
+            if (initGraph != null && spt.regions() != null && numLeaves > 0) {
                 int numRegionsTotal = spt.regions().size();
                 // N leaves => N+1 linear groups (no wrap-around):
                 //   Group 0: before leaf 0          → regions [0 .. leafIndices[0]]

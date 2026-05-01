@@ -264,10 +264,13 @@ public class SweepLine {
 		HashMap<Integer, double[]> edgeYIntervals = new HashMap<>();
 
 		ArrayList<Action> actions = initActions(edgesList);
-		actions.sort((a1, a2) -> a1.x() < a2.x() ? -1
-				: a1.x() > a2.x() ? 1
-				: a1.type() == ActionType.ADD ? 1
-				: a2.type() == ActionType.ADD ? -1 : 0);
+        actions.sort((a1, a2) -> {
+            int cmp = Double.compare(a1.x(), a2.x());
+            if (cmp != 0) return cmp;
+            int rank1 = a1.type() == ActionType.ADD ? 1 : 0;
+            int rank2 = a2.type() == ActionType.ADD ? 1 : 0;
+            return Integer.compare(rank1, rank2);
+        });
 
 		HashMap<Integer, EdgeOfGraph<Vertex>> actualEdge = new HashMap<>();
 

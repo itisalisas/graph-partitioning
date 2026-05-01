@@ -818,36 +818,12 @@ public class VertexSplitter {
         int count = 0;
 
         for (Vertex neighbor : split.pathNeighbors()) {
-            Vertex neighborInGraph = findVertexByName(splitGraph, neighbor.getName());
-
-            if (neighborInGraph != null) {
-                count++;
-                connectOriginalNeighbor(splitGraph, originalVertex,
-                                        splitVertex1, splitVertex2, neighborInGraph);
-            } else {
-                connectSplitNeighbor(splitGraph, originalVertex,
-                                     splitVertex1, splitVertex2, neighbor);
-                count++;
-            }
+            connectSplitNeighbor(splitGraph, originalVertex,
+                                 splitVertex1, splitVertex2, neighbor);
+            count++;
         }
 
         return count;
-    }
-
-    /**
-     * Соединяет с оригинальным соседом
-     */
-    private static void connectOriginalNeighbor(
-            Graph<Vertex> splitGraph,
-            Vertex originalVertex,
-            Vertex splitVertex1,
-            Vertex splitVertex2,
-            Vertex neighborInGraph) {
-
-        double edgeLength = splitGraph.getEdges().get(originalVertex)
-                .get(neighborInGraph).length;
-        splitGraph.addEdge(splitVertex1, neighborInGraph, edgeLength);
-        splitGraph.addEdge(splitVertex2, neighborInGraph, edgeLength);
     }
 
     /**
@@ -860,21 +836,22 @@ public class VertexSplitter {
             Vertex splitVertex2,
             Vertex neighbor) {
 
-        Vertex splitNeighbor1 = findVertexByName(splitGraph, neighbor.getName() * 1000 + 1);
-        Vertex splitNeighbor2 = findVertexByName(splitGraph, neighbor.getName() * 1000 + 2);
-
-        if (splitNeighbor1 != null && splitNeighbor2 != null) {
-            double edgeLength = calculateDistance(originalVertex, splitNeighbor1);
-
-            splitGraph.addEdge(splitVertex1, splitNeighbor1, edgeLength);
-            splitGraph.addEdge(splitVertex2, splitNeighbor2, edgeLength);
-
-            logger.debug("  Connected split vertices of {} with corresponding split versions of path neighbor {}", 
-                    originalVertex.getName(), neighbor.getName());
-        } else {
-            logger.warn("  Path neighbor {} not found (neither original nor split) for vertex {}", 
-                    neighbor.getName(), originalVertex.getName());
+        Vertex splitNeighbor1 = findOrCreateVertex(splitGraph, neighbor.getName() * 1000 + 1, neighbor);
+        Vertex splitNeighbor2 = findOrCreateVertex(splitGraph, neighbor.getName() * 1000 + 2, neighbor);
+        if (originalVertex.name == 6488867652L) {
+            logger.info("SPLIT VERTEX 6488867652, path neighbor to connect with split neighbor: {}", neighbor.getName());
         }
+        if (originalVertex.name == 56) {
+            logger.info("SPLIT VERTEX 56, path neighbor to connect with split neighbor: {}", neighbor.getName());
+        }
+
+        double edgeLength = calculateDistance(originalVertex, splitNeighbor1);
+
+        splitGraph.addEdge(splitVertex1, splitNeighbor1, edgeLength);
+        splitGraph.addEdge(splitVertex2, splitNeighbor2, edgeLength);
+
+        logger.debug("  Connected split vertices of {} with corresponding split versions of path neighbor {}",
+                originalVertex.getName(), neighbor.getName());
     }
 
     /**
@@ -945,6 +922,20 @@ public class VertexSplitter {
             }
         }
         return null;
+    }
+
+    /**
+     * Находит или создает вершину по имени
+     */
+    private static Vertex findOrCreateVertex(Graph<Vertex> graph, long name, Vertex originalVertex) {
+        for (Vertex v : graph.verticesArray()) {
+            if (v.getName() == name) {
+                return v;
+            }
+        }
+        Vertex newVertex = new Vertex(name, originalVertex);
+        graph.addVertex(newVertex);
+        return newVertex;
     }
 
     /**

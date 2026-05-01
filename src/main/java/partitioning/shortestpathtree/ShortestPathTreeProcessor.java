@@ -35,8 +35,8 @@ public class ShortestPathTreeProcessor {
                     bestScore = score;
                     bestI1 = i1;
                     bestI2 = i2;
-                    logger.debug("New best score: {} at i1 = {}, i2 = {}, weight balance = {}, length = {}", 
-                            bestScore.score, i1, i2, bestScore.weightBalance, bestScore.length);
+                    //logger.info("New best score: {} at i1 = {}, i2 = {}, weight balance = {}, length = {}",
+                    //        bestScore.score, i1, i2, bestScore.weightBalance, bestScore.length);
                 }
             }
         }
@@ -54,14 +54,20 @@ public class ShortestPathTreeProcessor {
         ) {
             return new ScoreResult(Double.MAX_VALUE, 0, 0);
         }
-        double length = result1.distances().get(result1.leafIndices().get(i1))
-                + result2.distances().get(result2.leafIndices().get(i2));
+        Vertex leaf1 = result1.boundaryLeaves().get(i1);
+        Vertex leaf2 = result2.boundaryLeaves().get(i2);
+        Double d1 = result1.dijkstraDistances() == null ? null : result1.dijkstraDistances().get(leaf1);
+        Double d2 = result2.dijkstraDistances() == null ? null : result2.dijkstraDistances().get(leaf2);
+        if (d1 == null || d2 == null || d1 == Double.MAX_VALUE || d2 == Double.MAX_VALUE) {
+            return new ScoreResult(Double.MAX_VALUE, 0, 0);
+        }
+
+        double length = d1 + d2;
         double totalWeight = result1.totalRegionWeight() + result2.totalRegionWeight() + sourceWeight + sinkWeight;
         double leftWeight = result1.weights().get(result1.leafIndices().get(i1))
                 + (result2.totalRegionWeight() - result2.weights().get(result2.leafIndices().get(i2)))
                 + sourceWeight;
         double balance = Math.abs(ALPHA * totalWeight - leftWeight);
-        //System.out.println("length = " + length + ", balance = " + balance + ", totalWeight = " + totalWeight + ", score = " + (BETA * length + (1 - BETA) * balance));
         return new ScoreResult(BETA * length + (1 - BETA) * balance, length, balance);
     }
 

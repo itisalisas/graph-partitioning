@@ -1,3 +1,4 @@
+import sys
 import os
 import subprocess
 import shutil
@@ -5,7 +6,7 @@ from pathlib import Path
 import traceback
 
 algorithm = "IF"
-max_sum_vertices_weight = ["5000", "10000"]
+max_sum_vertices_weight = ["10000", "20000"]
 
 max_region_radius_meters = "1000"
 data_root = "src/main/resources/data"
@@ -77,7 +78,8 @@ for city in os.listdir(data_root):
                 f"{output_dir}"
             )
 
-            cmd = ["gradlew.bat", "run", f"--args={args}"]
+            gradle_wrapper = "gradlew.bat" if os.name == "nt" else "./gradlew"
+            cmd = [gradle_wrapper, "run", f"--args={args}"]
             log_dir = os.path.join("src", "main", "output", output_dir)
             Path(log_dir).mkdir(parents=True, exist_ok=True)
             java_log_file = os.path.join(log_dir, "run.log")
@@ -118,7 +120,7 @@ for city in os.listdir(data_root):
                     map_output = os.path.join("src", "main", "output", bounds_dir, "map.html")
 
                     viz_cmd = [
-                        "python", visualization_script,
+                        sys.executable, visualization_script,
                         "--graph", graph_path,
                         "--bounds", bounds_dir,
                         "--points", points_path,

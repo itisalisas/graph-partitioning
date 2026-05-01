@@ -813,21 +813,22 @@ public class MaxFlowReif implements MaxFlow {
         Set<Vertex> allowedVertices = collectFaceVertices(dualGraph.verticesArray());
         Set<Vertex> sourceFaceVertices = collectFaceVertices(sourceNeighbors);
         Set<Vertex> sinkFaceVertices = collectFaceVertices(sinkNeighbors);
+        Set<Map.Entry<Vertex, Vertex>> sinkInnerEdges = collectFaceEdges(sinkNeighbors);
+        Set<Map.Entry<Vertex, Vertex>> sourceInnerEdges = collectFaceEdges(sourceNeighbors);
 
         Set<Vertex> sourceBoundarySet = new HashSet<>(sourceBoundary);
         Set<Vertex> sinkBoundarySet = new HashSet<>(sinkBoundary);
-        Set<Vertex> externalBoundarySet = new HashSet<>(externalBoundary);
 
         // Добавляем границы
-        modifiedGraph.addBoundEdges(sourceBoundary, initGraph);
-        modifiedGraph.addBoundEdges(sinkBoundary, initGraph);
+        modifiedGraph.addBoundEdgesWithConstraints(sourceBoundary, initGraph, sourceInnerEdges);
+        modifiedGraph.addBoundEdgesWithConstraints(sinkBoundary, initGraph, sinkInnerEdges);
         modifiedGraph.addBoundEdges(externalBoundary, initGraph);
 
         // Добавляем внутренние вершины
         for (Vertex v : initGraph.verticesArray()) {
             if (shouldAddVertexToModifiedGraph(v, allowedVertices,
                                                sourceFaceVertices, sinkFaceVertices,
-                                               sourceBoundarySet, sinkBoundarySet, externalBoundarySet)) {
+                                               sourceBoundarySet, sinkBoundarySet)) {
                 modifiedGraph.addVertexInSubgraph(v, initGraph);
             }
         }
@@ -847,6 +848,23 @@ public class MaxFlowReif implements MaxFlow {
     }
 
     /**
+     * Собирает все ребра из граней
+     */
+    private Set<Map.Entry<Vertex, Vertex>> collectFaceEdges(Iterable<VertexOfDualGraph> faces) {
+        Set<Map.Entry<Vertex, Vertex>> edges = new HashSet<>();
+        for (VertexOfDualGraph face : faces) {
+            if (face.getVerticesOfFace() != null) {
+                for (int i = 0; i < face.getVerticesOfFace().size(); i++) {
+                    var v1 = face.getVerticesOfFace().get(i);
+                    var v2 = face.getVerticesOfFace().get((i + 1) % face.getVerticesOfFace().size());
+                    edges.add(Map.entry(v1, v2));
+                }
+            }
+        }
+        return edges;
+    }
+
+    /**
      * Проверяет нужно ли добавлять вершину в модифицированный граф
      */
     private boolean shouldAddVertexToModifiedGraph(
@@ -855,16 +873,15 @@ public class MaxFlowReif implements MaxFlow {
             Set<Vertex> sourceFaceVertices,
             Set<Vertex> sinkFaceVertices,
             Set<Vertex> sourceBoundarySet,
-            Set<Vertex> sinkBoundarySet,
-            Set<Vertex> externalBoundarySet) {
+            Set<Vertex> sinkBoundarySet
+    ) {
 
         return v.getName() != 0 &&
                 allowedVertices.contains(v) &&
                 !sourceFaceVertices.contains(v) &&
                 !sinkFaceVertices.contains(v) &&
                 !sourceBoundarySet.contains(v) &&
-                !sinkBoundarySet.contains(v) &&
-                !externalBoundarySet.contains(v);
+                !sinkBoundarySet.contains(v);
     }
 
     /**

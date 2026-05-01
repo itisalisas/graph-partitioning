@@ -2,10 +2,14 @@ package graph;
 
 import java.util.*;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class Graph<T extends Vertex> {
     /*
      * vertices - keys for HashMap
      */
+    private static final Logger logger = LoggerFactory.getLogger(Graph.class);
     private final HashMap<T, HashMap<T, Edge>> edges;
     private HashMap<Vertex, HashMap<Vertex, VertexOfDualGraph>> edgeToDualVertex;
     private HashMap<T, TreeSet<EdgeOfGraph<T>>> vertexToSortedEdges;
@@ -167,7 +171,6 @@ public class Graph<T extends Vertex> {
         return ans;
     }
 
-
     public int edgesNumberInComponentUndirGraph(HashSet<T> vertexInComponent) {
         int edgesNumber = 0;
         for (T begin : vertexInComponent) {
@@ -235,9 +238,9 @@ public class Graph<T extends Vertex> {
         Graph<T> graph = new Graph<>();
         for (T vertex : edges.keySet()) {
             if (vertex instanceof VertexOfDualGraph vertexOfDualGraph) {
-                graph.addVertex((T) (new VertexOfDualGraph(vertexOfDualGraph)));
+                graph.addVertex((T) vertexOfDualGraph);
             } else {
-                graph.addVertex((T) (new Vertex(vertex.clone())));
+                graph.addVertex((T) vertex.clone());
             }
         }
         for (T begin : edges.keySet()) {
@@ -263,15 +266,9 @@ public class Graph<T extends Vertex> {
         for (EdgeOfGraph<T> edge : edges) {
             if (verticesOfSubgraph.contains(edge.begin) && verticesOfSubgraph.contains(edge.end)) {
                 if (edge.begin instanceof VertexOfDualGraph vertexOfDualGraph1 && edge.end instanceof VertexOfDualGraph vertexOfDualGraph2) {
-                    subgraph.addEdge((T) new VertexOfDualGraph(vertexOfDualGraph1),
-                            (T) new VertexOfDualGraph(vertexOfDualGraph2),
-                            edge.length);
-                } else if (edge.begin instanceof PartitionGraphVertex) {
-                    subgraph.addEdge((T) new PartitionGraphVertex(edge.begin),
-                            (T) new PartitionGraphVertex(edge.end),
-                            edge.length);
+                    subgraph.addEdge((T) vertexOfDualGraph1, (T) vertexOfDualGraph2, edge.length);
                 } else {
-                    subgraph.addEdge((T) new Vertex(edge.begin), (T) new Vertex(edge.end), edge.length);
+                    subgraph.addEdge(edge.begin, edge.end, edge.length);
                 }
             }
         }
@@ -280,7 +277,7 @@ public class Graph<T extends Vertex> {
     }
 
     public Graph<T> createSubgraphFromFaces(List<List<T>> faces) {
-        Graph<T> subgraph = new Graph<T>();
+        Graph<T> subgraph = new Graph<>();
 
         // Добавляем вершины в подграф
         for (List<T> face : faces) {
@@ -389,6 +386,26 @@ public class Graph<T extends Vertex> {
                     ? sourceGraph.getEdges().get(v).get(next).length
                     : v.getLength(next);
             addEdge(v, next, length);
+        }
+    }
+
+    public void addBoundEdgesWithConstraints(List<T> boundVertices, Graph<T> sourceGraph, Set<Map.Entry<T, T>> constraints) {
+        for (int i = 0; i < boundVertices.size(); i++) {
+            T v = boundVertices.get(i);
+            T next = boundVertices.get((i + 1) % boundVertices.size());
+            addVertex(v);
+            addVertex(next);
+            double length = sourceGraph.getEdges().get(v) != null
+                    && sourceGraph.getEdges().get(v).get(next) != null
+                    ? sourceGraph.getEdges().get(v).get(next).length
+                    : v.getLength(next);
+            addEdge(v, next, length);
+            for (T u: sourceGraph.getEdges().get(v).keySet()) {
+                if (!constraints.contains(Map.entry(v, u))) {
+                    addVertex(u);
+                    addEdge(v, u, sourceGraph.getEdges().get(v).get(u).length);
+                }
+            }
         }
     }
 
