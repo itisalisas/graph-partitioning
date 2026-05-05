@@ -22,10 +22,7 @@ public class ShortestPathTreeSearcher {
             Vertex sourceVertex,
             List<Vertex> externalBoundary,
             Graph<VertexOfDualGraph> dualGraph,
-            List<Vertex> sourceCorners,
-            List<Vertex> sinkCorners,
             boolean isFirstSide,
-            CornerConstraints cornerConstraints,
             List<Vertex> path
     ) {
 
@@ -33,7 +30,7 @@ public class ShortestPathTreeSearcher {
         List<Vertex> boundaryVerticesInSPT = findBoundaryVerticesInSPT(externalBoundarySet, previous);
 
         RegionWeightsResult weightsResult = computeRegionWeightsByEulerTour(
-                sourceVertex, previous, boundaryVerticesInSPT, graph, dualGraph, cornerConstraints, path, isFirstSide
+                sourceVertex, previous, boundaryVerticesInSPT, graph, dualGraph, path, isFirstSide
         );
 
         if (logger.isDebugEnabled()) {
@@ -74,12 +71,14 @@ public class ShortestPathTreeSearcher {
         final Vertex parent;
         final List<EdgeOfGraph<Vertex>> edges;
         int nextEdgeIdx;
+        boolean enteredFromBoundary;
 
-        EulerTourFrame(Vertex vertex, Vertex parent, List<EdgeOfGraph<Vertex>> edges) {
+        EulerTourFrame(Vertex vertex, Vertex parent, List<EdgeOfGraph<Vertex>> edges, boolean enteredFromBoundary) {
             this.vertex = vertex;
             this.parent = parent;
             this.edges = edges;
             this.nextEdgeIdx = 0;
+            this.enteredFromBoundary = enteredFromBoundary;
         }
     }
 
@@ -91,13 +90,12 @@ public class ShortestPathTreeSearcher {
         final Set<Map.Entry<Vertex, Vertex>> sptEdges;
         final Set<Vertex> sptVertices;
         final Set<Vertex> boundaryLeaves;
-        final Map<Vertex, HashMap<Vertex, VertexOfDualGraph>> edgeToLeftFace;
+        final Map<Vertex, Map<Vertex, VertexOfDualGraph>> edgeToLeftFace;
         final List<VertexOfDualGraph> regions;
         final List<Double> weights;
         final List<Double> distances;
         final List<Integer> leafIndices;
         final List<Vertex> tourOrderLeaves;
-        final CornerConstraints cornerConstraints;
 
         double cumulativeWeight;
         int currentLeafIndex;
@@ -114,9 +112,8 @@ public class ShortestPathTreeSearcher {
                 Set<Map.Entry<Vertex, Vertex>> sptEdges,
                 Set<Vertex> sptVertices,
                 Set<Vertex> boundaryLeaves,
-                Map<Vertex, HashMap<Vertex, VertexOfDualGraph>> edgeToLeftFace,
+                Map<Vertex, Map<Vertex, VertexOfDualGraph>> edgeToLeftFace,
                 Graph<VertexOfDualGraph> dualGraph,
-                CornerConstraints cornerConstraints,
                 List<Vertex> path,
                 boolean isFirstSide
         ) {
@@ -126,7 +123,6 @@ public class ShortestPathTreeSearcher {
             this.sptVertices = sptVertices;
             this.boundaryLeaves = boundaryLeaves;
             this.edgeToLeftFace = edgeToLeftFace;
-            this.cornerConstraints = cornerConstraints;
             this.regions = new ArrayList<>();
             this.weights = new ArrayList<>();
             this.distances = new ArrayList<>();
@@ -153,7 +149,6 @@ public class ShortestPathTreeSearcher {
             List<Vertex> boundaryLeaves,
             Graph<Vertex> graph,
             Graph<VertexOfDualGraph> dualGraph,
-            CornerConstraints cornerConstraints,
             List<Vertex> path,
             boolean isFirstSide
     ) {
@@ -163,7 +158,7 @@ public class ShortestPathTreeSearcher {
         }
 
         EulerTourContext context = prepareEulerTourContext(
-                root, previous, boundaryLeaves, graph, dualGraph, cornerConstraints, path, isFirstSide
+                root, previous, boundaryLeaves, graph, dualGraph, path, isFirstSide
         );
 
         logEulerTourStart(context, dualGraph);
@@ -188,20 +183,19 @@ public class ShortestPathTreeSearcher {
             List<Vertex> boundaryLeaves,
             Graph<Vertex> graph,
             Graph<VertexOfDualGraph> dualGraph,
-            CornerConstraints cornerConstraints,
             List<Vertex> path,
             boolean isFirstSide
     ) {
 
         Set<Map.Entry<Vertex, Vertex>> sptEdges = buildSPTEdgesSet(previous);
-        Map<Vertex, HashMap<Vertex, VertexOfDualGraph>> edgeToLeftFace = dualGraph.edgeToDualVertexMap();
+        Map<Vertex, Map<Vertex, VertexOfDualGraph>> edgeToLeftFace = dualGraph.edgeToDualVertexMap();
         graph.resetSortedEdgesCache();
         Map<Vertex, TreeSet<EdgeOfGraph<Vertex>>> sortedEdgesByVertex = graph.arrangeByAngle();
         Set<Vertex> sptVertices = buildSPTVerticesSet(root, previous);
 
         return new EulerTourContext(
                 sortedEdgesByVertex, sptEdges, sptVertices,
-                new HashSet<>(boundaryLeaves), edgeToLeftFace, dualGraph, cornerConstraints, path, isFirstSide
+                new HashSet<>(boundaryLeaves), edgeToLeftFace, dualGraph, path, isFirstSide
         );
     }
 
@@ -222,7 +216,7 @@ public class ShortestPathTreeSearcher {
 
         TreeSet<EdgeOfGraph<Vertex>> rootEdges = context.sortedEdgesByVertex.get(root);
         List<EdgeOfGraph<Vertex>> rootOrdered = getOrderedEdges(rootEdges, null, root, context.path, context.isFirstSide);
-        stack.push(new EulerTourFrame(root, null, rootOrdered));
+        stack.push(new EulerTourFrame(root, null, rootOrdered, false));
 
         while (!stack.isEmpty()) {
             EulerTourFrame frame = stack.peek();
@@ -231,7 +225,6 @@ public class ShortestPathTreeSearcher {
             if (frame.nextEdgeIdx >= frame.edges.size()) {
                 // All edges of this vertex have been processed — leaving vertex
                 stack.pop();
-                handleBoundaryVertex(frame.vertex, context);
                 continue;
             }
 
@@ -245,10 +238,8 @@ public class ShortestPathTreeSearcher {
                 continue;
             }
 
-            // Skip edges that violate corner constraints (edges to source/sink boundaries that are not allowed)
-            if (!context.cornerConstraints.isNeighborAllowed(frame.vertex, neighbor)) {
-                logger.debug("Skipping edge {} -> {} due to corner constraints",
-                        frame.vertex.getName(), neighbor.getName());
+            if (!context.sptVertices.contains(neighbor)) {
+                // edge to external vertex not in tree
                 continue;
             }
 
@@ -257,13 +248,22 @@ public class ShortestPathTreeSearcher {
 
             if (isTreeEdge) {
                 logger.debug("Processing tree edge {} -> {}", frame.vertex.getName(), neighbor.getName());
-                // Descend into child — push new frame (will be processed before
-                // we return to the current frame's next edge)
+                boolean neighborIsBoundary = context.boundaryLeaves.contains(neighbor);
+                boolean currentIsBoundary = context.boundaryLeaves.contains(frame.vertex);
+
+                boolean newFlag = frame.enteredFromBoundary || neighborIsBoundary;
+
+                if (neighborIsBoundary && !currentIsBoundary && !frame.enteredFromBoundary) {
+                    context.tourOrderLeaves.add(neighbor);
+                    context.leafIndices.add(context.weights.size() - 1);
+                }
+
                 TreeSet<EdgeOfGraph<Vertex>> childEdges =
                         context.sortedEdgesByVertex.get(neighbor);
                 List<EdgeOfGraph<Vertex>> childOrdered =
                         getOrderedEdges(childEdges, frame.vertex, null, null, context.isFirstSide);
-                stack.push(new EulerTourFrame(neighbor, frame.vertex, childOrdered));
+
+                stack.push(new EulerTourFrame(neighbor, frame.vertex, childOrdered, newFlag));
             } else {
                 logger.debug("Processing non-tree edge {} -> {}", frame.vertex.getName(), neighbor.getName());
                 // Non-tree edge — process the right face
@@ -313,18 +313,6 @@ public class ShortestPathTreeSearcher {
             result.add(edgesList.get((startIdx + i) % edgesList.size()));
         }
         return result;
-    }
-
-    /**
-     * Обрабатывает boundary leaf вершину
-     */
-    private static void handleBoundaryVertex(Vertex vertex, EulerTourContext context) {
-        if (context.boundaryLeaves.contains(vertex)) {
-            context.tourOrderLeaves.add(vertex);
-            context.leafIndices.add(context.weights.size() - 1);
-            logger.debug("  Leaf {} (vertex {}): cumulative={}", context.currentLeafIndex, vertex.getName(), context.cumulativeWeight);
-            context.currentLeafIndex++;
-        }
     }
 
     /**
@@ -422,21 +410,7 @@ public class ShortestPathTreeSearcher {
         logger.debug("  Unique regions: {}", new java.util.HashSet<>(context.regions).size());
         logger.debug("  Processed non-tree edges: {}", context.processedNonTreeEdges.size());
 
-        // Diagnostic: all boundary leaves must be visited
-        if (context.tourOrderLeaves.size() != context.boundaryLeaves.size()) {
-            logger.warn("MISSING LEAVES: visited {}/{} boundary leaves. Missing: {}",
-                    context.tourOrderLeaves.size(), context.boundaryLeaves.size(),
-                    context.boundaryLeaves.stream()
-                            .filter(v -> !context.tourOrderLeaves.contains(v))
-                            .map(v -> String.valueOf(v.getName()))
-                            .collect(java.util.stream.Collectors.joining(", ")));
-        } else {
-            for (int i = 0; i < context.tourOrderLeaves.size(); i++) {
-                logger.info("  Leaf {}: tour order {}", i, context.tourOrderLeaves.get(i).getName());
-            }
-        }
-
-        // Diagnostic 1: non-tree edges between SPT vertices that were never processed
+        // non-tree edges between SPT vertices that were never processed
         Set<String> seen = new java.util.HashSet<>();
         int totalNonTree = 0, missedNonTree = 0;
         for (Vertex u : context.sptVertices) {
@@ -458,43 +432,9 @@ public class ShortestPathTreeSearcher {
         if (missedNonTree > 0) {
             logger.warn("MISSED NON-TREE EDGES between SPT vertices: {}/{} — traversal bug",
                     missedNonTree, totalNonTree);
-        } else {
-            logger.debug("Non-tree edges between SPT vertices: all {}/{} processed", totalNonTree, totalNonTree);
-        }
-
-        // Diagnostic 2: vertices adjacent to SPT but not in SPT — their opposite faces are never processed
-        Set<Vertex> nonSPTAdjacent = new java.util.HashSet<>();
-        for (Vertex u : context.sptVertices) {
-            var edgesFromU = context.sortedEdgesByVertex.get(u);
-            if (edgesFromU == null) continue;
-            for (var e : edgesFromU) {
-                if (!context.sptVertices.contains(e.end)) {
-                    nonSPTAdjacent.add(e.end);
-                }
-            }
-        }
-        if (!nonSPTAdjacent.isEmpty()) {
-            logger.warn("NON-SPT VERTICES adjacent to SPT: {} — faces on their side are processed only from SPT direction",
-                    nonSPTAdjacent.size());
-            for (Vertex nv : nonSPTAdjacent) {
-                // find which SPT vertices are adjacent to this non-SPT vertex
-                List<Long> sptNeighborNames = new java.util.ArrayList<>();
-                for (Vertex u : context.sptVertices) {
-                    var edgesFromU = context.sortedEdgesByVertex.get(u);
-                    if (edgesFromU == null) continue;
-                    for (var e : edgesFromU) {
-                        if (e.end.equals(nv)) { sptNeighborNames.add(u.getName()); break; }
-                    }
-                }
-                logger.warn("  non-SPT vertex name={} ({},{}), adjacent SPT vertices: {}",
-                        nv.getName(), nv.x, nv.y, sptNeighborNames);
-            }
         }
     }
 
-    /**
-     * Строит set всех ребер в SPT (в обе стороны)
-     */
     private static Set<Map.Entry<Vertex, Vertex>> buildSPTEdgesSet(Map<Vertex, Vertex> previous) {
         Set<Map.Entry<Vertex, Vertex>> sptEdges = new HashSet<>();
 
@@ -505,24 +445,12 @@ public class ShortestPathTreeSearcher {
             if (parent != null) {
                 sptEdges.add(Map.entry(child, parent));
                 sptEdges.add(Map.entry(parent, child));
-
-                // Diagnostic: log all SPT entries involving target vertices
-                boolean childIsTarget = child.getName() == 2277977123L || child.getName() == 13660380159L;
-                boolean parentIsTarget = parent.getName() == 2277977123L || parent.getName() == 13660380159L;
-                if (childIsTarget || parentIsTarget) {
-                    logger.warn("SPT ENTRY: child={}({},{}) parent={}({},{})",
-                            child.getName(), child.x, child.y,
-                            parent.getName(), parent.x, parent.y);
-                }
             }
         }
 
         return sptEdges;
     }
 
-    /**
-     * Строит set всех вершин в SPT
-     */
     private static Set<Vertex> buildSPTVerticesSet(Vertex root, Map<Vertex, Vertex> previous) {
         Set<Vertex> vertices = new HashSet<>(previous.keySet());
         vertices.add(root);
@@ -561,9 +489,6 @@ public class ShortestPathTreeSearcher {
      * новое граничное ребро (прибавляем). Когда соседней грани нет (внешняя
      * удалённая грань), всё равно прибавляем — primal-ребро на внешнем контуре
      * принадлежит периметру.
-     *
-     * Прежний вариант через dualGraph.getEdges() терял рёбра на внешнем контуре,
-     * т.к. внешняя грань удалена и дуальных рёбер к ней нет.
      */
     private static double updateBoundaryLength(
             VertexOfDualGraph newRegion,

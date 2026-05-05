@@ -22,7 +22,8 @@ public class FlowWriter {
                                                   HashSet<VertexOfDualGraph> sourceNeighbors,
                                                   HashSet<VertexOfDualGraph> sinkNeighbors,
                                                   double size,
-                                                  Graph<Vertex> graph,
+                                                  Graph<Vertex> initGraph,
+                                                  Graph<Vertex> modifiedGraph,
                                                   Graph<VertexOfDualGraph> dualGraph,
                                                   VertexOfDualGraph source,
                                                   VertexOfDualGraph sink,
@@ -47,7 +48,10 @@ public class FlowWriter {
             }
 
             writeDualGraph(outputDir + "dual_graph.txt", dualGraph, source, sink, coordConversion);
-            writePrimalGraph(outputDir + "primal_graph.txt", graph, sourceNeighbors, sinkNeighbors, coordConversion);
+            
+            // Сохраняем оба графа - исходный и модифицированный
+            writePrimalGraph(outputDir + "init_graph.txt", initGraph, sourceNeighbors, sinkNeighbors, coordConversion);
+            writePrimalGraph(outputDir + "modified_graph.txt", modifiedGraph, sourceNeighbors, sinkNeighbors, coordConversion);
 
             logger.info("Visualization data saved to {}", outputDir);
         } catch (Exception e) {

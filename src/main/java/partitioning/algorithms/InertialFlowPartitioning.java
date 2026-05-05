@@ -14,18 +14,13 @@ import partitioning.entities.FlowResult;
 import partitioning.maxflow.MaxFlow;
 import partitioning.maxflow.MaxFlowDinic;
 import partitioning.maxflow.MaxFlowReif;
+import readWrite.CoordinateConversion;
 
 public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs {
     private static final Logger logger = LoggerFactory.getLogger(InertialFlowPartitioning.class);
 
     private final double PARAMETER_SOURCE, PARAMETER_SINK;
     private final boolean USE_REIF;
-
-    public InertialFlowPartitioning() {
-        this.PARAMETER_SOURCE = 0.25;
-        this.PARAMETER_SINK = 0.25;
-        this.USE_REIF = true;
-    }
 
     public InertialFlowPartitioning(double parameter, boolean useReif) {
         this.PARAMETER_SOURCE = parameter;
@@ -140,7 +135,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             HashSet<VertexOfDualGraph> maxSourceSet = new HashSet<>();
             int index = 0;
             while (index < vertices.size() && sourceSet.stream().mapToDouble(VertexOfDualGraph::getWeight).sum() < targetWeightSource) {
-                sourceSet = selectVerticesForSet(vertices, index, targetWeightSource, new HashSet<>(), currentGraph, startVertices.get(0));
+                sourceSet = selectVerticesForSet(vertices, index, targetWeightSource, Set.of(), currentGraph, startVertices.get(0));
                 if (sourceSet.stream().mapToDouble(VertexOfDualGraph::getWeight).sum()
                         > maxSourceSet.stream().mapToDouble(VertexOfDualGraph::getWeight).sum()) {
                     maxSourceSet = new HashSet<>(sourceSet);
@@ -171,8 +166,9 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                 sinkSet = selectVerticesForSet(vertices, currentIndex, targetWeightSink, sourceSet, currentGraph, startVertex);
 
                 boolean isDisjoint = Collections.disjoint(sinkSet, sourceSet);
-                if (isDisjoint && sinkSet.stream().mapToDouble(Vertex::getWeight).sum()
-                        > maxSinkSet.stream().mapToDouble(Vertex::getWeight).sum()) {
+                double sinkSetWeight = sinkSet.stream().mapToDouble(Vertex::getWeight).sum();
+                double maxSinkSetWeight = maxSinkSet.stream().mapToDouble(Vertex::getWeight).sum();
+                if (isDisjoint && (sinkSetWeight > maxSinkSetWeight || (sinkSetWeight == maxSinkSetWeight && sinkSet.size() > maxSinkSet.size()))) {
                     maxSinkSet = new HashSet<>(sinkSet);
                 }
                 index++;
@@ -257,6 +253,14 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             for (Graph<VertexOfDualGraph> subgraph : subpartition) {
                 if (!subgraph.isConnected()) {
                     logger.warn("Subgraph is not connected");
+                    for (var s : subgraph.splitForConnectedComponents()) {
+                        logger.warn("Part: {}", s.stream().map(Vertex::getName).collect(Collectors.toList()));
+                        if (s.size() == 1) {
+                            var vertex = s.iterator().next();
+                            CoordinateConversion cc = new CoordinateConversion();
+                            logger.warn("Vertex: {} ({} {}), neighbors: {}", vertex.name, cc.fromEuclidean(vertex).y, cc.fromEuclidean(vertex).x, subgraph.getEdges().get(vertex).keySet().stream().map(Vertex::getName).collect(Collectors.toList()));
+                        }
+                    }
                     // TODO - странный путь, когда станет понятно почему, пролемы быть не должно
                 }
             }
@@ -295,6 +299,10 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                 vertexSet.add(current);
                 currentWeight += current.getWeight();
                 for (VertexOfDualGraph neighbor : currentGraph.getEdges().get(current).keySet()) {
+                    if (initVertex != null && initVertex.name == 1781) {
+                        logger.debug("Adding neighbor {}, !vertexSet.contains(neighbor) = {}, !sourceSet.contains(neighbor) = {}",
+                                neighbor.name, !vertexSet.contains(neighbor), !sourceSet.contains(neighbor));
+                    }
                     if (!vertexSet.contains(neighbor) && !sourceSet.contains(neighbor)) {
                         queue.add(neighbor);
                     }
@@ -554,7 +562,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
         VertexOfDualGraph sink = flow.sink();
         
         List<VertexOfDualGraph> allVertices = new ArrayList<>(graph.verticesArray());
-        
+
         for (VertexOfDualGraph v : allVertices) {
             if (graph.getEdges().get(v) == null) continue;
             
@@ -566,11 +574,23 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
                 }
             }
         }
-        
+
         graph.deleteVertex(source);
         graph.deleteVertex(sink);
         
         List<Set<VertexOfDualGraph>> components = graph.splitForConnectedComponents();
+
+        if (components.size() > 2) {
+            logger.warn("Total components: {}", components.size());
+        }
+        for (int i = 0; i < components.size(); i++) {
+            Set<VertexOfDualGraph> component = components.get(i);
+
+            if (i > 1) {
+                logger.warn("Component {} vertices: {}", i + 1,
+                        component.stream().map(v -> v.name).limit(20).toArray());
+            }
+        }
 
         List<Graph<VertexOfDualGraph>> subpartition = new ArrayList<>();
         
@@ -587,7 +607,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
             subpartition.add(flow.graphWithFlow().createSubgraph(components.get(0)));
             subpartition.add(flow.graphWithFlow().createSubgraph(components.get(1)));
-            
+
             for (int i = 2; i < components.size(); i++) {
                 Graph<VertexOfDualGraph> smallComponent = flow.graphWithFlow().createSubgraph(components.get(i));
                 for (VertexOfDualGraph v : smallComponent.verticesArray()) {

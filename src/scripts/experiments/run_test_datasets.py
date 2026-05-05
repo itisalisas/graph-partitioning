@@ -12,7 +12,7 @@ max_region_radius_meters = "1000"
 data_root = "src/main/resources/data"
 data_relative_root = "data"
 out_dir = "src/main/output/res"
-out_dir_base = "res"
+out_dir_base = "res-1"
 visualization_script = "src/scripts/layers_visualizer.py"
 
 
@@ -96,7 +96,8 @@ for city in os.listdir(data_root):
                         stdout=log,
                         stderr=subprocess.STDOUT,
                         text=True,
-                        check=False
+                        check=False,
+                        timeout=120
                     )
 
                     if result.returncode == 0:
@@ -105,6 +106,11 @@ for city in os.listdir(data_root):
                     else:
                         print(f"Java failed with code {result.returncode} for {city}/{size}/{weight_dir}")
 
+                except subprocess.TimeoutExpired as e:
+                    log.write(f"\n\nExecution timed out after 120 seconds\n")
+                    print(f"Java execution TIMED OUT for {city}/{size}/{weight_dir} after 120 seconds")
+                    with open(visualization_errors_log, "a") as err_log:
+                        err_log.write(f"Java timeout for {city}/{size}/{weight_dir}: {e}\n\n")
                 except Exception as e:
                     log.write(f"\n\nExecution error: {e}\n")
                     print(f"Error in Java for {city}/{size}/{weight_dir}: {e}")

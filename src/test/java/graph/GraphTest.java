@@ -126,7 +126,7 @@ class GraphTest {
 
     @Test
     void testAngles() {
-        HashMap<Vertex, TreeSet<EdgeOfGraph<Vertex>>> orderedEdges = graph.arrangeByAngle();
+        Map<Vertex, TreeSet<EdgeOfGraph<Vertex>>> orderedEdges = graph.arrangeByAngle();
         TreeSet<EdgeOfGraph<Vertex>> orderedEdgesForV8 = orderedEdges.get(vs.get(8));
         assertEquals(2, orderedEdgesForV8.size());
         assertEquals(edges.get(10), orderedEdgesForV8.first());

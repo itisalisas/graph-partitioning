@@ -36,7 +36,6 @@ public class GraphPreparation {
 	public Graph<VertexOfDualGraph> prepareGraph(Graph<Vertex> gph, double inaccuracy) throws IOException {
         long startTime = System.currentTimeMillis();
 		logger.info("Number of 0 weight vertex, before correction: {}", gph.countZeroWeightVertices());
-		gph.correctVerticesWeight();
         long time1 = System.currentTimeMillis();
         logger.info("Time for correcting vertices weight: {} seconds", (time1 - startTime) / 1000.0);
 		logger.info("Number of 0 weight vertex, before sweepLine: {}", gph.countZeroWeightVertices());
@@ -54,12 +53,6 @@ public class GraphPreparation {
 		
         Assertions.assertTrue(graph.isConnected());
 
-        ArrayList<Vertex> zeroWeight = new ArrayList<>();
-		for (Vertex v : graph.getEdges().keySet()) {
-			if (v.getWeight() == 0) {
-				zeroWeight.add(v);
-			}
-		}
         long time2 = System.currentTimeMillis();
         logger.info("Time for sweepLine: {} seconds", (time2 - time1) / 1000.0);
 		
