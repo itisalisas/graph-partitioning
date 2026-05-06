@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from collections import defaultdict
 
-base_dir = "src/main/output/res-1"
+base_dir = "src/main/output/res"
 data_root = "src/main/resources/data"
 cities = [d for d in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, d))]
 sizes = ["1000", "2000", "5000"]

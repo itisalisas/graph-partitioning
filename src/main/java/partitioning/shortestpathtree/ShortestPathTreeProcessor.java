@@ -36,8 +36,8 @@ public class ShortestPathTreeProcessor {
                     bestScore = score;
                     bestI1 = i1;
                     bestI2 = i2;
-                    //logger.info("New best score: {} at i1 = {}, i2 = {}, weight balance = {}, length = {}",
-                    //        bestScore.score, i1, i2, bestScore.weightBalance, bestScore.length);
+                    logger.debug("New best score: {} at i1 = {}, i2 = {}, weight balance = {}, length = {}",
+                            bestScore.score, i1, i2, bestScore.weightBalance, bestScore.length);
                 }
             }
         }

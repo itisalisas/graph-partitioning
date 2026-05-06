@@ -105,13 +105,6 @@ public class MaxFlowReif implements MaxFlow {
                 sourceNeighbors, sinkNeighbors
         );
 
-        if (neighborSplits.size() == 1) {
-            var v = neighborSplits.keySet().stream().findFirst();
-            logger.debug("Found split vertex {}, right {}, left {}", v.get(),
-                    neighborSplits.get(v.get()).rightNeighbors().stream().map(u -> u.name).collect(Collectors.toList()),
-                    neighborSplits.get(v.get()).leftNeighbors().stream().map(u -> u.name).collect(Collectors.toList())
-            );
-        }
         long time4 = System.currentTimeMillis();
         logger.info("Time for preprocessing vertex splits: {} seconds", (time4 - time3) / 1000.0);
 
@@ -316,7 +309,7 @@ public class MaxFlowReif implements MaxFlow {
             }
             double diff = midOpt.get().balanceWeight();
             logger.info("eval spt at vertex of path number {}, diff in weight {}, isPositive {}", mid, diff, midOpt.get().isPositive);
-            if (!midOpt.get().isPositive) {
+            if (midOpt.get().isPositive) {
                 lo = mid + 1;
             } else {
                 hi = mid;

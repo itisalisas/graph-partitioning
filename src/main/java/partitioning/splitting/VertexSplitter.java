@@ -108,9 +108,7 @@ public class VertexSplitter {
                     boundaryContext.sinkBoundaryNames());
 
             boolean onExternalBoundary = externalBoundaryNames.contains(context.current().getName());
-            if (context.current.name == 13750691309L) {
-                logger.warn("13750691309 on external boundary {}", onExternalBoundary);
-            }
+            logger.debug("Vertex {} on external boundary: {}", context.current().getName(), onExternalBoundary);
 
             if (onExternalBoundary) {
                 Vertex prevPathVertex = context.previous(), nextPathVertex = context.next();
@@ -902,161 +900,142 @@ public class VertexSplitter {
             List<Vertex> externalBoundary,
             List<Vertex> sourceBoundary,
             List<Vertex> sinkBoundary,
-            Map<Vertex, java.util.TreeSet<EdgeOfGraph<Vertex>>> orderedEdges) {
-
-        // 1. Проверки на null и конец пути
+            Map<Vertex, java.util.TreeSet<EdgeOfGraph<Vertex>>> orderedEdges
+    ) {
         if (prevPathVertex == null && nextPathVertex == null) {
-            // Циклическая проверка: sinkBoundaryEdge должно идти сразу после sourceBoundaryEdge
+            logger.debug("prevPathVertex and nextPathVertex are null");
             Set<Vertex> sourceBoundarySet = new HashSet<>(sourceBoundary);
             Set<Vertex> sinkBoundarySet = new HashSet<>(sinkBoundary);
             Set<Vertex> externalBoundarySet = new HashSet<>(externalBoundary);
-            
+
             List<EdgeOfGraph<Vertex>> edgesList = new ArrayList<>(orderedEdges.get(currentVertex));
             int sourceEdgeIdx = -1, sinkEdgeIdx = -1;
-            
+
             for (int i = 0; i < edgesList.size(); i++) {
                 EdgeOfGraph<Vertex> edge = edgesList.get(i);
-                if (externalBoundarySet.contains(edge.end) && sourceBoundarySet.contains(edge.end)) {
+                if (externalBoundarySet.contains(edge.end) && sourceBoundarySet.contains(edge.end) && !sinkBoundarySet.contains(edge.end)) {
                     sourceEdgeIdx = i;
                 }
-                if (externalBoundarySet.contains(edge.end) && sinkBoundarySet.contains(edge.end)) {
+                if (externalBoundarySet.contains(edge.end) && sinkBoundarySet.contains(edge.end) && !sourceBoundarySet.contains(edge.end)) {
                     sinkEdgeIdx = i;
                 }
             }
-            
-            if (sourceEdgeIdx == -1 || sinkEdgeIdx == -1) {
+
+            if (sourceEdgeIdx == -1 && sinkEdgeIdx == -1) {
                 return Optional.empty();
             }
-            
-            // Проверяем, что sinkEdge идет сразу после sourceEdge (с учетом цикличности)
+
+            if (sourceEdgeIdx == -1) {
+                var sinkEdge = edgesList.get(sinkEdgeIdx);
+                logger.debug("sinkEdge: {} -> {}", sinkEdge.begin.getName(), sinkEdge.end.getName());
+                return Optional.of(isEdgeCoDirectionalWithBoundary(sinkEdge.begin, sinkEdge.end, externalBoundary));
+            }
+
+            if (sinkEdgeIdx == -1) {
+                var sourceEdge = edgesList.get(sourceEdgeIdx);
+                logger.debug("sourceEdge: {} -> {}", sourceEdge.begin.getName(), sourceEdge.end.getName());
+                return Optional.of(!isEdgeCoDirectionalWithBoundary(sourceEdge.begin, sourceEdge.end, externalBoundary));
+            }
+            var sourceEdge = edgesList.get(sourceEdgeIdx);
+            var sinkEdge = edgesList.get(sinkEdgeIdx);
+            logger.debug("sourceEdge: {} -> {}, sinkEdge: {} -> {}", sourceEdge.begin.getName(), sourceEdge.end.getName(), sinkEdge.begin.getName(), sinkEdge.end.getName());
+
             int nextIdx = (sourceEdgeIdx + 1) % edgesList.size();
+            logger.debug("sourceEdgeIdx: {}, sinkEdgeIdx: {}, nextIdx: {}", sourceEdgeIdx, sinkEdgeIdx, nextIdx);
             return Optional.of(sinkEdgeIdx != nextIdx);
         }
 
-        long currentId = currentVertex.getName();
-
-        // 2. Найти позицию currentVertex в external boundary
         int currentPosInBoundary = -1;
         for (int i = 0; i < externalBoundary.size(); i++) {
-            if (externalBoundary.get(i).getName() == currentId) {
+            if (externalBoundary.get(i).equals(currentVertex)) {
                 currentPosInBoundary = i;
                 break;
             }
         }
 
         if (currentPosInBoundary == -1) {
-            logger.warn("vertex {} not found in external boundary", currentId);
+            logger.warn("vertex {} not found in external boundary", currentVertex.getName());
             return Optional.empty();
         }
 
-        // 3. Получить соседей на boundary
-        Vertex nextInBoundaryV = externalBoundary.get((currentPosInBoundary + 1) % externalBoundary.size());
-        Vertex prevInBoundaryV = externalBoundary.get((currentPosInBoundary - 1 + externalBoundary.size()) % externalBoundary.size());
+        Vertex nextBoundaryVertex = externalBoundary.get((currentPosInBoundary + 1) % externalBoundary.size());
+        Vertex prevBoundaryVertex = externalBoundary.get((currentPosInBoundary - 1 + externalBoundary.size()) % externalBoundary.size());
 
-        long nextInBoundaryId = nextInBoundaryV.getName();
-        long prevInBoundaryId = prevInBoundaryV.getName();
-
-        // 4. --- ЯВНЫЕ ГРАНИЧНЫЕ СЛУЧАИ ---
-
-        // A. Если мы пришли "Против шерсти" (со стороны NextBoundary)
         if (prevPathVertex != null) {
-            long prevPathId = prevPathVertex.getName();
-            if (prevPathId == nextInBoundaryId) {
-                // Пытаемся идти навстречу потоку границы
+            if (prevPathVertex.equals(nextBoundaryVertex)) {
                 logger.debug("  Arrived from NextBoundary (Upstream) -> NOT match");
                 return Optional.of(false);
             }
-            if (prevPathId == prevInBoundaryId) {
+            if (prevPathVertex.equals(prevBoundaryVertex)) {
                 logger.debug("  Arrived from PrevBoundary (Downstream) -> match");
                 return Optional.of(true);
             }
         }
 
         if (nextPathVertex != null) {
-            long nextPathId = nextPathVertex.getName();
-
-            // 1. Идем далее по границе -> верно
-            if (nextPathId == nextInBoundaryId) {
+            if (nextPathVertex.equals(nextBoundaryVertex)) {
                 logger.debug("  Going forwards on boundary -> match");
                 return Optional.of(true);
             }
-            // 2. Разворачиваемся назад по границе -> неверно
-            if (nextPathId == prevInBoundaryId) {
+            if (nextPathVertex.equals(prevBoundaryVertex)) {
                 logger.debug("  Going backwards on boundary -> NOT match");
                 return Optional.of(false);
             }
         }
-
-        // 5. --- СЕКТОРНЫЙ АНАЛИЗ ---
 
         TreeSet<EdgeOfGraph<Vertex>> edges = orderedEdges.get(currentVertex);
         if (edges == null || edges.isEmpty()) {
             return Optional.empty();
         }
 
-        Long prevPathId = (prevPathVertex != null) ? prevPathVertex.getName() : null;
-        Long nextPathId = (nextPathVertex != null) ? nextPathVertex.getName() : null;
-
-        // Найдём все рёбра
         EdgeOfGraph<Vertex> prevPathEdge = null;
         EdgeOfGraph<Vertex> nextPathEdge = null;
         EdgeOfGraph<Vertex> prevBoundaryEdge = null;
         EdgeOfGraph<Vertex> nextBoundaryEdge = null;
 
         for (EdgeOfGraph<Vertex> edge : edges) {
-            long targetId = edge.end.getName();
-            if (prevPathId != null && targetId == prevPathId) prevPathEdge = edge;
-            if (nextPathId != null && targetId == nextPathId) nextPathEdge = edge;
-            if (targetId == prevInBoundaryId) prevBoundaryEdge = edge;
-            if (targetId == nextInBoundaryId) nextBoundaryEdge = edge;
+            if (edge.end.equals(prevPathVertex)) prevPathEdge = edge;
+            if (edge.end.equals(nextPathVertex)) nextPathEdge = edge;
+            if (edge.end.equals(prevBoundaryVertex)) prevBoundaryEdge = edge;
+            if (edge.end.equals(nextBoundaryVertex)) nextBoundaryEdge = edge;
         }
 
-        // Если не все нужные рёбра границы найдены
         if (prevBoundaryEdge == null || nextBoundaryEdge == null) {
             logger.warn("boundary edges not found");
             return Optional.empty();
         }
 
-        // 6. --- ПРОВЕРКА СЕКТОРОВ ---
-
-        // Случай 1: Начало пути (prevPathVertex == null)
         if (prevPathVertex == null && nextPathEdge != null) {
-            // Проверяем: оба ребра границы лежат между nextPathEdge и nextPathEdge (по кругу)?
-            // Т.е. если идём от nextPathEdge CCW, встретим ли оба ребра границы до возврата к nextPathEdge?
-            boolean boundariesAfterPath = areBothBoundariesAfterEdge(
-                    edges, nextPathEdge, prevBoundaryEdge, nextBoundaryEdge);
+            boolean boundariesAfterPath = areCorrectSequence(
+                    edges, nextPathEdge, nextBoundaryEdge, prevBoundaryEdge, sourceBoundary, false);
 
-            logger.debug("Direction check for START vertex {}: nextPath={}, prevBoundary={}, nextBoundary={} -> boundaries after path edge: {} -> matches={}", 
-                    currentId, nextPathId, prevInBoundaryId, nextInBoundaryId, boundariesAfterPath, !boundariesAfterPath);
+            logger.debug("Direction check for START vertex {}: nextPath={}, prevBoundary={}, nextBoundary={} -> boundaries after path edge: {} -> matches={}",
+                    currentVertex.name, nextPathVertex.name, prevBoundaryVertex.name, nextBoundaryVertex.name, boundariesAfterPath, !boundariesAfterPath);
 
             return Optional.of(!boundariesAfterPath);
         }
 
-        // Случай 2: Конец пути (nextPathVertex == null)
         if (nextPathVertex == null && prevPathEdge != null) {
-            // Проверяем: оба ребра границы лежат после prevPathEdge (по часовой, т.е. до prevPathEdge при обходе назад)?
-            boolean boundariesBeforePath = areBothBoundariesAfterEdge(
-                    edges, prevPathEdge, prevBoundaryEdge, nextBoundaryEdge);
+            boolean boundariesBeforePath = areCorrectSequence(
+                    edges, prevPathEdge, prevBoundaryEdge, nextBoundaryEdge, sinkBoundary, true);
 
-            logger.debug("Direction check for END vertex {}: prevPath={}, prevBoundary={}, nextBoundary={} -> boundaries after path edge: {} -> matches={}", 
-                    currentId, prevPathId, prevInBoundaryId, nextInBoundaryId, boundariesBeforePath, !boundariesBeforePath);
+            logger.debug("Direction check for END vertex {}: prevPath={}, prevBoundary={}, nextBoundary={} -> boundaries after path edge: {} -> matches={}",
+                    currentVertex.name, prevPathVertex.name, prevBoundaryVertex.name, nextBoundaryVertex.name, boundariesBeforePath, !boundariesBeforePath);
 
             return Optional.of(!boundariesBeforePath);
         }
 
-        // Случай 3: Середина пути (оба ребра пути присутствуют)
         if (prevPathEdge != null && nextPathEdge != null) {
-            // Проверяем: оба ребра границы между рёбрами пути?
             boolean boundariesBetweenPath = areBothBoundariesBetweenPathEdges(
                     edges, prevPathEdge, nextPathEdge, prevBoundaryEdge, nextBoundaryEdge);
 
-            logger.debug("Direction check for MIDDLE vertex {}: prevPath={}, nextPath={}, prevBoundary={}, nextBoundary={} -> boundaries between path edges: {} -> matches={}", 
-                    currentId, prevPathId, nextPathId, prevInBoundaryId, nextInBoundaryId, boundariesBetweenPath, !boundariesBetweenPath);
+            logger.debug("Direction check for MIDDLE vertex {}: prevPath={}, nextPath={}, prevBoundary={}, nextBoundary={} -> boundaries between path edges: {} -> matches={}",
+                    currentVertex.name, prevPathVertex.name, nextPathVertex.name, prevBoundaryVertex.name, nextBoundaryVertex.name, boundariesBetweenPath, !boundariesBetweenPath);
 
             return Optional.of(!boundariesBetweenPath);
         }
 
-        logger.warn("unexpected case for vertex {}", currentId);
+        logger.warn("unexpected case for vertex {}", currentVertex.name);
         return Optional.empty();
     }
 
@@ -1097,26 +1076,22 @@ public class VertexSplitter {
         return foundPrevBoundary && foundNextBoundary;
     }
 
-    /**
-     * Проверяет, лежат ли ОБА ребра границы после заданного ребра при обходе CCW.
-     * Используется для начала и конца пути.
-     * Идём от startEdge CCW и проверяем, встретим ли оба ребра границы до возврата к startEdge.
-     */
-    private static boolean areBothBoundariesAfterEdge(
+    private static boolean areCorrectSequence(
             TreeSet<EdgeOfGraph<Vertex>> edges,
             EdgeOfGraph<Vertex> startEdge,
-            EdgeOfGraph<Vertex> prevBoundaryEdge,
-            EdgeOfGraph<Vertex> nextBoundaryEdge) {
+            EdgeOfGraph<Vertex> firstBoundaryEdge,
+            EdgeOfGraph<Vertex> secondBoundaryEdge,
+            List<Vertex> boundaryVertices,
+            boolean invertOrder) {
 
         EdgeOfGraph<Vertex> current = startEdge;
-        boolean foundPrevBoundary = false;
-        boolean foundNextBoundary = false;
+        boolean foundFirstEdge = false;
 
         int iterations = 0;
         int maxIterations = edges.size();
 
         while (iterations < maxIterations) {
-            EdgeOfGraph<Vertex> next = edges.higher(current);
+            EdgeOfGraph<Vertex> next = invertOrder ? edges.lower(current) : edges.higher(current);
             if (next == null) next = edges.first();
 
             if (next.equals(startEdge)) {
@@ -1124,14 +1099,14 @@ public class VertexSplitter {
                 break;
             }
 
-            if (next.equals(prevBoundaryEdge)) foundPrevBoundary = true;
-            if (next.equals(nextBoundaryEdge)) foundNextBoundary = true;
+            if (next.equals(secondBoundaryEdge) && !foundFirstEdge) return false;
+            if (next.equals(firstBoundaryEdge)) return boundaryVertices.contains(next.end);
 
             current = next;
             iterations++;
         }
 
-        return foundPrevBoundary && foundNextBoundary;
+        return false;
     }
 
     private static void logSplitResult(Vertex vertex, NeighborSplit split) {

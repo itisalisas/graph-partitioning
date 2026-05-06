@@ -71,6 +71,7 @@ public class Balancer {
                 BalancedPartitioning bp = new BalancedPartitioning(new InertialFlowPartitioning(coefficient, false));
                 List<Set<VertexOfDualGraph>> newPartition = bp.partition(startGraph, regionsSubgraph, maxWeight);
                 if (newPartition.size() > 2) {
+                    logger.debug("partition size in balancer > 2, skip");
                     continue;
                 }
 

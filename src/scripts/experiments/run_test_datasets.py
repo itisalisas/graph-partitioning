@@ -12,7 +12,7 @@ max_region_radius_meters = "1000"
 data_root = "src/main/resources/data"
 data_relative_root = "data"
 out_dir = "src/main/output/res"
-out_dir_base = "res-1"
+out_dir_base = "res"
 visualization_script = "src/scripts/layers_visualizer.py"
 
 
@@ -97,7 +97,7 @@ for city in os.listdir(data_root):
                         stderr=subprocess.STDOUT,
                         text=True,
                         check=False,
-                        timeout=120
+                        timeout=600
                     )
 
                     if result.returncode == 0:
