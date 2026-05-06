@@ -9,6 +9,9 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -44,11 +47,11 @@ public class SweepLine {
 
 	public Graph<Vertex> makePlanar(Graph<Vertex> gph) {
         long t0 = System.currentTimeMillis();
-		ArrayList<EdgeOfGraph<Vertex>> edgesList = gph.undirEdgesArray();
-		ArrayList<ArrayList<Vertex>> intersectionPoints = findPointsOfIntersection(edgesList);
+		List<EdgeOfGraph<Vertex>> edgesList = gph.undirEdgesArray();
+		List<List<Vertex>> intersectionPoints = findPointsOfIntersection(edgesList);
         long t1 = System.currentTimeMillis();
         logger.info("findPointsOfIntersection: {} ms, edges: {}", t1 - t0, edgesList.size());
-		HashMap<Vertex, Vertex> copyPointsGraphPoints = checkCopyPoints(gph, intersectionPoints);
+		Map<Vertex, Vertex> copyPointsGraphPoints = checkCopyPoints(gph, intersectionPoints);
         long t2 = System.currentTimeMillis();
         logger.info("checkCopyPoints: {} ms", t2 - t1);
 		
@@ -124,7 +127,7 @@ public class SweepLine {
                 
                 if (toDelete.contains(v2)) continue;
                 if (v1.getLength(v2) <= inaccuracy) {
-                    HashMap<Vertex, Edge> tmp = graph.getEdges().get(v2);
+                    Map<Vertex, Edge> tmp = graph.getEdges().get(v2);
                     for (Vertex v : tmp.keySet()) {
                         graph.addEdge(v1, v, tmp.get(v).length);
                     }
@@ -144,19 +147,19 @@ public class SweepLine {
 		return graph;
 	}
 
-    private HashMap<Vertex, Vertex> checkCopyPoints(Graph<Vertex> gph, ArrayList<ArrayList<Vertex>> intersectionPoints) {
-        HashMap<Vertex, Vertex> ans = new HashMap<>();
-        HashMap<Vertex, Double> bestDist = new HashMap<>();
+    private Map<Vertex, Vertex> checkCopyPoints(Graph<Vertex> gph, List<List<Vertex>> intersectionPoints) {
+        Map<Vertex, Vertex> ans = new HashMap<>();
+        Map<Vertex, Double> bestDist = new HashMap<>();
 
         // Собираем и сортируем вершины графа по X
-        ArrayList<Vertex> graphVertices = new ArrayList<>(gph.getEdges().keySet());
+        List<Vertex> graphVertices = new ArrayList<>(gph.getEdges().keySet());
         Comparator<Vertex> byX = Comparator.comparingDouble(v -> v.x);
         graphVertices.sort(byX);
 
         // Фиктивная вершина для бинарного поиска
         Vertex searchKey = new Vertex(0, 0, 0);
 
-        for (ArrayList<Vertex> currArrayList : intersectionPoints) {
+        for (List<Vertex> currArrayList : intersectionPoints) {
             for (Vertex curVertex : currArrayList) {
                 // Бинарный поиск: находим начало диапазона вершин, близких по X
                 searchKey.x = curVertex.x - inaccuracy;
@@ -184,12 +187,12 @@ public class SweepLine {
 	
 	
 	private void addIntersectionPoints(Graph<Vertex> gph,
-									   ArrayList<EdgeOfGraph<Vertex>> edgesList,
-									   ArrayList<ArrayList<Vertex>> intersectionPoints, 
-									   HashMap<Vertex, Vertex> copyPoints) {
+									   List<EdgeOfGraph<Vertex>> edgesList,
+									   List<List<Vertex>> intersectionPoints,
+									   Map<Vertex, Vertex> copyPoints) {
 		for (int i = 0; i < edgesList.size(); i++) {
 			//List of intersection points in edge i
-			ArrayList<Vertex> currList = intersectionPoints.get(i);
+			List<Vertex> currList = intersectionPoints.get(i);
 			EdgeOfGraph<Vertex> currEdge = edgesList.get(i);
 			if (currList == null ||
 				(currList != null && currList.isEmpty()) ||
@@ -250,8 +253,8 @@ public class SweepLine {
 	 * - Удаление интервала: O(log n)  
 	 * - Поиск всех пересекающихся интервалов: O(log n + k)
 	 */
-	public ArrayList<ArrayList<Vertex>> findPointsOfIntersection(ArrayList<EdgeOfGraph<Vertex>> edgesList) {
-		ArrayList<ArrayList<Vertex>> intersectionPoints = new ArrayList<>();
+	public List<List<Vertex>> findPointsOfIntersection(List<EdgeOfGraph<Vertex>> edgesList) {
+		List<List<Vertex>> intersectionPoints = new ArrayList<>();
 		for (int i = 0; i < edgesList.size(); i++) {
 			intersectionPoints.add(new ArrayList<>());
 		}
@@ -261,15 +264,18 @@ public class SweepLine {
 		}
 
 		IntervalTree yIntervalTree = new IntervalTree();
-		HashMap<Integer, double[]> edgeYIntervals = new HashMap<>();
+		Map<Integer, double[]> edgeYIntervals = new HashMap<>();
 
-		ArrayList<Action> actions = initActions(edgesList);
-		actions.sort((a1, a2) -> a1.x() < a2.x() ? -1
-				: a1.x() > a2.x() ? 1
-				: a1.type() == ActionType.ADD ? 1
-				: a2.type() == ActionType.ADD ? -1 : 0);
+		List<Action> actions = initActions(edgesList);
+        actions.sort((a1, a2) -> {
+            int cmp = Double.compare(a1.x(), a2.x());
+            if (cmp != 0) return cmp;
+            int rank1 = a1.type() == ActionType.ADD ? 1 : 0;
+            int rank2 = a2.type() == ActionType.ADD ? 1 : 0;
+            return Integer.compare(rank1, rank2);
+        });
 
-		HashMap<Integer, EdgeOfGraph<Vertex>> actualEdge = new HashMap<>();
+		Map<Integer, EdgeOfGraph<Vertex>> actualEdge = new HashMap<>();
 
 		for (Action currAct : actions) {
 			int currEdgeInd = currAct.edgeNum();
@@ -287,7 +293,7 @@ public class SweepLine {
 			double edgeMinY = Math.min(currEdge.begin.y, currEdge.end.y);
 			double edgeMaxY = Math.max(currEdge.begin.y, currEdge.end.y);
 
-			HashSet<Integer> candidateEdges = new HashSet<>();
+			Set<Integer> candidateEdges = new HashSet<>();
 			yIntervalTree.queryOverlapping(edgeMinY, edgeMaxY, candidateEdges);
 
 			for (int edgeNum : candidateEdges) {
@@ -329,12 +335,12 @@ public class SweepLine {
 	//добавить пояснения
 	private <T extends Vertex> void checkHorizontalEdges(int edgeNum1,
 									  					int edgeNum2,
-									  					ArrayList<EdgeOfGraph<T>> edgesList,
-														ArrayList<ArrayList<Vertex>> intersectionPoints) {
-		EdgeOfGraph<T> edge1 = edgesList.get(edgeNum2);
+									  					List<EdgeOfGraph<T>> edgesList,
+														List<List<Vertex>> intersectionPoints) {
+		EdgeOfGraph<T> edge1 = edgesList.get(edgeNum1);
 		EdgeOfGraph<T> edge2 = edgesList.get(edgeNum2);
-		ArrayList<Vertex> intersectPointsEdge1 = intersectionPoints.get(edgeNum1);
-		ArrayList<Vertex> intersectPointsEdge2 = intersectionPoints.get(edgeNum2);
+		List<Vertex> intersectPointsEdge1 = intersectionPoints.get(edgeNum1);
+		List<Vertex> intersectPointsEdge2 = intersectionPoints.get(edgeNum2);
 		if (edge1.includeForX(edge2.begin)) {
 			intersectPointsEdge1.add(edge2.begin);
 		}
@@ -353,12 +359,12 @@ public class SweepLine {
 	//добавить пояснения
 	private <T extends Vertex> void checkVerticalEdges(int edgeNum1,
 													   int edgeNum2,
-													   ArrayList<EdgeOfGraph<T>> edgesList,
-													   ArrayList<ArrayList<Vertex>> intersectionPoints) {
+													   List<EdgeOfGraph<T>> edgesList,
+													   List<List<Vertex>> intersectionPoints) {
 		EdgeOfGraph<T> edge1 = edgesList.get(edgeNum1);
 		EdgeOfGraph<T> edge2 = edgesList.get(edgeNum2);
-		ArrayList<Vertex> intersectPointsEdge1 = intersectionPoints.get(edgeNum1);
-		ArrayList<Vertex> intersectPointsEdge2 = intersectionPoints.get(edgeNum2);
+		List<Vertex> intersectPointsEdge1 = intersectionPoints.get(edgeNum1);
+		List<Vertex> intersectPointsEdge2 = intersectionPoints.get(edgeNum2);
 		if (edge1.includeForY(edge2.begin)) {
 			intersectPointsEdge1.add(edge2.begin);
 		}
@@ -375,8 +381,8 @@ public class SweepLine {
 	}
 
 
-	private <T extends Vertex> ArrayList<Action> initActions(ArrayList<EdgeOfGraph<T>> edgesList) {
-			ArrayList<Action> result = new ArrayList<>();
+	private <T extends Vertex> List<Action> initActions(List<EdgeOfGraph<T>> edgesList) {
+			List<Action> result = new ArrayList<>();
 			for (int i = 0; i < edgesList.size(); i++) {
 				result.add(new Action(Math.min(edgesList.get(i).begin.x, edgesList.get(i).end.x),
 								   i,
@@ -398,12 +404,12 @@ public class SweepLine {
 	 *                                 position
 	 * @return matching: vertex - face
 	 */
-	public HashMap<Vertex, VertexOfDualGraph> findFacesOfVertices(ArrayList<EdgeOfGraph<Vertex>> diagList,
-																  HashMap<EdgeOfGraph<Vertex>,
+	public Map<Vertex, VertexOfDualGraph> findFacesOfVertices(List<EdgeOfGraph<Vertex>> diagList,
+																  Map<EdgeOfGraph<Vertex>,
 																  VertexOfDualGraph> returnFromSimplification,
-																  HashSet<Vertex> newVertices) {
-		HashMap<Vertex, VertexOfDualGraph> res = new HashMap<>();
-		ArrayList<Action> actions = initActions(diagList);
+																  Set<Vertex> newVertices) {
+		Map<Vertex, VertexOfDualGraph> res = new HashMap<>();
+		List<Action> actions = initActions(diagList);
 		addPointToActions(actions, newVertices);
 
 		actions.sort((a1, a2) -> a1.x() < a2.x() ? -1 :
@@ -489,7 +495,7 @@ public class SweepLine {
 		return res;
 	}
 
-	private void addPointToActions(ArrayList<Action> actions, HashSet<Vertex> newVertices) {
+	private void addPointToActions(List<Action> actions, Set<Vertex> newVertices) {
 		for (Vertex ver : newVertices) {
 			actions.add(new Action(ver.x, -1, ver, ActionType.POINT));
 		}

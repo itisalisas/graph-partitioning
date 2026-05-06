@@ -13,7 +13,6 @@ import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
 import partitioning.entities.DijkstraResult;
-import partitioning.entities.NeighborSplit;
 
 public class FlowWriter {
     private static final Logger logger = LoggerFactory.getLogger(FlowWriter.class);
@@ -23,7 +22,8 @@ public class FlowWriter {
                                                   HashSet<VertexOfDualGraph> sourceNeighbors,
                                                   HashSet<VertexOfDualGraph> sinkNeighbors,
                                                   double size,
-                                                  Graph<Vertex> graph,
+                                                  Graph<Vertex> initGraph,
+                                                  Graph<Vertex> modifiedGraph,
                                                   Graph<VertexOfDualGraph> dualGraph,
                                                   VertexOfDualGraph source,
                                                   VertexOfDualGraph sink,
@@ -48,7 +48,10 @@ public class FlowWriter {
             }
 
             writeDualGraph(outputDir + "dual_graph.txt", dualGraph, source, sink, coordConversion);
-            writePrimalGraph(outputDir + "primal_graph.txt", graph, sourceNeighbors, sinkNeighbors, coordConversion);
+            
+            // Сохраняем оба графа - исходный и модифицированный
+            writePrimalGraph(outputDir + "init_graph.txt", initGraph, sourceNeighbors, sinkNeighbors, coordConversion);
+            writePrimalGraph(outputDir + "modified_graph.txt", modifiedGraph, sourceNeighbors, sinkNeighbors, coordConversion);
 
             logger.info("Visualization data saved to {}", outputDir);
         } catch (Exception e) {
@@ -374,7 +377,7 @@ public class FlowWriter {
             writer.write("# lon lat (for each vertex)\n");
             writer.write("# ---\n");
 
-            if (initGraph != null && spt.leafIndices() != null && spt.regions() != null) {
+            if (initGraph != null && spt.regions() != null && numLeaves > 0) {
                 int numRegionsTotal = spt.regions().size();
                 // N leaves => N+1 linear groups (no wrap-around):
                 //   Group 0: before leaf 0          → regions [0 .. leafIndices[0]]

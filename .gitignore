@@ -14,3 +14,7 @@ src/main/resources/testGraphs/*_dual.txt
 cache/
 *.html
 src/main/resources/data/
+src/scripts/.osmnx_cache/
+*.csv
+test-output/
+.venv

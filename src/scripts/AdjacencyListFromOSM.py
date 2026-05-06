@@ -5,6 +5,9 @@ import networkx as nx
 from shapely.geometry import Point, box, Polygon, LineString
 from math import atan2, degrees
 
+# Отключаем кэширование OSMnx
+osmnx.settings.use_cache = False
+
 center_lat = 59.93893094417527
 center_lon = 30.32268115454809
 d = 50
@@ -119,11 +122,11 @@ for u, v, edata in edges_data:
 
             # Заменяем ребро на часть внутри границы
             if u_inside:
-                distance = 0 if is_water else geodesic((uy, ux), (intersection_point.y, intersection_point.x)).meters
+                distance = 0.1 if is_water else geodesic((uy, ux), (intersection_point.y, intersection_point.x)).meters
                 nodes_to_remove.add(v)
                 edges_to_add.append((u, new_node_id, {"length": distance}))
             elif v_inside:
-                distance = 0 if is_water else geodesic((vy, vx), (intersection_point.y, intersection_point.x)).meters
+                distance = 0.1 if is_water else geodesic((vy, vx), (intersection_point.y, intersection_point.x)).meters
                 nodes_to_remove.add(u)
                 edges_to_add.append((new_node_id, v, {"length": distance}))
 

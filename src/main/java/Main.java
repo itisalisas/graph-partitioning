@@ -91,7 +91,7 @@ public class Main implements Runnable {
 
         Graph<VertexOfDualGraph> preparedGraph;
         try {
-            preparedGraph = preparation.prepareGraph(graph, 1);
+            preparedGraph = preparation.prepareGraph(graph, 0.01);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -106,7 +106,7 @@ public class Main implements Runnable {
         weightedVertices = pr.readWeightedPoints(RESOURCES_DIRECTORY + pathToPointsFile, true);
 
         LocalizationPoints lp = new LocalizationPoints(new HashSet<>(weightedVertices));
-        HashMap<VertexOfDualGraph, ArrayList<Vertex>> faceToVertices = lp.findFacesForPoints(preparedGraph);
+        Map<VertexOfDualGraph, List<Vertex>> faceToVertices = lp.findFacesForPoints(preparedGraph);
 
         for (VertexOfDualGraph v: preparedGraph.verticesArray()) {
             v.setWeight(0);

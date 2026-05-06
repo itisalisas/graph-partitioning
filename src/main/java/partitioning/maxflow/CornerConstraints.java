@@ -2,6 +2,7 @@ package partitioning.maxflow;
 
 import graph.EdgeOfGraph;
 import graph.Vertex;
+
 import java.util.*;
 
 public class CornerConstraints {
@@ -24,7 +25,7 @@ public class CornerConstraints {
     }
 
     public boolean isCornerVertex(Vertex v) {
-        return cornerVertices.contains(v.getName());
+        return cornerVertices.contains(v.getName()) || cornerVertices.contains(v.getName() / 1000);
     }
 
     public boolean isNeighborAllowed(Vertex current, Vertex neighbor) {
@@ -34,7 +35,10 @@ public class CornerConstraints {
 
         List<EdgeOfGraph<Vertex>> allowedEdges = allowedEdgesForCorner.get(current.getName());
         if (allowedEdges == null) {
-            return true;
+            allowedEdges = allowedEdgesForCorner.get(current.getName() / 1000);
+            if (allowedEdges == null) {
+                return true;
+            }
         }
 
         for (EdgeOfGraph<Vertex> edge : allowedEdges) {

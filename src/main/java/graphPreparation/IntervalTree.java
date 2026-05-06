@@ -1,6 +1,7 @@
 package graphPreparation;
 
 import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Interval Tree (Augmented BST) для эффективного поиска пересекающихся интервалов.
@@ -82,11 +83,11 @@ public class IntervalTree {
 		return null;
 	}
 
-	public void queryOverlapping(double lo, double hi, HashSet<Integer> result) {
+	public void queryOverlapping(double lo, double hi, Set<Integer> result) {
 		queryOverlapping(root, lo, hi, result);
 	}
 
-	private void queryOverlapping(Node node, double lo, double hi, HashSet<Integer> result) {
+	private void queryOverlapping(Node node, double lo, double hi, Set<Integer> result) {
 		if (node == null) return;
 		if (node.maxHi < lo) return;
 

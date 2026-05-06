@@ -350,7 +350,16 @@ def visualize_reif_flow(directory_name, output_file):
     sink_boundary = load_vertex_list(os.path.join(directory_path, "sink_boundary.txt"))
     st_path = load_vertex_list(os.path.join(directory_path, "st_path.txt"))
     best_path = load_vertex_list(os.path.join(directory_path, "best_path.txt"))
-    primal_vertices, primal_edges = load_primal_graph(os.path.join(directory_path, "primal_graph.txt"))
+    
+    # Загружаем оба графа - исходный и модифицированный
+    init_vertices, init_edges = load_primal_graph(os.path.join(directory_path, "init_graph.txt"))
+    modified_vertices, modified_edges = load_primal_graph(os.path.join(directory_path, "modified_graph.txt"))
+    
+    # Для обратной совместимости: если нет новых файлов, пробуем загрузить старый
+    if not init_vertices and not modified_vertices:
+        init_vertices, init_edges = load_primal_graph(os.path.join(directory_path, "primal_graph.txt"))
+        modified_vertices, modified_edges = init_vertices, init_edges
+    
     dual_vertices, dual_edges = load_dual_graph(os.path.join(directory_path, "dual_graph.txt"))
     
     # Load SPT data
@@ -373,7 +382,8 @@ def visualize_reif_flow(directory_name, output_file):
     map_osm = folium.Map(location=(center_lat, center_lon), zoom_start=15)
     
     # Создаем слои (Feature Groups) для каждого типа данных
-    primal_graph_layer = folium.FeatureGroup(name='Primal Graph (Original)', show=False)
+    init_graph_layer = folium.FeatureGroup(name='Init Graph (Original)', show=False)
+    modified_graph_layer = folium.FeatureGroup(name='Modified Graph', show=True)
     dual_graph_layer = folium.FeatureGroup(name='Dual Graph', show=False)
     external_layer = folium.FeatureGroup(name='External Boundary', show=True)
     source_layer = folium.FeatureGroup(name='Source Boundary', show=True)
@@ -387,21 +397,21 @@ def visualize_reif_flow(directory_name, output_file):
     spt1_groups_layer = folium.FeatureGroup(name='SPT 1 Leaf Groups (Red→Green)', show=False)
     spt2_groups_layer = folium.FeatureGroup(name='SPT 2 Leaf Groups (Red→Green)', show=False)
     
-    # 0. Исходный (primal) граф
-    if primal_vertices and primal_edges:
-        print(f"Visualizing primal graph with {len(primal_vertices)} vertices and {len(primal_edges)} edges")
+    # 0. Исходный граф (до модификаций)
+    if init_vertices and init_edges:
+        print(f"Visualizing init graph with {len(init_vertices)} vertices and {len(init_edges)} edges")
         
         # Рисуем рёбра исходного графа
-        for edge in primal_edges:
+        for edge in init_edges:
             from_id = edge['from']
             to_id = edge['to']
             length = edge['length']
             
-            if from_id not in primal_vertices or to_id not in primal_vertices:
+            if from_id not in init_vertices or to_id not in init_vertices:
                 continue
             
-            from_lat, from_lon = primal_vertices[from_id]
-            to_lat, to_lon = primal_vertices[to_id]
+            from_lat, from_lon = init_vertices[from_id]
+            to_lat, to_lon = init_vertices[to_id]
             
             tooltip_text = f"Edge {from_id}↔{to_id}<br>Length: {length:.2f}m"
             
@@ -411,10 +421,10 @@ def visualize_reif_flow(directory_name, output_file):
                 weight=1.5,
                 opacity=0.6,
                 tooltip=tooltip_text
-            ).add_to(primal_graph_layer)
+            ).add_to(init_graph_layer)
         
         # Рисуем вершины исходного графа
-        for vertex_id, (lat, lon) in primal_vertices.items():
+        for vertex_id, (lat, lon) in init_vertices.items():
             folium.CircleMarker(
                 location=(lat, lon),
                 radius=2,
@@ -422,8 +432,46 @@ def visualize_reif_flow(directory_name, output_file):
                 fill=True,
                 fill_color='#144680',
                 fill_opacity=0.7,
-                tooltip=f"Vertex {vertex_id}"
-            ).add_to(primal_graph_layer)
+                tooltip=f"Init Vertex {vertex_id}"
+            ).add_to(init_graph_layer)
+    
+    # 0b. Модифицированный граф (после модификаций)
+    if modified_vertices and modified_edges:
+        print(f"Visualizing modified graph with {len(modified_vertices)} vertices and {len(modified_edges)} edges")
+        
+        # Рисуем рёбра модифицированного графа
+        for edge in modified_edges:
+            from_id = edge['from']
+            to_id = edge['to']
+            length = edge['length']
+            
+            if from_id not in modified_vertices or to_id not in modified_vertices:
+                continue
+            
+            from_lat, from_lon = modified_vertices[from_id]
+            to_lat, to_lon = modified_vertices[to_id]
+            
+            tooltip_text = f"Edge {from_id}↔{to_id}<br>Length: {length:.2f}m"
+            
+            folium.PolyLine(
+                locations=[(from_lat, from_lon), (to_lat, to_lon)],
+                color='#8B4513',  # Коричневый цвет для модифицированного графа
+                weight=1.5,
+                opacity=0.6,
+                tooltip=tooltip_text
+            ).add_to(modified_graph_layer)
+        
+        # Рисуем вершины модифицированного графа
+        for vertex_id, (lat, lon) in modified_vertices.items():
+            folium.CircleMarker(
+                location=(lat, lon),
+                radius=2,
+                color='#A0522D',
+                fill=True,
+                fill_color='#8B4513',
+                fill_opacity=0.7,
+                tooltip=f"Modified Vertex {vertex_id}"
+            ).add_to(modified_graph_layer)
     
     # 1. Двойственный граф
     if dual_vertices and dual_edges:
@@ -1103,7 +1151,8 @@ def visualize_reif_flow(directory_name, output_file):
             ).add_to(best_path_layer)
     
     # Добавляем все слои на карту
-    primal_graph_layer.add_to(map_osm)
+    init_graph_layer.add_to(map_osm)
+    modified_graph_layer.add_to(map_osm)
     dual_graph_layer.add_to(map_osm)
     external_layer.add_to(map_osm)
     source_layer.add_to(map_osm)

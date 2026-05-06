@@ -17,11 +17,6 @@ public class PartitionGraphVertex extends Vertex {
         calculateCenter();
     }
 
-    public <T extends Vertex> PartitionGraphVertex(T v) {
-        super(v.getName(), v.x, v.y, v.getWeight());
-        this.vertices = null;
-    }
-
     public void addVertex(VertexOfDualGraph vertex) {
         this.vertices.add(vertex);
         this.weight += vertex.getWeight();

@@ -6,9 +6,9 @@ from collections import defaultdict
 
 base_dir = "src/main/output/res"
 data_root = "src/main/resources/data"
-cities = [d for d in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, d)) and d != 'spb']
+cities = [d for d in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, d))]
 sizes = ["1000", "2000", "5000"]
-weights = [5000, 10000]
+weights = [10000, 20000]
 
 
 def get_graph_size(city, size):
@@ -59,6 +59,8 @@ for city in cities:
                     "city": city,
                     "size": int(size),
                     "graph_size": graph_size,
+                    "vertex_count": data.get("dualVertexNumber", None),
+                    "graph_weight": data.get("totalGraphWeight", None),
                     "weight": weight,
                     "time": data["partitionTime(s)"],
                     "memory": data["usedMemory(MB)"],
@@ -66,7 +68,9 @@ for city in cities:
                     "optimal_regions": data["minRegionCountEstimate"],
                     "region_ratio": region_ratio,
                     "avg_load": avg_load,
-                    "time_per_edge": time_per_edge
+                    "time_per_edge": time_per_edge,
+                    "weight_variance": data.get("weightVariance", None),
+                    "cut_length": data.get("totalBoundaryLength", None)
                 }
                 all_data.append(record)
                 city_stats[(city, weight)].append(record)
@@ -81,12 +85,16 @@ for (city, weight), records in city_stats.items():
 
     result_df = pd.DataFrame({
         'Size': city_df['size'],
+        'Vertices': city_df['vertex_count'],
         'Graph Edges': city_df['graph_size'],
+        'Graph Weight': city_df['graph_weight'].round(1),
         'Time (s)': city_df['time'].round(3),
         'Memory (MB)': city_df['memory'],
         'Regions': city_df['regions'],
         'Regions/Optimal': city_df['region_ratio'].round(3),
-        'Avg Load': city_df['avg_load'].round(3)
+        'Avg Load': city_df['avg_load'].round(3),
+        'Weight Var': city_df['weight_variance'].round(1),
+        'Cut Length': city_df['cut_length'].round(1)
     })
 
     filename = f"{city}_max_weight_{weight}.csv"

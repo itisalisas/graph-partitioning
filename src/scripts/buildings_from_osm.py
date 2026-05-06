@@ -4,6 +4,9 @@ from geopy.distance import geodesic
 import networkx as nx
 from shapely.geometry import Point, box, Polygon, LineString
 from math import atan2, cos, degrees, radians
+
+# Отключаем кэширование OSMnx
+osmnx.settings.use_cache = False
 from pathlib import Path
 
 # Stable shared cache so re-runs don't re-hit Overpass

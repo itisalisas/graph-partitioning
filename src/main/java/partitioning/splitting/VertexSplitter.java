@@ -91,7 +91,7 @@ public class VertexSplitter {
             List<Vertex> sinkBoundary,
             List<Vertex> externalBoundary) {
 
-        logger.info("Preprocessing neighbor splits for {} vertices in path", path.size());
+        logger.debug("Preprocessing neighbor splits for {} vertices in path", path.size());
 
         BoundaryContext boundaryContext = BoundaryContext.create(sourceBoundary, sinkBoundary);
         Map<Vertex, java.util.TreeSet<EdgeOfGraph<Vertex>>> orderedEdges = graph.arrangeByAngle();
@@ -108,17 +108,18 @@ public class VertexSplitter {
                     boundaryContext.sinkBoundaryNames());
 
             boolean onExternalBoundary = externalBoundaryNames.contains(context.current().getName());
+            logger.debug("Vertex {} on external boundary: {}", context.current().getName(), onExternalBoundary);
 
             if (onExternalBoundary) {
                 Vertex prevPathVertex = context.previous(), nextPathVertex = context.next();
 
                 Optional<Boolean> directionMatchesOpt = pathDirectionMatchesBoundaryTraversal(
-                        context.current(), prevPathVertex, nextPathVertex, externalBoundary, orderedEdges);
+                        context.current(), prevPathVertex, nextPathVertex, externalBoundary, sourceBoundary, sinkBoundary, orderedEdges);
 
                 if (directionMatchesOpt.isPresent()) {
                     boundaryFlagsMap.put(context.current().getName(), directionMatchesOpt.get());
 
-                    logger.debug("Vertex {} on external boundary, direction {}", 
+                    logger.debug("Vertex {} on external boundary, direction {}",
                             context.current().getName(), 
                             directionMatchesOpt.get() ? "matches" : "does not match");
                 }
@@ -138,7 +139,7 @@ public class VertexSplitter {
             //logSplitResult(context.current(), split);
         }
 
-        logger.info("Preprocessed {} neighbor splits", splits.size());
+        logger.debug("Preprocessed {} neighbor splits", splits.size());
         return splits;
     }
 
@@ -486,258 +487,32 @@ public class VertexSplitter {
             Optional<Boolean> boundaryFlag) {
 
         var angleOrderedEdges = graph.arrangeByAngle();
-        List<EdgeOfGraph<Vertex>> neighbors = collectNonSelfLoopEdges(
-                angleOrderedEdges.get(currentVertex));
 
-        Set<Vertex> sourceBoundarySet = new HashSet<>(sourceBoundary);
-        Set<Vertex> sinkBoundarySet = new HashSet<>(sinkBoundary);
-
-        int boundaryNeighborsCount = countBoundaryNeighbors(
-                neighbors, sourceBoundarySet, sinkBoundarySet);
-
-        return switch (boundaryNeighborsCount) {
-            case 2 -> handleTwoNeighborsCase(currentVertex, neighbors, boundaryFlag);
-            case 3 -> handleThreeNeighborsCase(currentVertex, neighbors,
-                                               sourceBoundary, sinkBoundary, boundaryFlag);
-            default -> handleManyNeighborsCase(currentVertex, neighbors,
-                                               sourceBoundary, sinkBoundary,
-                                               angleOrderedEdges, boundaryFlag);
-        };
-    }
-
-    /**
-     * Собирает ребра, исключая self-loops
-     */
-    private static List<EdgeOfGraph<Vertex>> collectNonSelfLoopEdges(
-            java.util.TreeSet<EdgeOfGraph<Vertex>> edges) {
-
-        return edges.stream()
-                .filter(edge -> !edge.begin.equals(edge.end))
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Подсчитывает соседей на границах
-     */
-    private static int countBoundaryNeighbors(
-            List<EdgeOfGraph<Vertex>> neighbors,
-            Set<Vertex> sourceBoundarySet,
-            Set<Vertex> sinkBoundarySet) {
-
-        return (int) neighbors.stream()
-                .filter(edge -> sourceBoundarySet.contains(edge.end) ||
-                        sinkBoundarySet.contains(edge.end))
-                .count();
-    }
-
-    /**
-     * Обрабатывает случай с 2 соседями
-     */
-    private static NeighborSplit handleTwoNeighborsCase(
-            Vertex currentVertex,
-            List<EdgeOfGraph<Vertex>> neighbors,
-            Optional<Boolean> boundaryFlag) {
-
-        return new NeighborSplit(
-                currentVertex,
-                List.of(),
-                List.of(neighbors.get(0).end),
-                List.of(neighbors.get(1).end),
-                boundaryFlag
-        );
-    }
-
-    /**
-     * Обрабатывает случай с 3 соседями
-     */
-    private static NeighborSplit handleThreeNeighborsCase(
-            Vertex currentVertex,
-            List<EdgeOfGraph<Vertex>> neighbors,
-            List<Vertex> sourceBoundary,
-            List<Vertex> sinkBoundary,
-            Optional<Boolean> boundaryFlag) {
-
-        logger.debug("handleThreeNeighborsCase");
+        logger.debug("handleBoundaryIntersectionVertex for vertex {}", currentVertex.getName());
 
         List<Vertex> leftNeighbors = new ArrayList<>();
         List<Vertex> rightNeighbors = new ArrayList<>();
-
-        for (EdgeOfGraph<Vertex> edge : neighbors) {
-            boolean isCommonBoundaryVertex = sourceBoundary.contains(edge.end) &&
-                    sinkBoundary.contains(edge.end);
-
-            if (isCommonBoundaryVertex) {
-                boolean onSinkBoundary = isAdjacentOnBoundary(
-                        currentVertex, edge.end, sinkBoundary);
-                boolean onSourceBoundary = isAdjacentOnBoundary(
-                        currentVertex, edge.end, sourceBoundary);
-
-                if (onSinkBoundary && onSourceBoundary) {
-                    rightNeighbors.add(edge.end);
-                } else {
-                    leftNeighbors.add(edge.end);
-                }
-            } else {
-                leftNeighbors.add(edge.end);
-            }
-        }
-
-        if (rightNeighbors.isEmpty()) {
-            throw new RuntimeException("no common neighbor");
-        }
-
-        return new NeighborSplit(currentVertex, List.of(), leftNeighbors, rightNeighbors, boundaryFlag);
-    }
-
-    /**
-     * Состояние для обработки многих соседей
-     */
-    private static class ManyNeighborsState {
-        int meetSink = 0;
-        int meetSource = 0;
-        int prevMeetSink = 0;
-        int prevMeetSource = 0;
-        boolean isRight = true;
-        final List<Vertex> leftNeighbors = new ArrayList<>();
-        final List<Vertex> rightNeighbors = new ArrayList<>();
-    }
-
-    /**
-     * Обрабатывает случай с многими соседями
-     */
-    private static NeighborSplit handleManyNeighborsCase(
-            Vertex currentVertex,
-            List<EdgeOfGraph<Vertex>> neighbors,
-            List<Vertex> sourceBoundary,
-            List<Vertex> sinkBoundary,
-            Map<Vertex, java.util.TreeSet<EdgeOfGraph<Vertex>>> angleOrderedEdges, Optional<Boolean> boundaryFlag) {
-
-        logger.debug("split for {}", currentVertex.name);
-
-        ManyNeighborsState state = new ManyNeighborsState();
 
         for (EdgeOfGraph<Vertex> edge : angleOrderedEdges.get(currentVertex)) {
             if (edge.begin.equals(edge.end)) {
                 continue;
             }
 
-            processManyNeighborsEdge(edge, currentVertex, sourceBoundary,
-                                     sinkBoundary, state);
+            Vertex neighbor = edge.end;
+            
+            boolean toFirstPart = isNeighborToFirstPart(
+                    currentVertex, neighbor, sourceBoundary, sinkBoundary, angleOrderedEdges);
+
+            if (toFirstPart) {
+                leftNeighbors.add(neighbor);
+                logger.debug("  Neighbor {} -> LEFT", neighbor.getName());
+            } else {
+                rightNeighbors.add(neighbor);
+                logger.debug("  Neighbor {} -> RIGHT", neighbor.getName());
+            }
         }
 
-        return new NeighborSplit(currentVertex, List.of(),
-                                 state.leftNeighbors, state.rightNeighbors, boundaryFlag);
-    }
-
-    /**
-     * Обрабатывает одно ребро в случае многих соседей
-     */
-    private static void processManyNeighborsEdge(
-            EdgeOfGraph<Vertex> edge,
-            Vertex currentVertex,
-            List<Vertex> sourceBoundary,
-            List<Vertex> sinkBoundary,
-            ManyNeighborsState state) {
-
-        int newMeetSink = state.meetSink;
-        int newMeetSource = state.meetSource;
-
-        if (sinkBoundary.contains(edge.end) &&
-                isAdjacentOnBoundary(currentVertex, edge.end, sinkBoundary)) {
-            newMeetSink++;
-        }
-
-        if (sourceBoundary.contains(edge.end) &&
-                isAdjacentOnBoundary(currentVertex, edge.end, sourceBoundary)) {
-            newMeetSource++;
-        }
-
-        // Если счетчики не изменились
-        if (state.meetSink == newMeetSink && state.meetSource == newMeetSource) {
-            addNeighborWithoutModification(edge, state);
-            return;
-        }
-
-        // Обновляем направление
-        updateDirection(state, newMeetSink, newMeetSource);
-
-        // Добавляем сосед с модификацией
-        addNeighborWithModification(edge, state);
-    }
-
-    /**
-     * Добавляет соседа без изменения направления
-     */
-    private static void addNeighborWithoutModification(
-            EdgeOfGraph<Vertex> edge,
-            ManyNeighborsState state) {
-
-        if (state.isRight) {
-            logger.debug("to right without modifications, vertex {} {} {} {} {}", 
-                    edge.end.name, state.meetSource, state.meetSink, state.prevMeetSource, state.prevMeetSink);
-            state.rightNeighbors.add(edge.end);
-        } else {
-            logger.debug("to left without modifications, vertex {} {} {} {} {}", 
-                    edge.end.name, state.meetSource, state.meetSink, state.prevMeetSource, state.prevMeetSink);
-            state.leftNeighbors.add(edge.end);
-        }
-
-        state.prevMeetSink = state.meetSink;
-        state.prevMeetSource = state.meetSource;
-    }
-
-    /**
-     * Обновляет направление разделения
-     */
-    private static void updateDirection(
-            ManyNeighborsState state,
-            int newMeetSink,
-            int newMeetSource) {
-
-        state.isRight = !shouldSwitchToLeft(
-                state.meetSink, state.meetSource,
-                state.prevMeetSink, state.prevMeetSource,
-                newMeetSink, newMeetSource
-        );
-
-        state.prevMeetSink = state.meetSink;
-        state.prevMeetSource = state.meetSource;
-        state.meetSink = newMeetSink;
-        state.meetSource = newMeetSource;
-    }
-
-    /**
-     * Проверяет нужно ли переключиться налево
-     */
-    private static boolean shouldSwitchToLeft(
-            int meetSink, int meetSource,
-            int prevMeetSink, int prevMeetSource,
-            int newMeetSink, int newMeetSource) {
-
-        return (newMeetSink == 2 && (newMeetSource < 2 ||
-                (prevMeetSource == 1 && prevMeetSink == 1)))
-                || (newMeetSource == 2 && (newMeetSink < 2 ||
-                (prevMeetSink == 1 && prevMeetSource == 1)))
-                || (newMeetSource == 2 && newMeetSink == 2 &&
-                meetSource == 1 && meetSink == 1);
-    }
-
-    /**
-     * Добавляет соседа с модификацией направления
-     */
-    private static void addNeighborWithModification(
-            EdgeOfGraph<Vertex> edge,
-            ManyNeighborsState state) {
-
-        if (state.isRight) {
-            logger.debug("to right with modifications, vertex {} {} {} {} {}", 
-                    edge.end.name, state.meetSource, state.meetSink, state.prevMeetSource, state.prevMeetSink);
-            state.rightNeighbors.add(edge.end);
-        } else {
-            logger.debug("to left with modifications, vertex {} {} {} {} {}", 
-                    edge.end.name, state.meetSource, state.meetSink, state.prevMeetSource, state.prevMeetSink);
-            state.leftNeighbors.add(edge.end);
-        }
+        return new NeighborSplit(currentVertex, List.of(), leftNeighbors, rightNeighbors, boundaryFlag);
     }
 
     /**
@@ -818,36 +593,12 @@ public class VertexSplitter {
         int count = 0;
 
         for (Vertex neighbor : split.pathNeighbors()) {
-            Vertex neighborInGraph = findVertexByName(splitGraph, neighbor.getName());
-
-            if (neighborInGraph != null) {
-                count++;
-                connectOriginalNeighbor(splitGraph, originalVertex,
-                                        splitVertex1, splitVertex2, neighborInGraph);
-            } else {
-                connectSplitNeighbor(splitGraph, originalVertex,
-                                     splitVertex1, splitVertex2, neighbor);
-                count++;
-            }
+            connectSplitNeighbor(splitGraph, originalVertex,
+                                 splitVertex1, splitVertex2, neighbor);
+            count++;
         }
 
         return count;
-    }
-
-    /**
-     * Соединяет с оригинальным соседом
-     */
-    private static void connectOriginalNeighbor(
-            Graph<Vertex> splitGraph,
-            Vertex originalVertex,
-            Vertex splitVertex1,
-            Vertex splitVertex2,
-            Vertex neighborInGraph) {
-
-        double edgeLength = splitGraph.getEdges().get(originalVertex)
-                .get(neighborInGraph).length;
-        splitGraph.addEdge(splitVertex1, neighborInGraph, edgeLength);
-        splitGraph.addEdge(splitVertex2, neighborInGraph, edgeLength);
     }
 
     /**
@@ -860,21 +611,16 @@ public class VertexSplitter {
             Vertex splitVertex2,
             Vertex neighbor) {
 
-        Vertex splitNeighbor1 = findVertexByName(splitGraph, neighbor.getName() * 1000 + 1);
-        Vertex splitNeighbor2 = findVertexByName(splitGraph, neighbor.getName() * 1000 + 2);
+        Vertex splitNeighbor1 = findOrCreateVertex(splitGraph, neighbor.getName() * 1000 + 1, neighbor);
+        Vertex splitNeighbor2 = findOrCreateVertex(splitGraph, neighbor.getName() * 1000 + 2, neighbor);
 
-        if (splitNeighbor1 != null && splitNeighbor2 != null) {
-            double edgeLength = calculateDistance(originalVertex, splitNeighbor1);
+        double edgeLength = calculateDistance(originalVertex, splitNeighbor1);
 
-            splitGraph.addEdge(splitVertex1, splitNeighbor1, edgeLength);
-            splitGraph.addEdge(splitVertex2, splitNeighbor2, edgeLength);
+        splitGraph.addEdge(splitVertex1, splitNeighbor1, edgeLength);
+        splitGraph.addEdge(splitVertex2, splitNeighbor2, edgeLength);
 
-            logger.debug("  Connected split vertices of {} with corresponding split versions of path neighbor {}", 
-                    originalVertex.getName(), neighbor.getName());
-        } else {
-            logger.warn("  Path neighbor {} not found (neither original nor split) for vertex {}", 
-                    neighbor.getName(), originalVertex.getName());
-        }
+        logger.debug("  Connected split vertices of {} with corresponding split versions of path neighbor {}",
+                originalVertex.getName(), neighbor.getName());
     }
 
     /**
@@ -913,25 +659,170 @@ public class VertexSplitter {
         return neighbors;
     }
 
-    /**
-     * Проверяет смежность вершин на границе
-     */
-    private static boolean isAdjacentOnBoundary(
-            Vertex vertex,
+    private static boolean isNeighborToFirstPart(
+            Vertex current,
             Vertex neighbor,
+            List<Vertex> sourceBoundary,
+            List<Vertex> sinkBoundary,
+            Map<Vertex, TreeSet<EdgeOfGraph<Vertex>>> orderedEdges) {
+
+        TreeSet<EdgeOfGraph<Vertex>> edges = orderedEdges.get(current);
+        if (edges == null || edges.isEmpty()) {
+            logger.warn("No edges found for vertex {}", current.getName());
+            return false;
+        }
+
+        // Находим рёбра на границах
+        EdgeOfGraph<Vertex> sourceEdge = null;
+        EdgeOfGraph<Vertex> sinkEdge = null;
+        EdgeOfGraph<Vertex> neighborEdge = null;
+
+        for (EdgeOfGraph<Vertex> edge : edges) {
+            long targetId = edge.end.getName();
+            
+            if (targetId == neighbor.getName()) {
+                neighborEdge = edge;
+            }
+            if (current.getName() == 1603311447L) {
+                logger.warn("neighbor = {}, source size = {}, sink size = {}", neighbor.getName(), sourceBoundary.size(), sinkBoundary.size());
+                logger.warn("Edge: {} -> {}, isEdgeCoDirectionalWithBoundary source = {}, sink = {}",
+                        edge.begin.getName(),
+                        edge.end.getName(),
+                        isEdgeCoDirectionalWithBoundary(current, edge.end, sourceBoundary),
+                        isEdgeCoDirectionalWithBoundary(current, edge.end, sinkBoundary)
+                        );
+            }
+            
+            // Проверяем, идёт ли это ребро на source boundary
+            if (isEdgeCoDirectionalWithBoundary(current, edge.end, sourceBoundary)) {
+                sourceEdge = edge;
+            }
+            
+            // Проверяем, идёт ли это ребро на sink boundary
+            if (isEdgeCoDirectionalWithBoundary(edge.end, current, sinkBoundary)) {
+                sinkEdge = edge;
+            }
+        }
+
+        if (neighborEdge == null) {
+            logger.warn("Neighbor edge {} -> {} not found in ordered edges", 
+                    current.getName(), neighbor.getName());
+            return false;
+        }
+
+        if (isEdgeOnBoundary(current, neighbor, sourceBoundary)) {
+            boolean isCoDirectional = isEdgeCoDirectionalWithBoundary(current, neighbor, sourceBoundary);
+            logger.debug("Edge {} -> {} is on source boundary => !isCoDirectional: {}",
+                    current.getName(), neighbor.getName(), !isCoDirectional);
+            return !isCoDirectional;
+        }
+
+        if (isEdgeOnBoundary(current, neighbor, sinkBoundary)) {
+            boolean isCoDirectional = isEdgeCoDirectionalWithBoundary(current, neighbor, sinkBoundary);
+            logger.debug("Edge {} -> {} is on sink boundary => isCoDirectional: {}",
+                    current.getName(), neighbor.getName(), isCoDirectional);
+            return isCoDirectional;
+        }
+
+        // Если не на границах, используем секторный анализ
+        if (sourceEdge != null && sinkEdge != null) {
+            logger.info("check is edge {} -> {} between source and sink edges, source edge = {}, sink edge = {}",
+                    current.getName(), neighbor.getName(), sourceEdge.end.getName(), sinkEdge.end.getName());
+            boolean isBetween = isEdgeBetween(edges, neighborEdge, sourceEdge, sinkEdge);
+            
+            logger.debug("Edge {} -> {} is between source and sink edges: {} => {}",
+                    current.getName(), neighbor.getName(), 
+                    isBetween, isBetween ? "2" : "1");
+            
+            return !isBetween;
+        }
+
+        // Fallback: не смогли определить
+        logger.warn("Could not determine side for edge {} -> {}, defaulting to LEFT", 
+                current.getName(), neighbor.getName());
+        return false;
+    }
+
+    /**
+     * Проверяет, находится ли edge между sourceEdge и sinkEdge при обходе CCW
+     */
+    private static boolean isEdgeBetween(
+            TreeSet<EdgeOfGraph<Vertex>> allEdges,
+            EdgeOfGraph<Vertex> edge,
+            EdgeOfGraph<Vertex> sourceEdge,
+            EdgeOfGraph<Vertex> sinkEdge) {
+
+        List<EdgeOfGraph<Vertex>> edgesList = new ArrayList<>(allEdges);
+        
+        int edgeIdx = edgesList.indexOf(edge);
+        int sourceIdx = edgesList.indexOf(sourceEdge);
+        int sinkIdx = edgesList.indexOf(sinkEdge);
+
+        if (edgeIdx == -1 || sourceIdx == -1 || sinkIdx == -1) {
+            return false;
+        }
+
+        // Проверяем, находится ли edge между source и sink при обходе CCW
+        // CCW обход = от source к sink по возрастанию индексов (с wrap-around)
+        int n = edgesList.size();
+        
+        // Нормализуем: считаем расстояние от sourceIdx
+        int distToEdge = (edgeIdx - sourceIdx + n) % n;
+        int distToSink = (sinkIdx - sourceIdx + n) % n;
+
+        // edge между source и sink, если расстояние до edge меньше расстояния до sink
+        return distToEdge > 0 && distToEdge < distToSink;
+    }
+
+    /**
+     * Проверяет, находится ли ребро на границе (в любом направлении).
+     * 
+     * @param v1 первая вершина ребра
+     * @param v2 вторая вершина ребра
+     * @param boundary список вершин границы
+     * @return true если ребро (v1, v2) или (v2, v1) присутствует на границе
+     */
+    private static boolean isEdgeOnBoundary(
+            Vertex v1,
+            Vertex v2,
             List<Vertex> boundary) {
 
         int boundarySize = boundary.size();
-        for (int ptr = 0; ptr < boundarySize; ptr++) {
-            if (boundary.get(ptr).equals(neighbor)) {
-                Vertex next = boundary.get((ptr + 1) % boundarySize);
-                Vertex prev = boundary.get((ptr - 1 + boundarySize) % boundarySize);
+        for (int i = 0; i < boundarySize; i++) {
+            Vertex currentInBoundary = boundary.get(i);
+            Vertex nextInBoundary = boundary.get((i + 1) % boundarySize);
 
-                if (next.equals(vertex) || prev.equals(vertex)) {
-                    return true;
-                }
+            // Проверяем ребро в обоих направлениях
+            if ((currentInBoundary.getName() == v1.getName() && nextInBoundary.getName() == v2.getName()) ||
+                (currentInBoundary.getName() == v2.getName() && nextInBoundary.getName() == v1.getName())) {
+                return true;
             }
         }
+
+        return false;
+    }
+
+    /**
+     * Проверяет, сонаправлено ли ребро (from -> to) с ребром на границе.
+     * Граница идет ПРОТИВ часовой стрелки (CCW).
+     * 
+     * @return true если существует ребро (from -> to) на границе
+     */
+    private static boolean isEdgeCoDirectionalWithBoundary(
+            Vertex from,
+            Vertex to,
+            List<Vertex> boundary) {
+
+        int boundarySize = boundary.size();
+        for (int i = 0; i < boundarySize; i++) {
+            Vertex currentInBoundary = boundary.get(i);
+            Vertex nextInBoundary = boundary.get((i + 1) % boundarySize);
+
+            if (currentInBoundary.name == from.name && nextInBoundary.name == to.name) {
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -945,6 +836,20 @@ public class VertexSplitter {
             }
         }
         return null;
+    }
+
+    /**
+     * Находит или создает вершину по имени
+     */
+    private static Vertex findOrCreateVertex(Graph<Vertex> graph, long name, Vertex originalVertex) {
+        for (Vertex v : graph.verticesArray()) {
+            if (v.getName() == name) {
+                return v;
+            }
+        }
+        Vertex newVertex = new Vertex(name, originalVertex);
+        graph.addVertex(newVertex);
+        return newVertex;
     }
 
     /**
@@ -993,137 +898,144 @@ public class VertexSplitter {
             Vertex prevPathVertex,
             Vertex nextPathVertex,
             List<Vertex> externalBoundary,
-            Map<Vertex, java.util.TreeSet<EdgeOfGraph<Vertex>>> orderedEdges) {
-
-        // 1. Проверки на null и конец пути
+            List<Vertex> sourceBoundary,
+            List<Vertex> sinkBoundary,
+            Map<Vertex, java.util.TreeSet<EdgeOfGraph<Vertex>>> orderedEdges
+    ) {
         if (prevPathVertex == null && nextPathVertex == null) {
-            return Optional.of(true);
+            logger.debug("prevPathVertex and nextPathVertex are null");
+            Set<Vertex> sourceBoundarySet = new HashSet<>(sourceBoundary);
+            Set<Vertex> sinkBoundarySet = new HashSet<>(sinkBoundary);
+            Set<Vertex> externalBoundarySet = new HashSet<>(externalBoundary);
+
+            List<EdgeOfGraph<Vertex>> edgesList = new ArrayList<>(orderedEdges.get(currentVertex));
+            int sourceEdgeIdx = -1, sinkEdgeIdx = -1;
+
+            for (int i = 0; i < edgesList.size(); i++) {
+                EdgeOfGraph<Vertex> edge = edgesList.get(i);
+                if (externalBoundarySet.contains(edge.end) && sourceBoundarySet.contains(edge.end) && !sinkBoundarySet.contains(edge.end)) {
+                    sourceEdgeIdx = i;
+                }
+                if (externalBoundarySet.contains(edge.end) && sinkBoundarySet.contains(edge.end) && !sourceBoundarySet.contains(edge.end)) {
+                    sinkEdgeIdx = i;
+                }
+            }
+
+            if (sourceEdgeIdx == -1 && sinkEdgeIdx == -1) {
+                return Optional.empty();
+            }
+
+            if (sourceEdgeIdx == -1) {
+                var sinkEdge = edgesList.get(sinkEdgeIdx);
+                logger.debug("sinkEdge: {} -> {}", sinkEdge.begin.getName(), sinkEdge.end.getName());
+                return Optional.of(isEdgeCoDirectionalWithBoundary(sinkEdge.begin, sinkEdge.end, externalBoundary));
+            }
+
+            if (sinkEdgeIdx == -1) {
+                var sourceEdge = edgesList.get(sourceEdgeIdx);
+                logger.debug("sourceEdge: {} -> {}", sourceEdge.begin.getName(), sourceEdge.end.getName());
+                return Optional.of(!isEdgeCoDirectionalWithBoundary(sourceEdge.begin, sourceEdge.end, externalBoundary));
+            }
+            var sourceEdge = edgesList.get(sourceEdgeIdx);
+            var sinkEdge = edgesList.get(sinkEdgeIdx);
+            logger.debug("sourceEdge: {} -> {}, sinkEdge: {} -> {}", sourceEdge.begin.getName(), sourceEdge.end.getName(), sinkEdge.begin.getName(), sinkEdge.end.getName());
+
+            int nextIdx = (sourceEdgeIdx + 1) % edgesList.size();
+            logger.debug("sourceEdgeIdx: {}, sinkEdgeIdx: {}, nextIdx: {}", sourceEdgeIdx, sinkEdgeIdx, nextIdx);
+            return Optional.of(sinkEdgeIdx != nextIdx);
         }
 
-        long currentId = currentVertex.getName();
-
-        // 2. Найти позицию currentVertex в external boundary
         int currentPosInBoundary = -1;
         for (int i = 0; i < externalBoundary.size(); i++) {
-            if (externalBoundary.get(i).getName() == currentId) {
+            if (externalBoundary.get(i).equals(currentVertex)) {
                 currentPosInBoundary = i;
                 break;
             }
         }
 
         if (currentPosInBoundary == -1) {
-            logger.warn("vertex {} not found in external boundary", currentId);
+            logger.warn("vertex {} not found in external boundary", currentVertex.getName());
             return Optional.empty();
         }
 
-        // 3. Получить соседей на boundary
-        Vertex nextInBoundaryV = externalBoundary.get((currentPosInBoundary + 1) % externalBoundary.size());
-        Vertex prevInBoundaryV = externalBoundary.get((currentPosInBoundary - 1 + externalBoundary.size()) % externalBoundary.size());
+        Vertex nextBoundaryVertex = externalBoundary.get((currentPosInBoundary + 1) % externalBoundary.size());
+        Vertex prevBoundaryVertex = externalBoundary.get((currentPosInBoundary - 1 + externalBoundary.size()) % externalBoundary.size());
 
-        long nextInBoundaryId = nextInBoundaryV.getName();
-        long prevInBoundaryId = prevInBoundaryV.getName();
-
-        // 4. --- ЯВНЫЕ ГРАНИЧНЫЕ СЛУЧАИ ---
-
-        // A. Если мы пришли "Против шерсти" (со стороны NextBoundary)
         if (prevPathVertex != null) {
-            long prevPathId = prevPathVertex.getName();
-            if (prevPathId == nextInBoundaryId) {
-                // Пытаемся идти навстречу потоку границы
+            if (prevPathVertex.equals(nextBoundaryVertex)) {
                 logger.debug("  Arrived from NextBoundary (Upstream) -> NOT match");
                 return Optional.of(false);
             }
-            if (prevPathId == prevInBoundaryId) {
+            if (prevPathVertex.equals(prevBoundaryVertex)) {
                 logger.debug("  Arrived from PrevBoundary (Downstream) -> match");
                 return Optional.of(true);
             }
         }
 
         if (nextPathVertex != null) {
-            long nextPathId = nextPathVertex.getName();
-
-            // 1. Идем далее по границе -> верно
-            if (nextPathId == nextInBoundaryId) {
+            if (nextPathVertex.equals(nextBoundaryVertex)) {
                 logger.debug("  Going forwards on boundary -> match");
                 return Optional.of(true);
             }
-            // 2. Разворачиваемся назад по границе -> неверно
-            if (nextPathId == prevInBoundaryId) {
+            if (nextPathVertex.equals(prevBoundaryVertex)) {
                 logger.debug("  Going backwards on boundary -> NOT match");
                 return Optional.of(false);
             }
         }
-
-        // 5. --- СЕКТОРНЫЙ АНАЛИЗ ---
 
         TreeSet<EdgeOfGraph<Vertex>> edges = orderedEdges.get(currentVertex);
         if (edges == null || edges.isEmpty()) {
             return Optional.empty();
         }
 
-        Long prevPathId = (prevPathVertex != null) ? prevPathVertex.getName() : null;
-        Long nextPathId = (nextPathVertex != null) ? nextPathVertex.getName() : null;
-
-        // Найдём все рёбра
         EdgeOfGraph<Vertex> prevPathEdge = null;
         EdgeOfGraph<Vertex> nextPathEdge = null;
         EdgeOfGraph<Vertex> prevBoundaryEdge = null;
         EdgeOfGraph<Vertex> nextBoundaryEdge = null;
 
         for (EdgeOfGraph<Vertex> edge : edges) {
-            long targetId = edge.end.getName();
-            if (prevPathId != null && targetId == prevPathId) prevPathEdge = edge;
-            if (nextPathId != null && targetId == nextPathId) nextPathEdge = edge;
-            if (targetId == prevInBoundaryId) prevBoundaryEdge = edge;
-            if (targetId == nextInBoundaryId) nextBoundaryEdge = edge;
+            if (edge.end.equals(prevPathVertex)) prevPathEdge = edge;
+            if (edge.end.equals(nextPathVertex)) nextPathEdge = edge;
+            if (edge.end.equals(prevBoundaryVertex)) prevBoundaryEdge = edge;
+            if (edge.end.equals(nextBoundaryVertex)) nextBoundaryEdge = edge;
         }
 
-        // Если не все нужные рёбра границы найдены
         if (prevBoundaryEdge == null || nextBoundaryEdge == null) {
             logger.warn("boundary edges not found");
             return Optional.empty();
         }
 
-        // 6. --- ПРОВЕРКА СЕКТОРОВ ---
-
-        // Случай 1: Начало пути (prevPathVertex == null)
         if (prevPathVertex == null && nextPathEdge != null) {
-            // Проверяем: оба ребра границы лежат между nextPathEdge и nextPathEdge (по кругу)?
-            // Т.е. если идём от nextPathEdge CCW, встретим ли оба ребра границы до возврата к nextPathEdge?
-            boolean boundariesAfterPath = areBothBoundariesAfterEdge(
-                    edges, nextPathEdge, prevBoundaryEdge, nextBoundaryEdge);
+            boolean boundariesAfterPath = areCorrectSequence(
+                    edges, nextPathEdge, nextBoundaryEdge, prevBoundaryEdge, sourceBoundary, false);
 
-            logger.debug("Direction check for START vertex {}: nextPath={}, prevBoundary={}, nextBoundary={} -> boundaries after path edge: {} -> matches={}", 
-                    currentId, nextPathId, prevInBoundaryId, nextInBoundaryId, boundariesAfterPath, !boundariesAfterPath);
+            logger.debug("Direction check for START vertex {}: nextPath={}, prevBoundary={}, nextBoundary={} -> boundaries after path edge: {} -> matches={}",
+                    currentVertex.name, nextPathVertex.name, prevBoundaryVertex.name, nextBoundaryVertex.name, boundariesAfterPath, !boundariesAfterPath);
 
             return Optional.of(!boundariesAfterPath);
         }
 
-        // Случай 2: Конец пути (nextPathVertex == null)
         if (nextPathVertex == null && prevPathEdge != null) {
-            // Проверяем: оба ребра границы лежат после prevPathEdge (по часовой, т.е. до prevPathEdge при обходе назад)?
-            boolean boundariesBeforePath = areBothBoundariesAfterEdge(
-                    edges, prevPathEdge, prevBoundaryEdge, nextBoundaryEdge);
+            boolean boundariesBeforePath = areCorrectSequence(
+                    edges, prevPathEdge, prevBoundaryEdge, nextBoundaryEdge, sinkBoundary, true);
 
-            logger.debug("Direction check for END vertex {}: prevPath={}, prevBoundary={}, nextBoundary={} -> boundaries after path edge: {} -> matches={}", 
-                    currentId, prevPathId, prevInBoundaryId, nextInBoundaryId, boundariesBeforePath, !boundariesBeforePath);
+            logger.debug("Direction check for END vertex {}: prevPath={}, prevBoundary={}, nextBoundary={} -> boundaries after path edge: {} -> matches={}",
+                    currentVertex.name, prevPathVertex.name, prevBoundaryVertex.name, nextBoundaryVertex.name, boundariesBeforePath, !boundariesBeforePath);
 
             return Optional.of(!boundariesBeforePath);
         }
 
-        // Случай 3: Середина пути (оба ребра пути присутствуют)
         if (prevPathEdge != null && nextPathEdge != null) {
-            // Проверяем: оба ребра границы между рёбрами пути?
             boolean boundariesBetweenPath = areBothBoundariesBetweenPathEdges(
                     edges, prevPathEdge, nextPathEdge, prevBoundaryEdge, nextBoundaryEdge);
 
-            logger.debug("Direction check for MIDDLE vertex {}: prevPath={}, nextPath={}, prevBoundary={}, nextBoundary={} -> boundaries between path edges: {} -> matches={}", 
-                    currentId, prevPathId, nextPathId, prevInBoundaryId, nextInBoundaryId, boundariesBetweenPath, !boundariesBetweenPath);
+            logger.debug("Direction check for MIDDLE vertex {}: prevPath={}, nextPath={}, prevBoundary={}, nextBoundary={} -> boundaries between path edges: {} -> matches={}",
+                    currentVertex.name, prevPathVertex.name, nextPathVertex.name, prevBoundaryVertex.name, nextBoundaryVertex.name, boundariesBetweenPath, !boundariesBetweenPath);
 
             return Optional.of(!boundariesBetweenPath);
         }
 
-        logger.warn("unexpected case for vertex {}", currentId);
+        logger.warn("unexpected case for vertex {}", currentVertex.name);
         return Optional.empty();
     }
 
@@ -1164,26 +1076,22 @@ public class VertexSplitter {
         return foundPrevBoundary && foundNextBoundary;
     }
 
-    /**
-     * Проверяет, лежат ли ОБА ребра границы после заданного ребра при обходе CCW.
-     * Используется для начала и конца пути.
-     * Идём от startEdge CCW и проверяем, встретим ли оба ребра границы до возврата к startEdge.
-     */
-    private static boolean areBothBoundariesAfterEdge(
+    private static boolean areCorrectSequence(
             TreeSet<EdgeOfGraph<Vertex>> edges,
             EdgeOfGraph<Vertex> startEdge,
-            EdgeOfGraph<Vertex> prevBoundaryEdge,
-            EdgeOfGraph<Vertex> nextBoundaryEdge) {
+            EdgeOfGraph<Vertex> firstBoundaryEdge,
+            EdgeOfGraph<Vertex> secondBoundaryEdge,
+            List<Vertex> boundaryVertices,
+            boolean invertOrder) {
 
         EdgeOfGraph<Vertex> current = startEdge;
-        boolean foundPrevBoundary = false;
-        boolean foundNextBoundary = false;
+        boolean foundFirstEdge = false;
 
         int iterations = 0;
         int maxIterations = edges.size();
 
         while (iterations < maxIterations) {
-            EdgeOfGraph<Vertex> next = edges.higher(current);
+            EdgeOfGraph<Vertex> next = invertOrder ? edges.lower(current) : edges.higher(current);
             if (next == null) next = edges.first();
 
             if (next.equals(startEdge)) {
@@ -1191,14 +1099,14 @@ public class VertexSplitter {
                 break;
             }
 
-            if (next.equals(prevBoundaryEdge)) foundPrevBoundary = true;
-            if (next.equals(nextBoundaryEdge)) foundNextBoundary = true;
+            if (next.equals(secondBoundaryEdge) && !foundFirstEdge) return false;
+            if (next.equals(firstBoundaryEdge)) return boundaryVertices.contains(next.end);
 
             current = next;
             iterations++;
         }
 
-        return foundPrevBoundary && foundNextBoundary;
+        return false;
     }
 
     private static void logSplitResult(Vertex vertex, NeighborSplit split) {
