@@ -46,13 +46,14 @@ public class MaxFlowReif implements MaxFlow {
     public MaxFlowReif(Graph<Vertex> initGraph,
                        Graph<VertexOfDualGraph> dualGraph,
                        VertexOfDualGraph source,
-                       VertexOfDualGraph sink
+                       VertexOfDualGraph sink,
+                       CoordinateConversion conversion
     ) {
         this.initGraph = initGraph;
         this.dualGraph = dualGraph;
         this.source = source;
         this.sink = sink;
-        this.conversion = new CoordinateConversion();
+        this.conversion = conversion;
     }
 
     @Override
@@ -970,7 +971,7 @@ public class MaxFlowReif implements MaxFlow {
                 logger.warn("Intersection vertex {} not found", intersectionName);
                 continue;
             }
-            
+
             TreeSet<EdgeOfGraph<Vertex>> allEdges = sortedEdgesByVertex.get(intersectionVertex);
             if (allEdges == null || allEdges.isEmpty()) {
                 // Пробуем найти split-вершины

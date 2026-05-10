@@ -25,7 +25,8 @@ public class CornerConstraints {
     }
 
     public boolean isCornerVertex(Vertex v) {
-        return cornerVertices.contains(v.getName()) || cornerVertices.contains(v.getName() / 1000);
+        return cornerVertices.contains(v.getName()) ||
+                (cornerVertices.contains(v.getName() / 1000) && (v.getName() % 1000 == 1 || v.getName() % 1000 == 2));
     }
 
     public boolean isNeighborAllowed(Vertex current, Vertex neighbor) {

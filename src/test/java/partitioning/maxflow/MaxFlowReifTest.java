@@ -3,6 +3,7 @@ package partitioning.maxflow;
 import graph.*;
 import org.junit.jupiter.api.Test;
 import partitioning.entities.FlowResult;
+import readWrite.CoordinateConversion;
 
 import java.util.*;
 
@@ -156,7 +157,8 @@ class MaxFlowReifTest {
         assertNotNull(source, "Source should exist in dual graph");
         assertNotNull(sink, "Sink should exist in dual graph");
         
-        MaxFlowReif maxFlow = new MaxFlowReif(primalGraph, dualGraph, source, sink);
+        CoordinateConversion cc = new CoordinateConversion(new HashSet<>(primalGraph.verticesArray()));
+        MaxFlowReif maxFlow = new MaxFlowReif(primalGraph, dualGraph, source, sink, cc);
         FlowResult result = maxFlow.findFlow();
         
         assertNotNull(result, "Flow result should not be null");
@@ -191,7 +193,8 @@ class MaxFlowReifTest {
             if (v.getName() == -2) sink = v;
         }
         
-        MaxFlowReif maxFlow = new MaxFlowReif(primalGraph, dualGraph, source, sink);
+        CoordinateConversion cc = new CoordinateConversion(new HashSet<>(primalGraph.verticesArray()));
+        MaxFlowReif maxFlow = new MaxFlowReif(primalGraph, dualGraph, source, sink, cc);
         FlowResult result = maxFlow.findFlow();
         
         // For intermediate nodes (not source or sink), flow in = flow out

@@ -383,8 +383,26 @@ def add_bubble_centers(map_osm, bounds_dir):
 def main():
     args = parse_arguments()
     coordinates = []
-    map_osm = folium.Map(location=[0, 0], zoom_start=12)
+    map_osm = folium.Map(location=[0, 0], zoom_start=12, tiles=None)
 
+    # Добавляем пустой базовый слой
+    folium.TileLayer(
+        tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        name='No basemap',
+        attr='No basemap',
+        overlay=False,
+        control=True,
+        opacity=0
+    ).add_to(map_osm)
+    
+    # Добавляем OpenStreetMap как альтернативный базовый слой
+    folium.TileLayer(
+        tiles='openstreetmap',
+        name='OpenStreetMap',
+        overlay=False,
+        control=True
+    ).add_to(map_osm)
+    
     
     if args.graph:
         G = add_graph_layer(map_osm, args.graph)

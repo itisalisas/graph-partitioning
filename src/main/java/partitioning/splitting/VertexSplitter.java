@@ -505,10 +505,10 @@ public class VertexSplitter {
 
             if (toFirstPart) {
                 leftNeighbors.add(neighbor);
-                logger.debug("  Neighbor {} -> LEFT", neighbor.getName());
+                logger.debug("Neighbor {} -> FIRST PART", neighbor.getName());
             } else {
                 rightNeighbors.add(neighbor);
-                logger.debug("  Neighbor {} -> RIGHT", neighbor.getName());
+                logger.debug("Neighbor {} -> SECOND PART", neighbor.getName());
             }
         }
 
@@ -683,15 +683,6 @@ public class VertexSplitter {
             if (targetId == neighbor.getName()) {
                 neighborEdge = edge;
             }
-            if (current.getName() == 1603311447L) {
-                logger.warn("neighbor = {}, source size = {}, sink size = {}", neighbor.getName(), sourceBoundary.size(), sinkBoundary.size());
-                logger.warn("Edge: {} -> {}, isEdgeCoDirectionalWithBoundary source = {}, sink = {}",
-                        edge.begin.getName(),
-                        edge.end.getName(),
-                        isEdgeCoDirectionalWithBoundary(current, edge.end, sourceBoundary),
-                        isEdgeCoDirectionalWithBoundary(current, edge.end, sinkBoundary)
-                        );
-            }
             
             // Проверяем, идёт ли это ребро на source boundary
             if (isEdgeCoDirectionalWithBoundary(current, edge.end, sourceBoundary)) {
@@ -726,7 +717,7 @@ public class VertexSplitter {
 
         // Если не на границах, используем секторный анализ
         if (sourceEdge != null && sinkEdge != null) {
-            logger.info("check is edge {} -> {} between source and sink edges, source edge = {}, sink edge = {}",
+            logger.debug("check is edge {} -> {} between source and sink edges, source edge = {}, sink edge = {}",
                     current.getName(), neighbor.getName(), sourceEdge.end.getName(), sinkEdge.end.getName());
             boolean isBetween = isEdgeBetween(edges, neighborEdge, sourceEdge, sinkEdge);
             
@@ -1092,7 +1083,9 @@ public class VertexSplitter {
 
         while (iterations < maxIterations) {
             EdgeOfGraph<Vertex> next = invertOrder ? edges.lower(current) : edges.higher(current);
-            if (next == null) next = edges.first();
+            if (next == null) {
+                next = invertOrder ? edges.last() : edges.first();
+            }
 
             if (next.equals(startEdge)) {
                 // Вернулись к началу

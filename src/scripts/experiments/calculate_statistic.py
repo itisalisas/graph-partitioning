@@ -2,12 +2,23 @@ import os
 import json
 import pandas as pd
 import numpy as np
+import argparse
 from collections import defaultdict
 
-base_dir = "src/main/output/res"
+parser = argparse.ArgumentParser(description='Calculate statistics for graph partitioning experiments')
+parser.add_argument('experiment_dir', type=str, help='Name of experiment directory (e.g., res-09-05-only-reif-coef-01)')
+args = parser.parse_args()
+
+base_dir = "src/main/output"
+experiment_path = os.path.join(base_dir, args.experiment_dir)
 data_root = "src/main/resources/data"
-cities = [d for d in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, d))]
-sizes = ["1000", "2000", "5000"]
+
+if not os.path.exists(experiment_path):
+    print(f"Error: Experiment directory not found: {experiment_path}")
+    exit(1)
+
+cities = [d for d in os.listdir(experiment_path) if os.path.isdir(os.path.join(experiment_path, d))]
+sizes = ["1000", "2000"]
 weights = [10000, 20000]
 
 
@@ -40,7 +51,7 @@ for city in cities:
             continue
 
         for weight in weights:
-            dir_path = os.path.join(base_dir, city, size, f"max_weight_{weight}")
+            dir_path = os.path.join(experiment_path, city, size, f"max_weight_{weight}")
             file_path = os.path.join(dir_path, "partition_info.json")
 
             if not os.path.exists(file_path):
@@ -80,7 +91,16 @@ for city in cities:
 
 df = pd.DataFrame(all_data)
 
-for (city, weight), records in city_stats.items():
+if df.empty:
+    print("No data found for statistics")
+    exit(0)
+
+# Prepare consolidated output
+output_lines = []
+output_lines.append(f"Experiment: {args.experiment_dir}\n")
+output_lines.append("="*80 + "\n")
+
+for (city, weight), records in sorted(city_stats.items()):
     city_df = pd.DataFrame(records).sort_values('size')
 
     result_df = pd.DataFrame({
@@ -97,36 +117,18 @@ for (city, weight), records in city_stats.items():
         'Cut Length': city_df['cut_length'].round(1)
     })
 
-    filename = f"{city}_max_weight_{weight}.csv"
-    result_df.to_csv(filename, index=False)
-    print(f"Saved: {filename}")
+    output_lines.append(f"\nCity: {city}, Max Weight: {weight}\n")
+    output_lines.append(result_df.to_string(index=False) + "\n")
+    output_lines.append("\n" + "="*80 + "\n")
 
-    print(f"\nCity: {city}, Max Weight: {weight}")
-    print(result_df.to_string(index=False))
-    print("\n" + "="*80 + "\n")
+# Save to single file in base_dir
+output_filename = os.path.join(experiment_path, f"{args.experiment_dir}_statistics.txt")
+with open(output_filename, 'w') as f:
+    f.writelines(output_lines)
 
-if not df.empty:
-    stats = [
-        ("Max Time (s)", df['time'].max()),
-        ("Max Memory (MB)", df['memory'].max()),
-        ("Avg Time/Edge (s/edge)", df['time_per_edge'].mean()),
-        ("Min Regions/Optimal", df['region_ratio'].min()),
-        ("Avg Regions/Optimal", df['region_ratio'].mean()),
-        ("Max Regions/Optimal", df['region_ratio'].max()),
-    ]
+print(f"Statistics saved to: {output_filename}")
+print(f"Processed {len(all_data)} experiments across {len(cities)} cities")
 
-    for weight in weights:
-        weight_data = df[df['weight'] == weight]
-        if not weight_data.empty:
-            stats.append((f"Avg Load (max_weight={weight})", weight_data['avg_load'].mean()))
-
-    stats_df = pd.DataFrame(stats, columns=['Metric', 'Value'])
-    stats_df['Value'] = stats_df['Value'].round(6)
-
-    stats_df.to_csv("overall_stats.csv", index=False)
-    print("Saved: overall_stats.csv")
-
-    print("\nOverall Statistics:")
-    print(stats_df.to_string(index=False))
-else:
-    print("No data found for statistics")
+# Print to console as well
+for line in output_lines:
+    print(line, end='')

@@ -6,7 +6,8 @@ import partitioning.algorithms.BubblePartitioningSequentially;
 import partitioning.algorithms.InertialFlowPartitioning;
 
 public enum Algorithm {
-    IF,
+    DIF,
+    RIF,
     BUP,
     BUS;
 
@@ -14,7 +15,9 @@ public enum Algorithm {
             Algorithm algorithmName,
             double partitionParameter) {
         return switch (algorithmName) {
-            case IF -> new BalancedPartitioning(
+            case DIF -> new BalancedPartitioning(
+                    new InertialFlowPartitioning(partitionParameter, false));
+            case RIF -> new BalancedPartitioning(
                     new InertialFlowPartitioning(partitionParameter, true));
             case BUP -> new BalancedPartitioning(
                     new BubblePartitioning());

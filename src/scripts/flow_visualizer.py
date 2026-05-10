@@ -368,18 +368,107 @@ def visualize_reif_flow(directory_name, output_file):
     
     # Собираем все точки для определения границ карты
     all_points = []
+    
+    # Добавляем точки из boundary файлов
+    boundary_points_count = 0
     for vertex_list in [external_boundary, source_boundary, sink_boundary, st_path, best_path]:
         for _, lat, lon in vertex_list:
             all_points.append((lat, lon))
+            boundary_points_count += 1
+    print(f"Loaded {boundary_points_count} points from boundary files")
+    if boundary_points_count > 0:
+        sample_lat, sample_lon = all_points[0]
+        print(f"  Sample boundary point: lat={sample_lat:.6f}, lon={sample_lon:.6f}")
+    
+    # Добавляем точки из графов (primal и dual)
+    init_count = 0
+    for lat, lon in init_vertices.values():
+        all_points.append((lat, lon))
+        init_count += 1
+    print(f"Loaded {init_count} points from init graph")
+    if init_count > 0:
+        sample_lat, sample_lon = list(init_vertices.values())[0]
+        print(f"  Sample init graph point: lat={sample_lat:.6f}, lon={sample_lon:.6f}")
+    
+    modified_count = 0
+    for lat, lon in modified_vertices.values():
+        all_points.append((lat, lon))
+        modified_count += 1
+    print(f"Loaded {modified_count} points from modified graph")
+    if modified_count > 0:
+        sample_lat, sample_lon = list(modified_vertices.values())[0]
+        print(f"  Sample modified graph point: lat={sample_lat:.6f}, lon={sample_lon:.6f}")
+    
+    dual_count = 0
+    for lat, lon, _ in dual_vertices.values():
+        all_points.append((lat, lon))
+        dual_count += 1
+    print(f"Loaded {dual_count} points from dual graph")
+    if dual_count > 0:
+        sample_lat, sample_lon, _ = list(dual_vertices.values())[0]
+        print(f"  Sample dual graph point: lat={sample_lat:.6f}, lon={sample_lon:.6f}")
+    
+    # Добавляем точки из SPT деревьев
+    spt1_count = 0
+    if spt1 and spt1['root']:
+        _, root_lat, root_lon = spt1['root']
+        all_points.append((root_lat, root_lon))
+        spt1_count += 1
+        for leaf_data in spt1['boundary_leaves']:
+            # Поддержка старого (4 поля) и нового (5 полей) формата
+            lat = leaf_data[1]
+            lon = leaf_data[2]
+            all_points.append((lat, lon))
+            spt1_count += 1
+    print(f"Loaded {spt1_count} points from SPT1")
+    if spt1_count > 0 and spt1['root']:
+        _, root_lat, root_lon = spt1['root']
+        print(f"  SPT1 root: lat={root_lat:.6f}, lon={root_lon:.6f}")
+    
+    spt2_count = 0
+    if spt2 and spt2['root']:
+        _, root_lat, root_lon = spt2['root']
+        all_points.append((root_lat, root_lon))
+        spt2_count += 1
+        for leaf_data in spt2['boundary_leaves']:
+            # Поддержка старого (4 поля) и нового (5 полей) формата
+            lat = leaf_data[1]
+            lon = leaf_data[2]
+            all_points.append((lat, lon))
+            spt2_count += 1
+    print(f"Loaded {spt2_count} points from SPT2")
+    if spt2_count > 0 and spt2['root']:
+        _, root_lat, root_lon = spt2['root']
+        print(f"  SPT2 root: lat={root_lat:.6f}, lon={root_lon:.6f}")
+    
+    print(f"\nTotal points collected: {len(all_points)}")
     
     if not all_points:
         print("No data to visualize")
         sys.exit(1)
     
-    # Создаем карту
+    # Создаем карту без базового слоя
     center_lat = sum(p[0] for p in all_points) / len(all_points)
     center_lon = sum(p[1] for p in all_points) / len(all_points)
-    map_osm = folium.Map(location=(center_lat, center_lon), zoom_start=15)
+    map_osm = folium.Map(location=(center_lat, center_lon), zoom_start=15, tiles=None)
+    
+    # Добавляем пустой базовый слой (белый фон)
+    folium.TileLayer(
+        tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        name='No basemap',
+        attr='No basemap',
+        overlay=False,
+        control=True,
+        opacity=0
+    ).add_to(map_osm)
+    
+    # Добавляем OpenStreetMap как альтернативный базовый слой
+    folium.TileLayer(
+        tiles='openstreetmap',
+        name='OpenStreetMap',
+        overlay=False,
+        control=True
+    ).add_to(map_osm)
     
     # Создаем слои (Feature Groups) для каждого типа данных
     init_graph_layer = folium.FeatureGroup(name='Init Graph (Original)', show=False)
@@ -757,24 +846,24 @@ def visualize_reif_flow(directory_name, output_file):
                 tooltip=f"SPT vertex {vertex_id}<br>Distance from root: {distance:.2f}"
             ).add_to(layer)
     
-    # Visualize SPT 1 (purple/magenta scheme)
+    # Visualize SPT 1 (orange/coral scheme)
     if spt1:
         visualize_spt(spt1, spt1_layer, {
-            'edge': '#9932CC',      # Dark orchid
-            'root': '#8B008B',      # Dark magenta
-            'leaf': '#DA70D6',      # Orchid
-            'vertex': '#DDA0DD',    # Plum
-            'region_label': '#8B008B'  # Dark magenta for region labels
+            'edge': '#FF6600',      # Bright orange
+            'root': '#FF4500',      # Orange red
+            'leaf': '#FF4500',      # Orange red
+            'vertex': '#FF8C42',    # Light orange
+            'region_label': '#FF4500'  # Orange red for region labels
         }, 'SPT1')
     
-    # Visualize SPT 2 (teal/cyan scheme)
+    # Visualize SPT 2 (deep blue/indigo scheme)
     if spt2:
         visualize_spt(spt2, spt2_layer, {
-            'edge': '#008B8B',      # Dark cyan
-            'root': '#006666',      # Darker teal
-            'leaf': '#20B2AA',      # Light sea green
-            'vertex': '#66CDAA',    # Medium aquamarine
-            'region_label': '#006666'  # Darker teal for region labels
+            'edge': '#0066FF',      # Bright blue
+            'root': '#0047AB',      # Cobalt blue
+            'leaf': '#0047AB',      # Cobalt blue
+            'vertex': '#4169E1',    # Royal blue
+            'region_label': '#0047AB'  # Cobalt blue for region labels
         }, 'SPT2')
     
     # 7.3. Individual regions from SPT (red-to-green gradient)
@@ -1169,12 +1258,14 @@ def visualize_reif_flow(directory_name, output_file):
     # Добавляем контроль слоев (переключатель в правом верхнем углу)
     folium.LayerControl(position='topright', collapsed=False).add_to(map_osm)
     
-    # Настраиваем границы карты
-    min_lat = min(p[0] for p in all_points)
-    max_lat = max(p[0] for p in all_points)
-    min_lon = min(p[1] for p in all_points)
-    max_lon = max(p[1] for p in all_points)
-    map_osm.fit_bounds([[min_lat, min_lon], [max_lat, max_lon]])
+    # Настраиваем границы карты на основе всех точек
+    if all_points:
+        min_lat = min(p[0] for p in all_points)
+        max_lat = max(p[0] for p in all_points)
+        min_lon = min(p[1] for p in all_points)
+        max_lon = max(p[1] for p in all_points)
+        map_osm.fit_bounds([[min_lat, min_lon], [max_lat, max_lon]])
+        print(f"Map bounds: lat [{min_lat:.6f}, {max_lat:.6f}], lon [{min_lon:.6f}, {max_lon:.6f}]")
 
     # Сохраняем карту
     output_path = os.path.join(directory_path, output_file)

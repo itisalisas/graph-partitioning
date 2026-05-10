@@ -59,7 +59,25 @@ x_coords = [G.nodes[node]["x"] for node in G]
 y_coords = [G.nodes[node]["y"] for node in G]
 center = (sum(y_coords) / len(y_coords), sum(x_coords) / len(x_coords))
 
-map_osm = folium.Map(location=center, zoom_start=15)
+map_osm = folium.Map(location=center, zoom_start=15, tiles=None)
+
+# Добавляем пустой базовый слой
+folium.TileLayer(
+    tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    name='No basemap',
+    attr='No basemap',
+    overlay=False,
+    control=True,
+    opacity=0
+).add_to(map_osm)
+
+# Добавляем OpenStreetMap как альтернативный базовый слой
+folium.TileLayer(
+    tiles='openstreetmap',
+    name='OpenStreetMap',
+    overlay=False,
+    control=True
+).add_to(map_osm)
 
 colors = generate_colors(parts_number)
 
@@ -85,5 +103,8 @@ for node, data in G.nodes(data=True):
         fill_color=color,
         tooltip=f"Part: {vertex_part_map[node]}\nVertex: {node}"
     ).add_to(map_osm)
+
+# Добавляем контроль слоев
+folium.LayerControl(position='topright', collapsed=False).add_to(map_osm)
 
 map_osm.save(os.path.join(script_dir, '..', 'main', 'output', file_name, output_file))

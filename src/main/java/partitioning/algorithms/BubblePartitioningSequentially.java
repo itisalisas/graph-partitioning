@@ -16,6 +16,7 @@ import graph.VertexOfDualGraph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import partitioning.entities.Bubble;
+import readWrite.CoordinateConversion;
 
 public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanarGraphs {
     private static final Logger logger = LoggerFactory.getLogger(BubblePartitioningSequentially.class);
@@ -25,7 +26,8 @@ public class BubblePartitioningSequentially extends BalancedPartitioningOfPlanar
     @Override
     public void balancedPartitionAlgorithm(Graph<Vertex> simpleGraph,
 										   Graph<VertexOfDualGraph> graph, 
-								           int maxSumVerticesWeight) {
+								           int maxSumVerticesWeight,
+								           CoordinateConversion coordinateConversion) {
         this.graph = graph;
 
         //list

@@ -44,7 +44,25 @@ for file_path in file_paths:
     for _, row in vertices.iterrows():
         all_points.append((row["latitude"], row["longitude"]))
 
-m = folium.Map()
+m = folium.Map(tiles=None)
+
+# Добавляем пустой базовый слой
+folium.TileLayer(
+    tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    name='No basemap',
+    attr='No basemap',
+    overlay=False,
+    control=True,
+    opacity=0
+).add_to(m)
+
+# Добавляем OpenStreetMap как альтернативный базовый слой
+folium.TileLayer(
+    tiles='openstreetmap',
+    name='OpenStreetMap',
+    overlay=False,
+    control=True
+).add_to(m)
 
 for i, file_path in enumerate(file_paths):
     vertices = load_vertex_data(file_path)
@@ -64,6 +82,9 @@ min_lon = min(p[1] for p in all_points)
 max_lon = max(p[1] for p in all_points)
 
 m.fit_bounds([[min_lat, min_lon], [max_lat, max_lon]])
+
+# Добавляем контроль слоев
+folium.LayerControl(position='topright', collapsed=False).add_to(m)
 
 m.save(os.path.join(directory_path, output_file))
 print(f"Map saved to {output_file}")
