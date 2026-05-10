@@ -15,11 +15,12 @@ public class ShortestPathTreeProcessor {
 
     private static final double ALPHA = 0.5, BETA = 0.5; // коэф
 
-    public SPTResult findBestPath(DijkstraResult result1, DijkstraResult result2, double sourceWeight, double sinkWeight) {
+    public SPTResult findBestPath(DijkstraResult result1, DijkstraResult result2, double sourceWeight, double sinkWeight, double boundaryLength) {
         int n1 = result1.leafIndices().size();
         int n2 = result2.leafIndices().size();
         if (n1 == 0 || n2 == 0) {
             return new SPTResult(
+                    Double.MAX_VALUE,
                     Double.MIN_VALUE,
                     result1.distance() + result2.distance(),
                     combinePaths(result1.path(), result2.path()),
@@ -31,7 +32,7 @@ public class ShortestPathTreeProcessor {
         int bestI1 = 0, bestI2 = 0;
         for (int i1 = 0; i1 < n1; i1++) {
             for (int i2 = 0; i2 < n2; i2++) {
-                ScoreResult score = leafScore(result1, i1, result2, i2, sourceWeight, sinkWeight);
+                ScoreResult score = leafScore(result1, i1, result2, i2, sourceWeight, sinkWeight, boundaryLength);
                 if (score.score < bestScore.score) {
                     bestScore = score;
                     bestI1 = i1;
@@ -45,11 +46,18 @@ public class ShortestPathTreeProcessor {
         List<Vertex> path1 = reconstructPathToLeaf(result1, bestI1);
         List<Vertex> path2 = reconstructPathToLeaf(result2, bestI2);
 
-        return new SPTResult(bestScore.weightBalance, bestScore.length, combinePaths(path1, path2), bestScore.isPositive);
+        return new SPTResult(bestScore.score, bestScore.weightBalance, bestScore.length, combinePaths(path1, path2), bestScore.isPositive);
     }
 
-    private ScoreResult leafScore(DijkstraResult result1, int i1, DijkstraResult result2, int i2, double sourceWeight, double sinkWeight) {
-        // TODO - разные порядки длины и баланса???
+    private ScoreResult leafScore(
+        DijkstraResult result1, 
+        int i1, 
+        DijkstraResult result2, 
+        int i2, 
+        double sourceWeight, 
+        double sinkWeight, 
+        double boundaryLength
+    ) {
         if (result1.leafIndices().get(i1) == -1
                 || result2.leafIndices().get(i2) == -1
         ) {
@@ -69,7 +77,10 @@ public class ShortestPathTreeProcessor {
                 + (result2.totalRegionWeight() - result2.weights().get(result2.leafIndices().get(i2)))
                 + sourceWeight;
         double balance = Math.abs(ALPHA * totalWeight - leftWeight);
-        return new ScoreResult(BETA * length + (1 - BETA) * balance, length, balance, ALPHA * totalWeight - leftWeight > 0);
+        double normalizedLength = length / boundaryLength;
+        double normalizedBalance = balance / totalWeight;
+        logger.debug("Length: {}, normalized length: {}, balance: {}, normalized balance: {}, score: {}", length, normalizedLength, balance, normalizedBalance, BETA * normalizedLength + (1 - BETA) * normalizedBalance);
+        return new ScoreResult(BETA * normalizedLength + (1 - BETA) * normalizedBalance, length, balance, ALPHA * totalWeight - leftWeight > 0);
     }
 
     private List<Vertex> reconstructPathToLeaf(DijkstraResult result, int leafIdx) {
