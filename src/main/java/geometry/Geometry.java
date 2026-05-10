@@ -1,6 +1,9 @@
 package geometry;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import graph.Point;
 
@@ -17,37 +20,53 @@ public class Geometry {
     public static boolean containsPoint(List<? extends Point> polygon, Point point) {
         int n = polygon.size();
         if (n < 3) return false;
-        boolean inside = false;
-        double x = point.x, y = point.y;
-        for (int i = 0, j = n - 1; i < n; j = i++) {
-            double xi = polygon.get(i).x, yi = polygon.get(i).y;
-            double xj = polygon.get(j).x, yj = polygon.get(j).y;
-            if (((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
-                inside = !inside;
-            }
-        }
-        return inside;
-    }
-
-    public static boolean containsPointWinding(List<? extends Point> polygon, Point point) {
-        int n = polygon.size();
-        if (n < 3) return false;
-        int winding = 0;
         double px = point.x, py = point.y;
-        for (int i = 0, j = n - 1; i < n; j = i++) {
-            double xi = polygon.get(i).x, yi = polygon.get(i).y;
-            double xj = polygon.get(j).x, yj = polygon.get(j).y;
-            if (yj <= py) {
-                if (yi > py && crossZ(xj, yj, xi, yi, px, py) > 0) winding++;
-            } else {
-                if (yi <= py && crossZ(xj, yj, xi, yi, px, py) < 0) winding--;
-            }
+        int count = 0;
+        for (int i = 0; i < n; i++) {
+            double ax = polygon.get(i).x, ay = polygon.get(i).y;
+            double bx = polygon.get((i + 1) % n).x, by = polygon.get((i + 1) % n).y;
+            double minX, minY, maxX, maxY;
+            if (ay <= by) { minX = ax; minY = ay; maxX = bx; maxY = by; }
+            else          { minX = bx; minY = by; maxX = ax; maxY = ay; }
+            if (minY == maxY) continue;                  // horizontal edge
+            if (py < minY || py >= maxY) continue;       // half-open [minY, maxY)
+            double cross = (maxX - minX) * (py - minY) - (maxY - minY) * (px - minX);
+            if (cross == 0) return true;                 // point on edge
+            if (cross > 0) count++;
         }
-        return winding != 0;
+        return count % 2 != 0;
     }
 
-    private static double crossZ(double x1, double y1, double x2, double y2, double px, double py) {
-        return (x2 - x1) * (py - y1) - (px - x1) * (y2 - y1);
+    // Splits self-intersecting polygon into simple sub-polygons at repeated vertices.
+    // Pattern ...->A->B->...->C->A->... splits into inner loop [A,B,...,C] and outer [... A ...].
+    public static List<List<Point>> decomposePolygon(List<? extends Point> polygon) {
+        List<List<Point>> result = new ArrayList<>();
+        decomposeRecursive(new ArrayList<>(polygon), result);
+        return result;
+    }
+
+    private static void decomposeRecursive(List<Point> polygon, List<List<Point>> result) {
+        int n = polygon.size();
+        Map<String, Integer> seen = new LinkedHashMap<>();
+        for (int i = 0; i < n; i++) {
+            Point p = polygon.get(i);
+            String key = p.x + " " + p.y;
+            Integer prev = seen.get(key);
+            if (prev != null) {
+                int j = prev;
+                // inner loop: polygon[j..i-1]
+                List<Point> inner = new ArrayList<>(polygon.subList(j, i));
+                // outer: polygon[0..j] + polygon[i+1..n-1]
+                List<Point> outer = new ArrayList<>();
+                outer.addAll(polygon.subList(0, j + 1));
+                outer.addAll(polygon.subList(i + 1, n));
+                decomposeRecursive(inner, result);
+                decomposeRecursive(outer, result);
+                return;
+            }
+            seen.put(key, i);
+        }
+        if (n >= 3) result.add(polygon);
     }
 
     public static double area(List<? extends Point> polygon) {

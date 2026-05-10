@@ -47,13 +47,25 @@ public class Dijkstra {
             List<Vertex> sourceVertices,
             List<Vertex> targetBoundary,
             CornerConstraints cornerConstraints) {
+        return dijkstraMultiSource(graph, sourceVertices, targetBoundary, cornerConstraints, List.of());
+    }
+
+    /**
+     * Находит кратчайший путь от множества источников до целевой границы с учетом внешней границы
+     */
+    public static Optional<DijkstraResult> dijkstraMultiSource(
+            Graph<Vertex> graph,
+            List<Vertex> sourceVertices,
+            List<Vertex> targetBoundary,
+            CornerConstraints cornerConstraints,
+            List<Vertex> externalBoundary) {
 
         logDebugInfo(graph, sourceVertices, targetBoundary, cornerConstraints);
 
         DijkstraState state = new DijkstraState();
         initializeDistances(state, graph, sourceVertices);
 
-        processGraph(state, graph, targetBoundary, cornerConstraints);
+        processGraph(state, graph, targetBoundary, cornerConstraints, externalBoundary);
 
         if (state.targetVertex == null) {
             logger.debug("  No target vertex found!");
@@ -115,7 +127,8 @@ public class Dijkstra {
             DijkstraState state,
             Graph<Vertex> graph,
             List<Vertex> targetBoundary,
-            CornerConstraints cornerConstraints) {
+            CornerConstraints cornerConstraints,
+            List<Vertex> externalBoundary) {
 
         while (!state.queue.isEmpty()) {
             VertexDistance current = state.queue.poll();
@@ -132,7 +145,7 @@ public class Dijkstra {
             }
 
             // Обрабатываем соседей текущей вершины
-            processNeighbors(state, graph, current, cornerConstraints);
+            processNeighbors(state, graph, current, cornerConstraints, externalBoundary, targetBoundary);
         }
     }
 
@@ -171,11 +184,17 @@ public class Dijkstra {
             DijkstraState state,
             Graph<Vertex> graph,
             VertexDistance current,
-            CornerConstraints cornerConstraints) {
+            CornerConstraints cornerConstraints,
+            List<Vertex> externalBoundary,
+            List<Vertex> targetBoundary) {
         Map<Vertex, Edge> neighbors = graph.getEdges().get(current.vertex());
         if (neighbors == null) {
             return;
         }
+
+        // Проверяем, является ли текущая вершина частью external boundary, но не целевой
+        boolean currentIsNonTargetBoundary = isOnExternalBoundary(current.vertex(), externalBoundary) 
+                && !isBoundaryContainsVertex(targetBoundary, current.vertex());
 
         for (Map.Entry<Vertex, Edge> entry : neighbors.entrySet()) {
             Vertex neighbor = entry.getKey();
@@ -183,8 +202,34 @@ public class Dijkstra {
             if (!cornerConstraints.isNeighborAllowed(current.vertex(), neighbor)) {
                 continue;
             }
+
+            // Если текущая вершина на внешней границе (не целевая), 
+            // запрещаем переход в другие вершины на внешней границе
+            if (currentIsNonTargetBoundary && isOnExternalBoundary(neighbor, externalBoundary)) {
+                logger.debug("  Blocking edge from boundary vertex {} to boundary vertex {}", 
+                        current.vertex().getName(), neighbor.getName());
+                continue;
+            }
+
             processNeighbor(state, current.vertex(), entry.getKey(), entry.getValue());
         }
+    }
+
+    /**
+     * Проверяет, находится ли вершина на внешней границе
+     */
+    private static boolean isOnExternalBoundary(Vertex vertex, List<Vertex> externalBoundary) {
+        if (externalBoundary.isEmpty()) {
+            return false;
+        }
+        
+        if (externalBoundary.contains(vertex)) {
+            return true;
+        }
+        
+        // Проверяем основную вершину для разделенной вершины
+        Vertex vertexMain = new Vertex(vertex.name / 1000, vertex.x, vertex.y);
+        return externalBoundary.contains(vertexMain);
     }
 
     /**

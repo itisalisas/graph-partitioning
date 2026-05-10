@@ -91,7 +91,7 @@ public class Main implements Runnable {
 
         Graph<VertexOfDualGraph> preparedGraph;
         try {
-            preparedGraph = preparation.prepareGraph(graph, 0.01);
+            preparedGraph = preparation.prepareGraph(graph, 0.01, cc);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -121,20 +121,22 @@ public class Main implements Runnable {
 
         long startTime = System.currentTimeMillis();
 
-        List<Set<VertexOfDualGraph>> partitionResultForFaces = partitioning.partition(graph, preparedGraph, maxSumVerticesWeight);
-        for (Set<VertexOfDualGraph> hs : partitionResultForFaces) {
-            for (VertexOfDualGraph v : hs) {
-                Assertions.assertNotNull(v.getVerticesOfFace());
-            }
-        }
+        List<Set<VertexOfDualGraph>> partitionResultForFaces = partitioning.partition(graph, preparedGraph, maxSumVerticesWeight, cc);
+
+        long time1 = System.currentTimeMillis();
+        logger.info("Partitioning without balancing time: " + (time1 - startTime) + " ms");
+
         HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber = partitioning.dualVertexToPartNumber();
-        for (Set<VertexOfDualGraph> hs : partitionResultForFaces) {
-            for (VertexOfDualGraph v : hs) {
-                Assertions.assertNotNull(v.getVerticesOfFace());
-            }
-        }
+
+        long time2 = System.currentTimeMillis();
+        logger.info("Partitioning dual vertex to part number time: " + (time2 - time1) + " ms");
+
         Graph<PartitionGraphVertex> partitionGraph = PartitionGraphVertex.buildPartitionGraph(preparedGraph, partitionResultForFaces, dualVertexToPartNumber);
-        Balancer balancer = new Balancer(partitionGraph, preparedGraph, graph, maxSumVerticesWeight, OUTPUT_DIRECTORY + pathToResultDirectory);
+
+        long time3 = System.currentTimeMillis();
+        logger.info("Building partition graph time: " + (time3 - time2) + " ms");
+
+        Balancer balancer = new Balancer(partitionGraph, preparedGraph, graph, maxSumVerticesWeight, OUTPUT_DIRECTORY + pathToResultDirectory, cc, algorithmName.equals(Algorithm.RIF));
         partitionResultForFaces = balancer.rebalancing();
         HashMap<VertexOfDualGraph, Integer> newDualVertexToPartNumber = new HashMap<>();
         for (int i = 0; i < partitionResultForFaces.size(); i++) {

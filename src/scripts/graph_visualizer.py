@@ -41,7 +41,25 @@ def visualize_graph(file_name):
     y_coords = [G.nodes[node]["y"] for node in G]
     center = (sum(y_coords) / len(y_coords), sum(x_coords) / len(x_coords))
 
-    map_osm = folium.Map(location=center, zoom_start=15)
+    map_osm = folium.Map(location=center, zoom_start=15, tiles=None)
+    
+    # Добавляем пустой базовый слой
+    folium.TileLayer(
+        tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        name='No basemap',
+        attr='No basemap',
+        overlay=False,
+        control=True,
+        opacity=0
+    ).add_to(map_osm)
+    
+    # Добавляем OpenStreetMap как альтернативный базовый слой
+    folium.TileLayer(
+        tiles='openstreetmap',
+        name='OpenStreetMap',
+        overlay=False,
+        control=True
+    ).add_to(map_osm)
 
     for node, data in G.nodes(data=True):
         folium.CircleMarker(
@@ -63,6 +81,9 @@ def visualize_graph(file_name):
             weight=2.5,
             tooltip=f"Length: {data['length']}"
         ).add_to(map_osm)
+
+    # Добавляем контроль слоев
+    folium.LayerControl(position='topright', collapsed=False).add_to(map_osm)
 
     return map_osm
 

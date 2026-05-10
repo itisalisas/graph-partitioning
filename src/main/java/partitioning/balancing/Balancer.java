@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import partitioning.BalancedPartitioning;
 import partitioning.algorithms.InertialFlowPartitioning;
+import readWrite.CoordinateConversion;
 
 public class Balancer {
     private static final Logger logger = LoggerFactory.getLogger(Balancer.class);
@@ -21,19 +22,25 @@ public class Balancer {
     Set<Set<VertexOfDualGraph>> wasMerged = new HashSet<>();
     int maxWeight;
     String pathToResultDirectory;
+    CoordinateConversion cc;
+    boolean useReif;
 
     public Balancer(
             Graph<PartitionGraphVertex> partitionGraph,
             Graph<VertexOfDualGraph> dualGraph,
             Graph<Vertex> startGraph,
             int maxWeight,
-            String pathToResultDirectory
+            String pathToResultDirectory,
+            CoordinateConversion cc,
+            boolean useReif
     ) {
         this.partitionGraph = partitionGraph;
         this.dualGraph = dualGraph;
         this.startGraph = startGraph.makeUndirectedGraph();
         this.maxWeight = maxWeight;
         this.pathToResultDirectory = pathToResultDirectory;
+        this.cc = cc;
+        this.useReif = useReif;
     }
 
     private boolean rebalanceSmallestRegion() {
@@ -68,10 +75,10 @@ public class Balancer {
                 Assertions.assertEquals(balancingVerticesSet.size(), regionsSubgraph.verticesNumber());
                 Assertions.assertTrue(regionsSubgraph.isConnected());
                 double coefficient = 1 - (double) maxWeight / (balancingVerticesSet.stream().mapToDouble(Vertex::getWeight).sum());
-                BalancedPartitioning bp = new BalancedPartitioning(new InertialFlowPartitioning(coefficient, false));
-                List<Set<VertexOfDualGraph>> newPartition = bp.partition(startGraph, regionsSubgraph, maxWeight);
+                BalancedPartitioning bp = new BalancedPartitioning(new InertialFlowPartitioning(coefficient, useReif));
+                List<Set<VertexOfDualGraph>> newPartition = bp.partition(startGraph, regionsSubgraph, maxWeight, cc);
                 if (newPartition.size() > 2) {
-                    logger.debug("partition size in balancer > 2, skip");
+                    logger.error("partition size in balancer > 2, skip");
                     continue;
                 }
 

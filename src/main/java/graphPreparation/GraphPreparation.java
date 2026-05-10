@@ -7,6 +7,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 
 import graph.Graph;
 import graph.Vertex;
@@ -34,6 +36,10 @@ public class GraphPreparation {
 	}
 	
 	public Graph<VertexOfDualGraph> prepareGraph(Graph<Vertex> gph, double inaccuracy) throws IOException {
+		return prepareGraph(gph, inaccuracy, new CoordinateConversion(new HashSet<>()));
+	}
+
+	public Graph<VertexOfDualGraph> prepareGraph(Graph<Vertex> gph, double inaccuracy, CoordinateConversion cc) throws IOException {
         long startTime = System.currentTimeMillis();
 		logger.info("Number of 0 weight vertex, before correction: {}", gph.countZeroWeightVertices());
         long time1 = System.currentTimeMillis();
@@ -68,6 +74,15 @@ public class GraphPreparation {
 		Assertions.assertTrue(dualGraph.isConnected());
 		dg.removeExternalFace(dualGraph);
 		Assertions.assertTrue(dualGraph.isConnected());
+
+        Set<VertexOfDualGraph> removedNestedFaces = NestedFacesRemover.removeNestedFaces(dualGraph, cc);
+        logger.info("Found {} nested faces to remove", removedNestedFaces.size());
+
+        if (!removedNestedFaces.isEmpty()) {
+            logger.info("Dual graph weight after removing nested faces: {}", dualGraph.verticesSumWeight());
+            Assertions.assertTrue(dualGraph.isConnected());
+        }
+
 		logger.info("Dual graph weight: {}", dualGraph.verticesSumWeight());
 		return dualGraph;
 	}

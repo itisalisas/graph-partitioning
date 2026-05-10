@@ -67,13 +67,35 @@ def visualize_bounds(directory_name, map_osm):
 
 def main(bounds_directory, output_file):
     # Сначала визуализируем граф
-    map_osm = folium.Map(location=(0, 0), zoom_start=15)
+    map_osm = folium.Map(location=(0, 0), zoom_start=15, tiles=None)
+    
+    # Добавляем пустой базовый слой
+    folium.TileLayer(
+        tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        name='No basemap',
+        attr='No basemap',
+        overlay=False,
+        control=True,
+        opacity=0
+    ).add_to(map_osm)
+    
+    # Добавляем OpenStreetMap как альтернативный базовый слой
+    folium.TileLayer(
+        tiles='openstreetmap',
+        name='OpenStreetMap',
+        overlay=False,
+        control=True
+    ).add_to(map_osm)
 
     # Накладываем границы
     visualize_bounds(bounds_directory, map_osm)
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
     directory_path = os.path.join(script_dir, '..', 'main', 'output', bounds_directory)
+    
+    # Добавляем контроль слоев
+    folium.LayerControl(position='topright', collapsed=False).add_to(map_osm)
+    
     # Сохраняем финальную карту
     map_osm.save(os.path.join(directory_path, output_file))
     print(f"Map with boundaries saved to {output_file}")
