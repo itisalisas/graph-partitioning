@@ -116,7 +116,7 @@ public class MakingDualGraph {
         } while (!(begin.equals(firstEdge.end) && prev.equals(firstEdge.begin)));
    }
 
-   public void removeExternalFace(Graph<VertexOfDualGraph> dualGraph) {
+   public VertexOfDualGraph findExternalFace(Graph<VertexOfDualGraph> dualGraph) {
        Vertex leftTop = null;
        Vertex rightBottom = null;
 
@@ -150,6 +150,6 @@ public class MakingDualGraph {
        if (externalFaceVertex == null) {
            throw new RuntimeException("Couldn't find external face");
        }
-       dualGraph.deleteVertex(externalFaceVertex);
+       return externalFaceVertex;
    }
 }

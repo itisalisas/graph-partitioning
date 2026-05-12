@@ -9,26 +9,30 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import graph.*;
 import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import addingPoints.LocalizationPoints;
+import graph.BoundSearcher;
+import graph.Graph;
+import graph.PartitionGraphVertex;
+import graph.Point;
+import graph.Vertex;
+import graph.VertexOfDualGraph;
 import graphPreparation.GraphPreparation;
 import partitioning.BalancedPartitioning;
 import partitioning.balancing.Balancer;
 import partitioning.entities.Algorithm;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 import readWrite.CoordinateConversion;
 import readWrite.GraphReader;
 import readWrite.GraphWriter;
 import readWrite.PartitionWriter;
 import readWrite.PointsReader;
-
-import picocli.CommandLine;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
 
 @Command(name = "graph-partitioning", mixinStandardHelpOptions = true, version = "1.0",
         description = "Application for balanced partitioning of planar graphs")

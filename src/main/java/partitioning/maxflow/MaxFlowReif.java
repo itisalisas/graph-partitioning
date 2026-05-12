@@ -1,26 +1,38 @@
 package partitioning.maxflow;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-import graph.*;
-import jakarta.validation.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import partitioning.entities.SPTResult;
-import partitioning.entities.SPTWithRegionWeights;
-import partitioning.shortestpathtree.ShortestPathTreeProcessor;
-import partitioning.shortestpathtree.ShortestPathTreeSearcher;
+
+import graph.BoundSearcher;
+import graph.Edge;
+import graph.EdgeOfGraph;
+import graph.Graph;
+import graph.Vertex;
+import graph.VertexOfDualGraph;
+import jakarta.validation.constraints.NotNull;
+import partitioning.entities.DijkstraResult;
 import partitioning.entities.FlowResult;
 import partitioning.entities.NeighborSplit;
-import partitioning.entities.DijkstraResult;
-import readWrite.CoordinateConversion;
-import readWrite.FlowWriter;
-
+import partitioning.entities.SPTResult;
+import partitioning.entities.SPTWithRegionWeights;
+import static partitioning.maxflow.Dijkstra.dijkstraMultiSource;
 import static partitioning.maxflow.Dijkstra.dijkstraSingleSource;
+import partitioning.shortestpathtree.ShortestPathTreeProcessor;
+import partitioning.shortestpathtree.ShortestPathTreeSearcher;
 import static partitioning.splitting.VertexSplitter.preprocessNeighborSplits;
 import static partitioning.splitting.VertexSplitter.splitVertex;
-import static partitioning.maxflow.Dijkstra.dijkstraMultiSource;
+import readWrite.CoordinateConversion;
+import readWrite.FlowWriter;
 
 public class MaxFlowReif implements MaxFlow {
     private static final Logger logger = LoggerFactory.getLogger(MaxFlowReif.class);
@@ -185,11 +197,12 @@ public class MaxFlowReif implements MaxFlow {
         List<Vertex> sourceBoundary = BoundSearcher.findBound(initGraph, sourceNeighbors);
         List<Vertex> sinkBoundary = BoundSearcher.findBound(initGraph, sinkNeighbors);
 
-        HashSet<VertexOfDualGraph> allDualVerticesSet = new HashSet<>(
-                dualGraph.verticesArray()
-        );
-        allDualVerticesSet.remove(source);
-        allDualVerticesSet.remove(sink);
+        HashSet<VertexOfDualGraph> allDualVerticesSet = new HashSet<>(dualGraph.verticesNumber() - 2);
+        for (VertexOfDualGraph v : dualGraph.verticesArray()) {
+            if (v != source && v != sink) {
+                allDualVerticesSet.add(v);
+            }
+        }
 
         List<Vertex> externalBoundary = BoundSearcher.findBound(initGraph, allDualVerticesSet);
         Map<Vertex, Map<Vertex, Edge>> edges = initGraph.getEdges();
@@ -442,7 +455,7 @@ public class MaxFlowReif implements MaxFlow {
         DijkstraResult path2ToBoundary = path2ToBoundaryOpt.get();
 
         ShortestPathTreeProcessor sptProcessor = new ShortestPathTreeProcessor();
-        SPTResult result = sptProcessor.findBestPath(path1ToBoundary, path2ToBoundary, source.getWeight(), sink.getWeight(), boundaryLength);
+        SPTResult result = sptProcessor.findBestPath(path1ToBoundary, path2ToBoundary, source.getWeight(), sink.getWeight(), boundaryLength, boundaries.externalBoundary());
         long time3 = System.currentTimeMillis();
         logger.info("Time for find best path in spt: {} seconds", (time3 - time2) / 1000.0);
 

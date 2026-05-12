@@ -2,23 +2,17 @@ package graphPreparation;
 
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+
+import org.junit.jupiter.api.Assertions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
 import readWrite.CoordinateConversion;
-import readWrite.GraphWriter;
-
-import org.junit.jupiter.api.Assertions;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class GraphPreparation {
 	private static final Logger logger = LoggerFactory.getLogger(GraphPreparation.class);
@@ -72,16 +66,17 @@ public class GraphPreparation {
 			Assertions.assertNotNull(v.getVerticesOfFace());
 		}
 		Assertions.assertTrue(dualGraph.isConnected());
-		dg.removeExternalFace(dualGraph);
-		Assertions.assertTrue(dualGraph.isConnected());
+        VertexOfDualGraph externalFaceVertex = dg.findExternalFace(dualGraph);
 
-        Set<VertexOfDualGraph> removedNestedFaces = NestedFacesRemover.removeNestedFaces(dualGraph, cc);
+        Set<VertexOfDualGraph> removedNestedFaces = NestedFacesRemover.removeNestedFaces(dualGraph, externalFaceVertex);
         logger.info("Found {} nested faces to remove", removedNestedFaces.size());
 
         if (!removedNestedFaces.isEmpty()) {
             logger.info("Dual graph weight after removing nested faces: {}", dualGraph.verticesSumWeight());
             Assertions.assertTrue(dualGraph.isConnected());
         }
+        dualGraph.deleteVertex(externalFaceVertex);
+        Assertions.assertTrue(dualGraph.isConnected());
 
 		logger.info("Dual graph weight: {}", dualGraph.verticesSumWeight());
 		return dualGraph;
