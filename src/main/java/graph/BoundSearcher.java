@@ -154,8 +154,9 @@ public class BoundSearcher {
     }
 
     private static long computeEdgeKey(Vertex v1, Vertex v2) {
-        String s = v1.name + "_" + v2.name;
-        return s.hashCode();
+        long a = v1.name;
+        long b = v2.name;
+        return ((a + b) * (a + b + 1) / 2) + b;
     }
 
     private static int findCommonFaceFast(Vertex v1, Vertex v2,

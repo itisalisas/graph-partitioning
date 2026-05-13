@@ -16,7 +16,7 @@ import partitioning.entities.SPTResult;
 public class ShortestPathTreeProcessor {
     private static final Logger logger = LoggerFactory.getLogger(ShortestPathTreeProcessor.class);
 
-    private static final double ALPHA = 0.5, BETA = 0.5;
+    private static final double BETA = 0.25;
     private static final double EXTERNAL_BOUNDARY_PENALTY = 10.0;
 
     public SPTResult findBestPath(
@@ -25,7 +25,18 @@ public class ShortestPathTreeProcessor {
             double sourceWeight, 
             double sinkWeight, 
             double boundaryLength,
-            List<Vertex> externalBoundary) {
+            List<Vertex> externalBoundary,
+            double totalWeight,
+            int maxWeight) {
+        
+        // Вычисляем alpha динамически на основе отношения общего веса к максимальному весу
+        // k = ceil(totalWeight / maxWeight) - необходимое количество частей
+        // alpha = floor(k/2) / k - делим на части с отношением близким к половине
+        int k = (int) Math.ceil(totalWeight / maxWeight);
+        int leftParts = k / 2;  // floor(k/2)
+        double alpha = (double) leftParts / k;
+        logger.info("Dynamic alpha calculation: totalWeight={}, maxWeight={}, k={}, leftParts={}, rightParts={}, alpha={}", 
+                    totalWeight, maxWeight, k, leftParts, (k - leftParts), alpha);
         
         int n1 = result1.leafIndices().size();
         int n2 = result2.leafIndices().size();
@@ -77,7 +88,8 @@ public class ShortestPathTreeProcessor {
                     result1, i1, 
                     result2, i2, 
                     sourceWeight, sinkWeight, boundaryLength,
-                    totalExternalCount
+                    totalExternalCount,
+                    alpha
                 );
                 
                 if (score.score < bestScore.score) {
@@ -121,7 +133,8 @@ public class ShortestPathTreeProcessor {
         double sourceWeight, 
         double sinkWeight, 
         double boundaryLength,
-        int externalVerticesCount
+        int externalVerticesCount,
+        double alpha
     ) {
         if (result1.leafIndices().get(i1) == -1
                 || result2.leafIndices().get(i2) == -1
@@ -143,7 +156,7 @@ public class ShortestPathTreeProcessor {
         double leftWeight = result1.weights().get(result1.leafIndices().get(i1))
                 + (result2.totalRegionWeight() - result2.weights().get(result2.leafIndices().get(i2)))
                 + sourceWeight;
-        double balance = Math.abs(ALPHA * totalWeight - leftWeight);
+        double balance = Math.abs(alpha * totalWeight - leftWeight);
         double normalizedLength = length / boundaryLength;
         double normalizedBalance = balance / totalWeight;
         
@@ -164,7 +177,7 @@ public class ShortestPathTreeProcessor {
             penalizedScore, 
             length, 
             balance, 
-            ALPHA * totalWeight - leftWeight > 0,
+            alpha * totalWeight - leftWeight > 0,
             externalVerticesCount
         );
     }

@@ -1,16 +1,16 @@
 package graphPreparation;
 
+import java.util.ArrayList;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
+
 import graph.Graph;
 import graph.Point;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
-import org.junit.jupiter.api.Test;
-import readWrite.CoordinateConversion;
-
-import java.util.ArrayList;
-import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 public class NestedFacesRemoverTest {
 

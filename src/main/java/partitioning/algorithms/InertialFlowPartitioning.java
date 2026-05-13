@@ -185,7 +185,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
             MaxFlow maxFlow;
             if (USE_REIF) {
-                maxFlow = new MaxFlowReif(simpleGraph, copyGraph, source, sink, coordinateConversion);
+                maxFlow = new MaxFlowReif(simpleGraph, copyGraph, source, sink, coordinateConversion, maxSumVerticesWeight);
             } else {
                 maxFlow = new MaxFlowDinic(copyGraph, source, sink);
             }

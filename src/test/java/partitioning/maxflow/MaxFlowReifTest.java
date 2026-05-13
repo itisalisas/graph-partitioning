@@ -158,7 +158,8 @@ class MaxFlowReifTest {
         assertNotNull(sink, "Sink should exist in dual graph");
         
         CoordinateConversion cc = new CoordinateConversion(new HashSet<>(primalGraph.verticesArray()));
-        MaxFlowReif maxFlow = new MaxFlowReif(primalGraph, dualGraph, source, sink, cc);
+        int maxSumVerticesWeight = 1000;
+        MaxFlowReif maxFlow = new MaxFlowReif(primalGraph, dualGraph, source, sink, cc, maxSumVerticesWeight);
         FlowResult result = maxFlow.findFlow();
         
         assertNotNull(result, "Flow result should not be null");
@@ -194,7 +195,8 @@ class MaxFlowReifTest {
         }
         
         CoordinateConversion cc = new CoordinateConversion(new HashSet<>(primalGraph.verticesArray()));
-        MaxFlowReif maxFlow = new MaxFlowReif(primalGraph, dualGraph, source, sink, cc);
+        int maxSumVerticesWeight = 1000;
+        MaxFlowReif maxFlow = new MaxFlowReif(primalGraph, dualGraph, source, sink, cc, maxSumVerticesWeight);
         FlowResult result = maxFlow.findFlow();
         
         // For intermediate nodes (not source or sink), flow in = flow out

@@ -43,6 +43,7 @@ public class MaxFlowReif implements MaxFlow {
     double flow;
     double boundaryLength;
     CoordinateConversion conversion;
+    int maxSumVerticesWeight;
 
     private record PathCandidate(
             Vertex splitVertex1,
@@ -61,13 +62,15 @@ public class MaxFlowReif implements MaxFlow {
                        Graph<VertexOfDualGraph> dualGraph,
                        VertexOfDualGraph source,
                        VertexOfDualGraph sink,
-                       CoordinateConversion conversion
+                       CoordinateConversion conversion,
+                       int maxSumVerticesWeight
     ) {
         this.initGraph = initGraph;
         this.dualGraph = dualGraph;
         this.source = source;
         this.sink = sink;
         this.conversion = conversion;
+        this.maxSumVerticesWeight = maxSumVerticesWeight;
     }
 
     @Override
@@ -455,7 +458,8 @@ public class MaxFlowReif implements MaxFlow {
         DijkstraResult path2ToBoundary = path2ToBoundaryOpt.get();
 
         ShortestPathTreeProcessor sptProcessor = new ShortestPathTreeProcessor();
-        SPTResult result = sptProcessor.findBestPath(path1ToBoundary, path2ToBoundary, source.getWeight(), sink.getWeight(), boundaryLength, boundaries.externalBoundary());
+        double totalWeight = dualGraph.verticesWeight();
+        SPTResult result = sptProcessor.findBestPath(path1ToBoundary, path2ToBoundary, source.getWeight(), sink.getWeight(), boundaryLength, boundaries.externalBoundary(), totalWeight, maxSumVerticesWeight);
         long time3 = System.currentTimeMillis();
         logger.info("Time for find best path in spt: {} seconds", (time3 - time2) / 1000.0);
 
@@ -655,25 +659,26 @@ public class MaxFlowReif implements MaxFlow {
             PathCandidate best,
             Map<Vertex, Vertex> splitToOriginalMap) {
 
-        FlowWriter.dumpVisualizationData(
-                boundaries.externalBoundary(),
-                boundaries.sourceBoundary(),
-                boundaries.sinkBoundary(),
-                shortestPath, bestPath,
-                sourceNeighbors, sinkNeighbors, flow,
-                initGraph,
-                modifiedGraph, dualGraph, source, sink, conversion
-        );
+        // Отключено для производительности - раскомментировать для debug
+        // FlowWriter.dumpVisualizationData(
+        //         boundaries.externalBoundary(),
+        //         boundaries.sourceBoundary(),
+        //         boundaries.sinkBoundary(),
+        //         shortestPath, bestPath,
+        //         sourceNeighbors, sinkNeighbors, flow,
+        //         initGraph,
+        //         modifiedGraph, dualGraph, source, sink, conversion
+        // );
 
-        FlowWriter.dumpSPTVisualizationData(
-                best.path1ToBoundary(),
-                best.path2ToBoundary(),
-                best.splitVertex1(),
-                best.splitVertex2(),
-                splitToOriginalMap,
-                sourceNeighbors, sinkNeighbors, flow, conversion,
-                initGraph
-        );
+        // FlowWriter.dumpSPTVisualizationData(
+        //         best.path1ToBoundary(),
+        //         best.path2ToBoundary(),
+        //         best.splitVertex1(),
+        //         best.splitVertex2(),
+        //         splitToOriginalMap,
+        //         sourceNeighbors, sinkNeighbors, flow, conversion,
+        //         initGraph
+        // );
     }
 
     private Optional<DijkstraResult> dijkstraSingleSourceWithRegionWeights(

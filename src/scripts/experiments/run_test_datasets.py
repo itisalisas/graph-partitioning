@@ -116,7 +116,7 @@ def run_single_experiment(task):
                 stderr=subprocess.STDOUT,
                 text=True,
                 check=False,
-                timeout=900
+                timeout=600
             )
             
             if result.returncode == 0:

@@ -161,7 +161,7 @@ public class ShortestPathTreeProcessorTest {
         
         // Используем процессор для нахождения лучшего пути
         ShortestPathTreeProcessor processor = new ShortestPathTreeProcessor();
-        SPTResult result = processor.findBestPath(leftD, rightD, 0.0, 0.0, 10);
+        SPTResult result = processor.findBestPath(leftD, rightD, 0.0, 0.0, 10, List.of(), 1000.0, 500);
         
         // Отладка
         System.out.println("=== Debug testFindBestPathBasic ===");
@@ -299,8 +299,8 @@ public class ShortestPathTreeProcessorTest {
         double sourceWeight = 100.0;
         double sinkWeight = 100.0;
         
-        SPTResult result1 = processor.findBestPath(leftD, rightD, sourceWeight, sinkWeight, 10);
-        SPTResult result2 = processor.findBestPath(leftD, rightD, 0.0, 0.0, 10);
+        SPTResult result1 = processor.findBestPath(leftD, rightD, sourceWeight, sinkWeight, 10, List.of(), 1000.0, 500);
+        SPTResult result2 = processor.findBestPath(leftD, rightD, 0.0, 0.0, 10, List.of(), 1000.0, 500);
         
         // === ПРОВЕРКИ ===
         
@@ -348,7 +348,7 @@ public class ShortestPathTreeProcessorTest {
         );
         
         ShortestPathTreeProcessor processor = new ShortestPathTreeProcessor();
-        SPTResult result = processor.findBestPath(emptyResult, emptyResult, 0.0, 0.0, 10);
+        SPTResult result = processor.findBestPath(emptyResult, emptyResult, 0.0, 0.0, 10, List.of(), 1000.0, 500);
         
         // Должен вернуть результат с MIN_VALUE балансом
         Assertions.assertEquals(Double.MIN_VALUE, result.balanceWeight());
@@ -436,7 +436,7 @@ public class ShortestPathTreeProcessorTest {
         );
         
         ShortestPathTreeProcessor processor = new ShortestPathTreeProcessor();
-        SPTResult result = processor.findBestPath(leftD, rightD, 0.0, 0.0, 10);
+        SPTResult result = processor.findBestPath(leftD, rightD, 0.0, 0.0, 10, List.of(), 1000.0, 500);
         
         // === ВИЗУАЛИЗАЦИЯ ===
         dumpBestPathToFile(graph, result, root, leftBoundary, rightBoundary, 
