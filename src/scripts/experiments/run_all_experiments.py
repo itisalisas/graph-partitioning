@@ -13,15 +13,17 @@ args = parser.parse_args()
 
 # Configuration
 algorithms = ['DIF', 'RIF']
-coefficients = ['0.1', '0.25', '0.4']
+coefficients = ['0.1', '0.25']
 weights = ['10000', '20000']
 num_workers = args.workers
 
 run_script = 'src/scripts/experiments/run_test_datasets.py'
 calc_stats_script = 'src/scripts/experiments/calculate_statistic.py'
+compare_script = 'src/scripts/experiments/compare_rif_dif.py'
 
 def run_experiment(algorithm, coef):
     """Run a single experiment with given parameters."""
+    # NOTE: Change version suffix (_3) here if needed for new experiment runs
     experiment_dir = f"{algorithm}_{coef.replace('.', '_')}"
     
     print("\n" + "="*80)
@@ -74,7 +76,7 @@ def run_experiment(algorithm, coef):
         print(stats_result.stdout)
         print(f"✓ Statistics calculated for {experiment_dir}")
         
-        return True
+        return (True, experiment_dir)
         
     except subprocess.CalledProcessError as e:
         if 'run_test_datasets' in str(cmd):
@@ -83,10 +85,10 @@ def run_experiment(algorithm, coef):
             print(f"\n✗ Statistics calculation for {experiment_dir} failed with return code {e.returncode}")
             if hasattr(e, 'stderr') and e.stderr:
                 print(f"Error: {e.stderr}")
-        return False
+        return (False, experiment_dir)
     except Exception as e:
         print(f"\n✗ Experiment {experiment_dir} failed with error: {e}")
-        return False
+        return (False, experiment_dir)
 
 def main():
     """Run all experiment combinations."""
@@ -101,13 +103,16 @@ def main():
     print("="*80)
     
     results = []
+    experiment_dirs = []
     start_time = datetime.now()
     
     for algorithm in algorithms:
         for coef in coefficients:
             experiment_name = f"{algorithm}_{coef.replace('.', '_')}"
-            success = run_experiment(algorithm, coef)
+            success, exp_dir = run_experiment(algorithm, coef)
             results.append((experiment_name, success))
+            if success:
+                experiment_dirs.append(exp_dir)
     
     end_time = datetime.now()
     duration = end_time - start_time
@@ -134,6 +139,82 @@ def main():
     print(f"Successful: {successful}")
     print(f"Failed: {failed}")
     print("="*80 + "\n")
+    
+    # Generate comparison HTML tables
+    if successful > 0:
+        print("\n" + "="*80)
+        print("GENERATING COMPARISON TABLES")
+        print("="*80 + "\n")
+        
+        # Extract version from the first successful experiment directory name
+        version = None
+        if experiment_dirs:
+            # Example: DIF_0_1_3 -> parts = ['DIF', '0', '1', '3'] -> version = '3'
+            parts = experiment_dirs[0].split('_')
+            if len(parts) >= 4 and parts[-1].isdigit():
+                version = parts[-1]
+        
+        version_suffix = f"_v{version}" if version else ""
+        version_arg = ['--version', version] if version else []
+        version_msg = f" (version {version})" if version else ""
+        
+        print(f"Detected experiment version: {version if version else 'no version suffix'}\n")
+        
+        # Generate comparison for each coefficient (only for sizes 1000 and 2000)
+        for coef in coefficients:
+            output_file = f"src/main/output/comparison_coef_{coef.replace('.', '_')}{version_suffix}.html"
+            print(f"Generating comparison for coefficient {coef} (sizes: 1000, 2000){version_msg}...")
+            
+            compare_cmd = [
+                sys.executable,
+                compare_script,
+                '--base-dir', 'src/main/output',
+                '--output', output_file,
+                '--coef', coef,
+                '--sizes', '1000', '2000'
+            ] + version_arg
+            
+            try:
+                result = subprocess.run(
+                    compare_cmd,
+                    check=True,
+                    text=True,
+                    capture_output=True
+                )
+                print(result.stdout)
+                print(f"✓ Comparison table generated: {output_file}")
+            except subprocess.CalledProcessError as e:
+                print(f"✗ Failed to generate comparison for coefficient {coef}")
+                if e.stderr:
+                    print(f"Error: {e.stderr}")
+        
+        # Generate combined comparison with picker (all coefficients, only sizes 1000 and 2000)
+        output_file = f"src/main/output/comparison_all{version_suffix}.html"
+        print(f"\nGenerating combined comparison with coefficient picker (sizes: 1000, 2000){version_msg}...")
+        
+        compare_cmd = [
+            sys.executable,
+            compare_script,
+            '--base-dir', 'src/main/output',
+            '--output', output_file,
+            '--sizes', '1000', '2000'
+        ] + version_arg
+        
+        try:
+            result = subprocess.run(
+                compare_cmd,
+                check=True,
+                text=True,
+                capture_output=True
+            )
+            print(result.stdout)
+            print(f"✓ Combined comparison table generated: {output_file}")
+        except subprocess.CalledProcessError as e:
+            print(f"✗ Failed to generate combined comparison")
+            if e.stderr:
+                print(f"Error: {e.stderr}")
+        
+        print("="*80 + "\n")
     
     return 0 if failed == 0 else 1
 

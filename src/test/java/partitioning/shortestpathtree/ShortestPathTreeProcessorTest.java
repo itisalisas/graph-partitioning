@@ -4,19 +4,27 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
 import graphPreparation.GraphPreparation;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
 import partitioning.entities.DijkstraResult;
 import partitioning.entities.SPTResult;
 import partitioning.entities.SPTWithRegionWeights;
-import partitioning.maxflow.Dijkstra;
 import partitioning.maxflow.CornerConstraints;
+import partitioning.maxflow.Dijkstra;
 
 public class ShortestPathTreeProcessorTest {
 
@@ -153,7 +161,7 @@ public class ShortestPathTreeProcessorTest {
         
         // Используем процессор для нахождения лучшего пути
         ShortestPathTreeProcessor processor = new ShortestPathTreeProcessor();
-        SPTResult result = processor.findBestPath(leftD, rightD, 0.0, 0.0);
+        SPTResult result = processor.findBestPath(leftD, rightD, 0.0, 0.0, 10, List.of(), 1000.0, 500);
         
         // Отладка
         System.out.println("=== Debug testFindBestPathBasic ===");
@@ -291,8 +299,8 @@ public class ShortestPathTreeProcessorTest {
         double sourceWeight = 100.0;
         double sinkWeight = 100.0;
         
-        SPTResult result1 = processor.findBestPath(leftD, rightD, sourceWeight, sinkWeight);
-        SPTResult result2 = processor.findBestPath(leftD, rightD, 0.0, 0.0);
+        SPTResult result1 = processor.findBestPath(leftD, rightD, sourceWeight, sinkWeight, 10, List.of(), 1000.0, 500);
+        SPTResult result2 = processor.findBestPath(leftD, rightD, 0.0, 0.0, 10, List.of(), 1000.0, 500);
         
         // === ПРОВЕРКИ ===
         
@@ -340,7 +348,7 @@ public class ShortestPathTreeProcessorTest {
         );
         
         ShortestPathTreeProcessor processor = new ShortestPathTreeProcessor();
-        SPTResult result = processor.findBestPath(emptyResult, emptyResult, 0.0, 0.0);
+        SPTResult result = processor.findBestPath(emptyResult, emptyResult, 0.0, 0.0, 10, List.of(), 1000.0, 500);
         
         // Должен вернуть результат с MIN_VALUE балансом
         Assertions.assertEquals(Double.MIN_VALUE, result.balanceWeight());
@@ -428,7 +436,7 @@ public class ShortestPathTreeProcessorTest {
         );
         
         ShortestPathTreeProcessor processor = new ShortestPathTreeProcessor();
-        SPTResult result = processor.findBestPath(leftD, rightD, 0.0, 0.0);
+        SPTResult result = processor.findBestPath(leftD, rightD, 0.0, 0.0, 10, List.of(), 1000.0, 500);
         
         // === ВИЗУАЛИЗАЦИЯ ===
         dumpBestPathToFile(graph, result, root, leftBoundary, rightBoundary, 

@@ -1,14 +1,23 @@
 package partitioning.splitting;
 
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
+
+import org.junit.jupiter.api.Assertions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import graph.EdgeOfGraph;
 import graph.Graph;
 import graph.Vertex;
-import org.junit.jupiter.api.Assertions;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import partitioning.entities.NeighborSplit;
 
 public class VertexSplitter {
@@ -899,16 +908,45 @@ public class VertexSplitter {
             Set<Vertex> sinkBoundarySet = new HashSet<>(sinkBoundary);
             Set<Vertex> externalBoundarySet = new HashSet<>(externalBoundary);
 
+            Map<Long, Set<Long>> boundaryNeighbors = new HashMap<>(externalBoundary.size());
+            for (int i = 0; i < externalBoundary.size(); i++) {
+                Vertex curr = externalBoundary.get(i);
+                Vertex next = externalBoundary.get((i + 1) % externalBoundary.size());
+                
+                boundaryNeighbors.computeIfAbsent(curr.getName(), k -> new HashSet<>()).add(next.getName());
+                boundaryNeighbors.computeIfAbsent(next.getName(), k -> new HashSet<>()).add(curr.getName());
+            }
+
             List<EdgeOfGraph<Vertex>> edgesList = new ArrayList<>(orderedEdges.get(currentVertex));
             int sourceEdgeIdx = -1, sinkEdgeIdx = -1;
 
             for (int i = 0; i < edgesList.size(); i++) {
                 EdgeOfGraph<Vertex> edge = edgesList.get(i);
-                if (externalBoundarySet.contains(edge.end) && sourceBoundarySet.contains(edge.end) && !sinkBoundarySet.contains(edge.end)) {
-                    sourceEdgeIdx = i;
+                boolean isOnExternal = externalBoundarySet.contains(edge.end);
+                boolean isOnSource = sourceBoundarySet.contains(edge.end);
+                boolean isOnSink = sinkBoundarySet.contains(edge.end);
+                
+                // O(1) проверка: являются ли вершины соседями на границе
+                Set<Long> neighbors = boundaryNeighbors.get(currentVertex.getName());
+                boolean isActualBoundaryEdge = neighbors != null && neighbors.contains(edge.end.getName());
+                
+                if (isOnExternal && isOnSource && !isOnSink) {
+                    if (isActualBoundaryEdge) {
+                        sourceEdgeIdx = i;
+                        logger.debug("Found source boundary edge: {} -> {}", currentVertex.getName(), edge.end.getName());
+                    } else {
+                        logger.debug("Edge {} -> {} is in sourceBoundary but NOT a boundary edge (not adjacent in externalBoundary)", 
+                                currentVertex.getName(), edge.end.getName());
+                    }
                 }
-                if (externalBoundarySet.contains(edge.end) && sinkBoundarySet.contains(edge.end) && !sourceBoundarySet.contains(edge.end)) {
-                    sinkEdgeIdx = i;
+                if (isOnExternal && isOnSink && !isOnSource) {
+                    if (isActualBoundaryEdge) {
+                        sinkEdgeIdx = i;
+                        logger.debug("Found sink boundary edge: {} -> {}", currentVertex.getName(), edge.end.getName());
+                    } else {
+                        logger.debug("Edge {} -> {} is in sinkBoundary but NOT a boundary edge (not adjacent in externalBoundary)", 
+                                currentVertex.getName(), edge.end.getName());
+                    }
                 }
             }
 

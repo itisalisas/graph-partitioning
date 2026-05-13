@@ -1,16 +1,31 @@
 package partitioning.algorithms;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.Set;
+import java.util.Stack;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import geometry.Geometry;
-import graph.*;
-import org.junit.jupiter.api.Assertions;
+import graph.Edge;
+import graph.Graph;
+import graph.Point;
+import graph.Vertex;
+import graph.VertexOfDualGraph;
 import partitioning.entities.FlowResult;
 import partitioning.maxflow.MaxFlow;
 import partitioning.maxflow.MaxFlowDinic;
@@ -170,7 +185,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
             MaxFlow maxFlow;
             if (USE_REIF) {
-                maxFlow = new MaxFlowReif(simpleGraph, copyGraph, source, sink, coordinateConversion);
+                maxFlow = new MaxFlowReif(simpleGraph, copyGraph, source, sink, coordinateConversion, maxSumVerticesWeight);
             } else {
                 maxFlow = new MaxFlowDinic(copyGraph, source, sink);
             }

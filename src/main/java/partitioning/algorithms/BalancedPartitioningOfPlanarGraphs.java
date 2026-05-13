@@ -17,6 +17,9 @@ import readWrite.CoordinateConversion;
 public abstract class BalancedPartitioningOfPlanarGraphs {
 
 	public List<Set<VertexOfDualGraph>> partition = new ArrayList<>();
+	
+	// Отдельное хранилище для "больших" вершин (извлеченных через extractBigVertices)
+	public List<Set<VertexOfDualGraph>> bigVerticesPartitions = new ArrayList<>();
 
 	public Graph<VertexOfDualGraph> graph;
 
@@ -39,7 +42,8 @@ public abstract class BalancedPartitioningOfPlanarGraphs {
 	public void extractBigVertices(Graph<VertexOfDualGraph> dualGraph, int maxSumVerticesWeight) {
 		for (VertexOfDualGraph v: dualGraph.verticesArray()) {
 			while (v.getWeight() >= maxSumVerticesWeight) {
-                partition.add(Set.of(v));
+				// Добавляем в отдельное хранилище для больших вершин
+                bigVerticesPartitions.add(Set.of(v));
 				v.setWeight(v.getWeight() - maxSumVerticesWeight);
 			}
 		}

@@ -16,7 +16,10 @@ public class NestedFacesRemover {
 
     private static final Logger logger = LoggerFactory.getLogger(NestedFacesRemover.class);
 
-    public static Set<VertexOfDualGraph> removeNestedFaces(Graph<VertexOfDualGraph> dualGraph, CoordinateConversion cc) {
+    public static Set<VertexOfDualGraph> removeNestedFaces(
+            Graph<VertexOfDualGraph> dualGraph,
+            VertexOfDualGraph outerFace
+    ) {
         Set<VertexOfDualGraph> totalRemoved = new HashSet<>();
 
         logger.debug("removeNestedFaces start: dualGraph has {} vertices", dualGraph.verticesNumber());
@@ -29,15 +32,10 @@ public class NestedFacesRemover {
             Set<VertexOfDualGraph> articulationPoints = findArticulationPoints(dualGraph);
 
             logger.debug("iteration {}: found {} articulation points", iteration, articulationPoints.size());
-            for (VertexOfDualGraph ap : articulationPoints) {
-                Point geo = cc.fromEuclidean(ap);
-                logger.debug("AP: name={} lon={} lat={} area={} faceSize={}",
-                        ap.getName(), geo.x, geo.y, Math.abs(ap.area), ap.getVerticesOfFace().size());
-            }
 
             Map<VertexOfDualGraph, Set<VertexOfDualGraph>> apToNested = new LinkedHashMap<>();
             for (VertexOfDualGraph ap : articulationPoints) {
-                Set<VertexOfDualGraph> nested = findNestedVertices(dualGraph, ap, cc);
+                Set<VertexOfDualGraph> nested = findNestedVertices(dualGraph, ap, outerFace);
                 logger.debug("AP name={}: found {} nested vertices {}", ap.getName(), nested.size(), nested.stream().map(Vertex::getName).toList());
                 if (!nested.isEmpty()) {
                     apToNested.put(ap, nested);
@@ -72,60 +70,28 @@ public class NestedFacesRemover {
     private static Set<VertexOfDualGraph> findNestedVertices(
             Graph<VertexOfDualGraph> dualGraph,
             VertexOfDualGraph ap,
-            CoordinateConversion cc) {
+            VertexOfDualGraph outerFace) {
 
-        Set<VertexOfDualGraph> allExcludingAP = new HashSet<>(dualGraph.verticesArray());
-        allExcludingAP.remove(ap);
+        Set<VertexOfDualGraph> allowed = new HashSet<>(dualGraph.verticesArray());
+        allowed.remove(ap);
 
-        List<Set<VertexOfDualGraph>> components = findComponents(dualGraph, allExcludingAP);
-
-        logger.debug("AP name={}: {} components after removal", ap.getName(), components.size());
+        List<Set<VertexOfDualGraph>> components =
+                findComponents(dualGraph, allowed);
 
         Set<VertexOfDualGraph> nested = new HashSet<>();
-        List<Point> apGeoPolygon = toGeoPolygon(ap.getVerticesOfFace(), cc);
-        List<List<Point>> subPolygons = Geometry.decomposePolygon(apGeoPolygon);
-        logger.debug("AP name={}: polygon size={} decomposed into {} sub-polygons, sizes: {}",
-                ap.getName(), apGeoPolygon.size(), subPolygons.size(),
-                subPolygons.stream().map(List::size).toList());
 
-        for (int i = 0; i < components.size(); i++) {
-            Set<VertexOfDualGraph> component = components.get(i);
-            boolean inside = isInsidePolygon(component, subPolygons, cc, ap.name);
-            logger.debug("component[{}] size={} inside={}", i, component.size(), inside);
-            if (inside) {
-                nested.addAll(component);
+        for (Set<VertexOfDualGraph> component : components) {
+
+            // component connected to outer face is NOT nested
+            if (component.contains(outerFace)) {
+                continue;
             }
+
+            // every other component is enclosed
+            nested.addAll(component);
         }
 
         return nested;
-    }
-
-    private static List<Point> toGeoPolygon(List<Vertex> polygon, CoordinateConversion cc) {
-        List<Point> geo = new ArrayList<>(polygon.size());
-        for (Vertex v : polygon) {
-            geo.add(cc.fromEuclidean(v));
-        }
-        return geo;
-    }
-
-    private static boolean isInsidePolygon(Set<VertexOfDualGraph> component, List<List<Point>> subPolygons, CoordinateConversion cc, long name) {
-        for (VertexOfDualGraph v : component) {
-            boolean inside = false;
-            outer:
-            for (Vertex u : v.getVerticesOfFace()) {
-                Point geo = cc.fromEuclidean(u);
-                for (List<Point> sub : subPolygons) {
-                    if (Geometry.containsPoint(sub, geo)) {
-                        inside = true;
-                        break outer;
-                    }
-                }
-            }
-            if (!inside) {
-                return false;
-            }
-        }
-        return true;
     }
 
     private static List<Set<VertexOfDualGraph>> findComponents(
