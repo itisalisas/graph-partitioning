@@ -210,7 +210,16 @@ public class MaxFlowReif implements MaxFlow {
         List<Vertex> externalBoundary = BoundSearcher.findBound(initGraph, allDualVerticesSet);
         Map<Vertex, Map<Vertex, Edge>> edges = initGraph.getEdges();
         for (int i = 0; i < externalBoundary.size(); i++) {
-            boundaryLength += edges.get(externalBoundary.get(i)).get(externalBoundary.get((i + 1) % externalBoundary.size())).length;
+            Vertex v1 = externalBoundary.get(i);
+            Vertex v2 = externalBoundary.get((i + 1) % externalBoundary.size());
+            
+            Map<Vertex, Edge> v1Edges = edges.get(v1);
+            if (v1Edges != null) {
+                Edge edge = v1Edges.get(v2);
+                if (edge != null) {
+                    boundaryLength += edge.length;
+                }
+            }
         }
 
         return new BoundariesData(sourceBoundary, sinkBoundary, externalBoundary);
