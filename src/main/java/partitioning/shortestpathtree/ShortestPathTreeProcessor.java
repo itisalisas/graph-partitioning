@@ -24,6 +24,10 @@ public class ShortestPathTreeProcessor {
         this.lengthPriority = lengthPriority;
     }
 
+    public ShortestPathTreeProcessor() {
+        this.lengthPriority = 0.5;
+    }
+
     public SPTResult findBestPath(
             DijkstraResult result1, 
             DijkstraResult result2, 

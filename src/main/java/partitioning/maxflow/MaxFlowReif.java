@@ -76,6 +76,16 @@ public class MaxFlowReif implements MaxFlow {
         this.lengthPriority = lengthPriority;
     }
 
+    public MaxFlowReif(Graph<Vertex> initGraph,
+                       Graph<VertexOfDualGraph> dualGraph,
+                       VertexOfDualGraph source,
+                       VertexOfDualGraph sink,
+                       CoordinateConversion conversion,
+                       int maxSumVerticesWeight
+    ) {
+        this(initGraph, dualGraph, source, sink, conversion, maxSumVerticesWeight, 0.5);
+    }
+
     @Override
     public FlowResult findFlow() {
         // Подготовка данных
