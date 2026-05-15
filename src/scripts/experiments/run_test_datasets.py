@@ -14,12 +14,14 @@ parser.add_argument('experiment_dir', type=str, help='Name of experiment directo
 parser.add_argument('--algorithm', type=str, default='IF', help='Algorithm to use (default: IF)')
 parser.add_argument('--weights', type=str, nargs='+', default=['10000', '20000'], help='Max weight values (default: 10000 20000)')
 parser.add_argument('--coef', type=str, default='0.1', help='Coefficient parameter (default: 0.1)')
+parser.add_argument('--length-priority', type=str, default='0.5', help='LENGTH_PRIORITY parameter (default: 0.5)')
 parser.add_argument('--workers', type=int, default=1, help='Number of parallel workers (default: 1)')
 args = parser.parse_args()
 
 algorithm = args.algorithm
 max_sum_vertices_weight = args.weights
 coef = args.coef
+length_priority = args.length_priority
 num_workers = args.workers
 
 max_region_radius_meters = "1000"
@@ -94,7 +96,8 @@ def run_single_experiment(task):
         f"{weight} "
         f"{max_region_radius_meters} "
         f"{output_dir} "
-        f"-p {coef}"
+        f"-p {coef} "
+        f"-l {length_priority}"
     )
     
     gradle_wrapper = "gradlew.bat" if os.name == "nt" else "./gradlew"
@@ -227,7 +230,7 @@ for city in os.listdir(data_root):
 # Print summary
 safe_print("\n" + "="*80)
 safe_print(f"Experiment: {args.experiment_dir}")
-safe_print(f"Algorithm: {algorithm}, Coefficient: {coef}")
+safe_print(f"Algorithm: {algorithm}, Coefficient: {coef}, LENGTH_PRIORITY: {length_priority}")
 safe_print(f"Workers: {num_workers}")
 safe_print(f"Total tasks: {len(tasks)}")
 safe_print("="*80 + "\n")

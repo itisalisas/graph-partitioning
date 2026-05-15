@@ -64,11 +64,16 @@ public class Main implements Runnable {
             description = "Partition parameter (default: ${DEFAULT-VALUE})")
     private double partitionParameter;
 
+    @Option(names = {"-l", "--length-priority"}, defaultValue = "0.5",
+            description = "Length priority coefficient for Reif (default: ${DEFAULT-VALUE})")
+    private double lengthPriority;
+
     @Override
     public void run() throws RuntimeException {
         BalancedPartitioning partitioning = Algorithm.getBalancedPartitioningByAlgorithmName(
                 algorithmName,
-                partitionParameter
+                partitionParameter,
+                lengthPriority
         );
 
         Graph<Vertex> graph = new Graph<>();
@@ -140,7 +145,7 @@ public class Main implements Runnable {
         long time3 = System.currentTimeMillis();
         logger.info("Building partition graph time: " + (time3 - time2) + " ms");
 
-        Balancer balancer = new Balancer(partitionGraph, preparedGraph, graph, maxSumVerticesWeight, OUTPUT_DIRECTORY + pathToResultDirectory, cc, algorithmName.equals(Algorithm.RIF));
+        Balancer balancer = new Balancer(partitionGraph, preparedGraph, graph, maxSumVerticesWeight, OUTPUT_DIRECTORY + pathToResultDirectory, cc, algorithmName.equals(Algorithm.RIF), lengthPriority);
         partitionResultForFaces = balancer.rebalancing();
         HashMap<VertexOfDualGraph, Integer> newDualVertexToPartNumber = new HashMap<>();
         for (int i = 0; i < partitionResultForFaces.size(); i++) {

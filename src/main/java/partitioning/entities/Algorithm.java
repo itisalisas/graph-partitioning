@@ -13,12 +13,13 @@ public enum Algorithm {
 
     public static BalancedPartitioning getBalancedPartitioningByAlgorithmName(
             Algorithm algorithmName,
-            double partitionParameter) {
+            double partitionParameter,
+            double lengthPriority) {
         return switch (algorithmName) {
             case DIF -> new BalancedPartitioning(
                     new InertialFlowPartitioning(partitionParameter, false));
             case RIF -> new BalancedPartitioning(
-                    new InertialFlowPartitioning(partitionParameter, true));
+                    new InertialFlowPartitioning(partitionParameter, true, lengthPriority));
             case BUP -> new BalancedPartitioning(
                     new BubblePartitioning());
             case BUS -> new BalancedPartitioning(

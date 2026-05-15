@@ -1,7 +1,15 @@
 package graph;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
+import java.util.TreeSet;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -349,7 +357,12 @@ public class Graph<T extends Vertex> {
         }
     }
 
-    public void addBoundEdgesWithConstraints(List<T> boundVertices, Graph<T> sourceGraph, Set<Map.Entry<T, T>> constraints) {
+    public void addBoundEdgesWithConstraints(
+        List<T> boundVertices, 
+        Graph<T> sourceGraph, 
+        Set<Map.Entry<T, T>> constraints,
+        Set<T> externalBoundarySet
+    ) {
         Set<T> boundVerticesSet = new HashSet<>(boundVertices);
         for (int i = 0; i < boundVertices.size(); i++) {
             T v = boundVertices.get(i);
@@ -362,7 +375,8 @@ public class Graph<T extends Vertex> {
                     : v.getLength(next);
             addEdge(v, next, length);
             for (T u: sourceGraph.getEdges().get(v).keySet()) {
-                if (!constraints.contains(Map.entry(v, u)) && boundVerticesSet.contains(u)) {
+                if (!constraints.contains(Map.entry(v, u)) && boundVerticesSet.contains(u) 
+                    && !(externalBoundarySet.contains(u) && externalBoundarySet.contains(v))) {
                     addVertex(u);
                     addEdge(v, u, sourceGraph.getEdges().get(v).get(u).length);
                 }

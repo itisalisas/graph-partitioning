@@ -16,8 +16,17 @@ import partitioning.entities.SPTResult;
 public class ShortestPathTreeProcessor {
     private static final Logger logger = LoggerFactory.getLogger(ShortestPathTreeProcessor.class);
 
-    private static final double BETA = 0.25;
     private static final double EXTERNAL_BOUNDARY_PENALTY = 10.0;
+
+    private final double lengthPriority;
+
+    public ShortestPathTreeProcessor(double lengthPriority) {
+        this.lengthPriority = lengthPriority;
+    }
+
+    public ShortestPathTreeProcessor() {
+        this.lengthPriority = 0.5;
+    }
 
     public SPTResult findBestPath(
             DijkstraResult result1, 
@@ -88,6 +97,7 @@ public class ShortestPathTreeProcessor {
                     result1, i1, 
                     result2, i2, 
                     sourceWeight, sinkWeight, boundaryLength,
+                    totalWeight,
                     totalExternalCount,
                     alpha
                 );
@@ -133,6 +143,7 @@ public class ShortestPathTreeProcessor {
         double sourceWeight, 
         double sinkWeight, 
         double boundaryLength,
+        double totalWeight,
         int externalVerticesCount,
         double alpha
     ) {
@@ -152,15 +163,17 @@ public class ShortestPathTreeProcessor {
         }
 
         double length = d1 + d2;
-        double totalWeight = result1.totalRegionWeight() + result2.totalRegionWeight() + sourceWeight + sinkWeight;
-        double leftWeight = result1.weights().get(result1.leafIndices().get(i1))
-                + (result2.totalRegionWeight() - result2.weights().get(result2.leafIndices().get(i2)))
+        double leftWeight = result2.weights().get(result2.leafIndices().get(i2))
+                + (result1.totalRegionWeight() - result1.weights().get(result1.leafIndices().get(i1)))
                 + sourceWeight;
         double balance = Math.abs(alpha * totalWeight - leftWeight);
+        if (Math.abs((1 - alpha) * totalWeight - leftWeight) < balance) {
+            balance = Math.abs(alpha * totalWeight - leftWeight);
+        }
         double normalizedLength = length / boundaryLength;
         double normalizedBalance = balance / totalWeight;
         
-        double baseScore = BETA * normalizedLength + (1 - BETA) * normalizedBalance;
+        double baseScore = lengthPriority * normalizedLength + (1 - lengthPriority) * normalizedBalance;
         
         double penalizedScore = baseScore;
         if (externalVerticesCount > 2) {

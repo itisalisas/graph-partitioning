@@ -38,35 +38,105 @@ def parse_dataset_name(path: str) -> Tuple[str, str, str]:
 def extract_coef_from_exp_name(exp_name: str) -> str:
     """
     Извлекает коэффициент из имени эксперимента.
-    Пример: RIF_0_1_3 -> 0.1, DIF_0_25 -> 0.25
+    Пример: RIF_0_25_lp0_5_21 -> 0.25, RIF_0_1_3 -> 0.1, DIF_0_25 -> 0.25
     """
     parts = exp_name.split('_')
     if len(parts) >= 3:
-        # Убираем последнюю часть если это номер версии (_2, _3)
-        if len(parts) >= 4 and parts[-1].isdigit():
-            coef_parts = parts[1:3]
-        else:
-            coef_parts = parts[1:3]
-        return '.'.join(coef_parts)
+        # Коэффициент всегда состоит из двух частей после алгоритма (индексы 1 и 2)
+        # Останавливаемся когда встретили 'lp' или собрали 2 части
+        coef_parts = []
+        for i in range(1, len(parts)):
+            # Останавливаемся если встретили маркер LENGTH_PRIORITY
+            if parts[i].startswith('lp'):
+                break
+            coef_parts.append(parts[i])
+            # Коэффициент всегда состоит из 2 частей
+            if len(coef_parts) == 2:
+                break
+        if len(coef_parts) >= 2:
+            return '.'.join(coef_parts[:2])
     return "unknown"
+
+
+def extract_length_priority_from_exp_name(exp_name: str) -> str:
+    """
+    Извлекает LENGTH_PRIORITY из имени эксперимента.
+    Примеры: 
+      RIF_0_1_lp0_5_26 -> 0.5 (LP, затем версия)
+      RIF_0_1_lp0_25_26 -> 0.25 (LP, затем версия)
+      RIF_0_1_lp0_25 -> 0.25 (LP, нет версии)
+      RIF_0_1_lp0_75 -> 0.75 (LP, нет версии)
+      RIF_0_1_lp1_0 -> 1.0
+      RIF_0_1_26 -> '' (нет LP)
+    """
+    parts = exp_name.split('_')
+    # Ищем часть с префиксом 'lp'
+    for i in range(len(parts)):
+        if parts[i].startswith('lp'):
+            # lp0 -> первая часть числа
+            lp_first = parts[i][2:]  # убираем 'lp'
+            # Следующая часть - вторая часть числа (после точки)
+            if i + 1 < len(parts):
+                lp_second = parts[i + 1]
+                # Проверяем, что следующая часть - это число
+                if lp_second.isdigit():
+                    lp_second_val = int(lp_second)
+                    # LP может быть 0, 25, 5, 50, 75 (от 0.0 до 1.0)
+                    # Версия обычно >= 20
+                    # Если есть еще одна часть после lp_second, то lp_second - это LP компонент
+                    # Если lp_second - последняя часть, то нужно угадать:
+                    #   - если <= 75, скорее всего LP
+                    #   - если >= 20, может быть версией, НО если < 100 то скорее LP
+                    has_part_after = (i + 2 < len(parts))
+                    is_likely_lp = (lp_second_val <= 75 or has_part_after)
+                    
+                    if is_likely_lp:
+                        return f"{lp_first}.{lp_second}"
+            # Если следующей части нет, возвращаем X.0
+            return f"{lp_first}.0" if lp_first else "0.0"
+    return ""  # LENGTH_PRIORITY не указан
 
 
 def extract_version_from_exp_name(exp_name: str) -> str:
     """
     Извлекает версию из имени эксперимента.
-    Пример: RIF_0_1_3 -> 3, DIF_0_25 -> '', RIF_0_4_2 -> 2
+    Примеры:
+      RIF_0_1_lp0_0_26 -> '26' (версия после LP)
+      RIF_0_1_lp0_25 -> '' (нет версии после LP)
+      RIF_0_1_26 -> '26' (нет LP, версия в конце)
+      RIF_0_1 -> '' (нет версии)
     """
     parts = exp_name.split('_')
-    # Версия - это последняя часть, если она является цифрой
-    if len(parts) >= 4 and parts[-1].isdigit():
-        return parts[-1]
-    return ""
+    
+    # Ищем маркер 'lp' в имени
+    lp_index = -1
+    for i, part in enumerate(parts):
+        if part.startswith('lp'):
+            lp_index = i
+            break
+    
+    if lp_index >= 0:
+        # Есть LENGTH_PRIORITY
+        # LP состоит из 2 частей: lpX и Y, например lp0 и 25
+        # Версия должна быть ПОСЛЕ LP компонентов (т.е. после lp_index + 1)
+        version_index = lp_index + 2
+        if version_index < len(parts) and parts[version_index].isdigit():
+            # Проверяем что это действительно версия (обычно >= 20)
+            # или это единственная часть после LP
+            return parts[version_index]
+        return ""
+    else:
+        # Нет LENGTH_PRIORITY, версия - последняя цифровая часть
+        # Пропускаем первые 3 части (алгоритм + коэффициент из 2 частей)
+        if len(parts) >= 4 and parts[-1].isdigit():
+            return parts[-1]
+        return ""
 
 
-def load_experiment_data(base_dir: str, algorithm: str, coef_filter: str = None, size_filter: List[str] = None, version_filter: str = None) -> Dict[str, Dict]:
+def load_experiment_data(base_dir: str, algorithm: str, coef_filter: str = None, lp_filter: str = None, size_filter: List[str] = None, version_filter: str = None) -> Dict[str, Dict]:
     """
     Загружает данные экспериментов для указанного алгоритма.
-    Возвращает словарь: {coef: {dataset_key: metrics}}
+    Возвращает словарь: {coef: {lp: {dataset_key: metrics}}}
     """
     data = {}
     base_path = Path(base_dir)
@@ -77,21 +147,32 @@ def load_experiment_data(base_dir: str, algorithm: str, coef_filter: str = None,
         if not exp_dir.is_dir():
             continue
         
-        # Извлекаем коэффициент и версию
+        # Извлекаем коэффициент, length_priority и версию
         coef = extract_coef_from_exp_name(exp_dir.name)
+        lp = extract_length_priority_from_exp_name(exp_dir.name)
         version = extract_version_from_exp_name(exp_dir.name)
+        
+        # Если lp пустой, значит это старый эксперимент без length_priority, используем "default"
+        if not lp:
+            lp = "default"
         
         # Фильтруем по коэффициенту если указан
         if coef_filter and coef != coef_filter:
+            continue
+        
+        # Фильтруем по length_priority если указан
+        if lp_filter and lp != lp_filter:
             continue
         
         # Фильтруем по версии если указан
         if version_filter is not None and version != version_filter:
             continue
         
-        # Инициализируем словарь для коэффициента
+        # Инициализируем вложенную структуру для коэффициента и lp
         if coef not in data:
             data[coef] = {}
+        if lp not in data[coef]:
+            data[coef][lp] = {}
         
         # Ищем все partition_info.json в поддиректориях
         for json_file in exp_dir.rglob("partition_info.json"):
@@ -116,9 +197,10 @@ def load_experiment_data(base_dir: str, algorithm: str, coef_filter: str = None,
                 metrics['_size'] = size
                 metrics['_max_weight'] = max_weight
                 metrics['_coef'] = coef
+                metrics['_length_priority'] = lp
                 metrics['_version'] = version
                 
-                data[coef][dataset_key] = metrics
+                data[coef][lp][dataset_key] = metrics
             except Exception as e:
                 print(f"Error loading {json_file}: {e}", file=sys.stderr)
     
@@ -190,11 +272,11 @@ def detect_available_versions(base_dir: str) -> List[str]:
     return sorted_versions
 
 
-def generate_html_table(rif_data: Dict, dif_data: Dict, output_file: str, coef_filter: str = None, version: str = None):
+def generate_html_table(rif_data: Dict, dif_data: Dict, output_file: str, coef_filter: str = None, lp_filter: str = None, version: str = None):
     """
     Генерирует HTML таблицу со сравнением метрик.
-    rif_data: {coef: {dataset_key: metrics}}
-    dif_data: {coef: {dataset_key: metrics}}
+    rif_data: {coef: {lp: {dataset_key: metrics}}}
+    dif_data: {coef: {lp: {dataset_key: metrics}}}
     """
     # Находим общие коэффициенты
     common_coefs = sorted(set(rif_data.keys()) & set(dif_data.keys()))
@@ -203,7 +285,7 @@ def generate_html_table(rif_data: Dict, dif_data: Dict, output_file: str, coef_f
         print("No common coefficients found between RIF and DIF!", file=sys.stderr)
         return
     
-    # Если указан фильтр, используем только его
+    # Если указан фильтр коэффициента, используем только его
     if coef_filter:
         if coef_filter in common_coefs:
             common_coefs = [coef_filter]
@@ -211,14 +293,26 @@ def generate_html_table(rif_data: Dict, dif_data: Dict, output_file: str, coef_f
             print(f"Coefficient {coef_filter} not found in data!", file=sys.stderr)
             return
     
-    # Проверяем датасеты для каждого коэффициента
-    coef_datasets = {}
+    # Для каждого коэффициента находим общие LENGTH_PRIORITY значения
+    coef_lp_datasets = {}
     for coef in common_coefs:
-        common_datasets = sorted(set(rif_data[coef].keys()) & set(dif_data[coef].keys()))
-        if common_datasets:
-            coef_datasets[coef] = common_datasets
+        common_lps = sorted(set(rif_data[coef].keys()) & set(dif_data[coef].keys()))
+        
+        # Если указан фильтр lp, используем только его
+        if lp_filter:
+            if lp_filter in common_lps:
+                common_lps = [lp_filter]
+            else:
+                continue  # Пропускаем этот коэффициент
+        
+        for lp in common_lps:
+            common_datasets = sorted(set(rif_data[coef][lp].keys()) & set(dif_data[coef][lp].keys()))
+            if common_datasets:
+                if coef not in coef_lp_datasets:
+                    coef_lp_datasets[coef] = {}
+                coef_lp_datasets[coef][lp] = common_datasets
     
-    if not coef_datasets:
+    if not coef_lp_datasets:
         print("No common datasets found between RIF and DIF!", file=sys.stderr)
         return
     
@@ -243,8 +337,9 @@ def generate_html_table(rif_data: Dict, dif_data: Dict, output_file: str, coef_f
         'maxRegionWeight'
     ]
     
-    # Определяем коэффициент по умолчанию (0.25 если есть, иначе первый)
+    # Определяем значения по умолчанию
     default_coef = '0.25' if '0.25' in common_coefs else common_coefs[0]
+    default_lp = '0.0' if default_coef in coef_lp_datasets and '0.0' in coef_lp_datasets[default_coef] else list(coef_lp_datasets[default_coef].keys())[0]
     
     version_title = f" (Version {version})" if version else ""
     
@@ -357,83 +452,117 @@ def generate_html_table(rif_data: Dict, dif_data: Dict, output_file: str, coef_f
             text-align: right;
             font-family: 'Courier New', monospace;
         }
-        .coef-table {
+        .data-table {
             display: none;
         }
-        .coef-table.active {
+        .data-table.active {
             display: table;
         }
     </style>
     <script>
-        function switchCoef() {
-            const selector = document.getElementById('coef-selector');
-            const selectedCoef = selector.value;
+        function updateTable() {
+            const coefSelector = document.getElementById('coef-selector');
+            const lpSelector = document.getElementById('lp-selector');
+            const selectedCoef = coefSelector.value;
+            const selectedLp = lpSelector.value;
             
             // Скрываем все таблицы
-            document.querySelectorAll('.coef-table').forEach(table => {
+            document.querySelectorAll('.data-table').forEach(table => {
                 table.classList.remove('active');
             });
             
             // Показываем выбранную таблицу
-            const selectedTable = document.getElementById('table-' + selectedCoef.replace('.', '_'));
+            const tableId = 'table-' + selectedCoef.replace(/\./g, '_') + '-' + selectedLp.replace(/\./g, '_');
+            const selectedTable = document.getElementById(tableId);
             if (selectedTable) {
                 selectedTable.classList.add('active');
             }
+        }
+        
+        function updateLpOptions() {
+            const coefSelector = document.getElementById('coef-selector');
+            const lpSelector = document.getElementById('lp-selector');
+            const selectedCoef = coefSelector.value;
             
-            // Обновляем summary
-            const summary = selectedTable ? selectedTable.dataset.summary : '0';
-            document.getElementById('dataset-count').textContent = summary;
+            // Получаем данные о доступных LP для выбранного коэффициента
+            const lpOptions = coefLpMapping[selectedCoef] || [];
+            
+            // Очищаем текущие опции
+            lpSelector.innerHTML = '';
+            
+            // Добавляем новые опции
+            lpOptions.forEach(lp => {
+                const option = document.createElement('option');
+                option.value = lp;
+                option.text = 'LENGTH_PRIORITY ' + lp;
+                lpSelector.appendChild(option);
+            });
+            
+            // Обновляем таблицу
+            updateTable();
         }
         
         // Инициализация при загрузке страницы
         window.onload = function() {
-            switchCoef();
+            updateLpOptions();
         };
     </script>
 </head>
 <body>
-    <h1>RIF vs DIF Algorithm Comparison""" + version_title + """</h1>
-    
-    <div class="controls">
-        <label for="coef-selector">Coefficient:</label>
-        <select id="coef-selector" onchange="switchCoef()">
-"""
-    
-    # Добавляем опции для коэффициентов
-    for coef in common_coefs:
-        selected = 'selected' if coef == default_coef else ''
-        html += f'            <option value="{coef}" {selected}>coef = {coef}</option>\n'
-    
-    html += """        </select>
-    </div>
-    
-    <div class="summary">
-        <h2>Summary</h2>
-        <p><strong>Total datasets compared:</strong> <span id="dataset-count">0</span></p>
-        <p><strong>Available coefficients:</strong> """ + ', '.join(common_coefs) + """</p>
-    </div>
+    <h1>RIF vs DIF Comparison""" + version_title + """</h1>
     
     <div class="legend">
         <div class="legend-item">
             <div class="legend-box better"></div>
-            <span>RIF is better</span>
+            <span>RIF Better</span>
         </div>
         <div class="legend-item">
             <div class="legend-box worse"></div>
-            <span>RIF is worse</span>
+            <span>RIF Worse</span>
         </div>
     </div>
+    
+    <div class="controls">
+        <label for="coef-selector">Select Coefficient:</label>
+        <select id="coef-selector" onchange="updateLpOptions()">
 """
     
-    # Генерируем таблицы для каждого коэффициента
+    # Добавляем опции для коэффициентов
     for coef in common_coefs:
-        common_datasets = coef_datasets[coef]
-        is_default = (coef == default_coef)
-        active_class = 'active' if is_default else ''
-        table_id = f"table-{coef.replace('.', '_')}"
-        
-        html += f"""    
-    <table id="{table_id}" class="coef-table {active_class}" data-summary="{len(common_datasets)}">
+        selected = ' selected' if coef == default_coef else ''
+        html += f'            <option value="{coef}"{selected}>Coefficient {coef}</option>\n'
+    
+    html += """        </select>
+        <label for="lp-selector">Select LENGTH_PRIORITY:</label>
+        <select id="lp-selector" onchange="updateTable()">
+        </select>
+    </div>
+    
+    <script>
+        // Маппинг коэффициентов к доступным LENGTH_PRIORITY
+        const coefLpMapping = {
+"""
+    
+    # Добавляем маппинг коэффициентов к LP значениям
+    for coef in common_coefs:
+        lps = sorted(coef_lp_datasets[coef].keys())
+        lps_str = ', '.join(f'"{lp}"' for lp in lps)
+        html += f'            "{coef}": [{lps_str}],\n'
+    
+    html += """        };
+    </script>
+"""
+    
+    # Генерируем таблицы для каждой комбинации коэффициента и LENGTH_PRIORITY
+    for coef in common_coefs:
+        for lp in sorted(coef_lp_datasets[coef].keys()):
+            common_datasets = coef_lp_datasets[coef][lp]
+            is_default = (coef == default_coef and lp == default_lp)
+            active_class = 'active' if is_default else ''
+            table_id = f"table-{coef.replace('.', '_')}-{lp.replace('.', '_')}"
+            
+            html += f"""    
+    <table id="{table_id}" class="data-table {active_class}" data-summary="{len(common_datasets)}">
         <thead>
             <tr>
                 <th>Metric</th>
@@ -444,67 +573,67 @@ def generate_html_table(rif_data: Dict, dif_data: Dict, output_file: str, coef_f
         </thead>
         <tbody>
 """
-        
-        for dataset in common_datasets:
-            rif_metrics = rif_data[coef][dataset]
-            dif_metrics = dif_data[coef][dataset]
             
-            # Заголовок датасета
-            html += f"""
+            for dataset in common_datasets:
+                rif_metrics = rif_data[coef][lp][dataset]
+                dif_metrics = dif_data[coef][lp][dataset]
+                
+                # Заголовок датасета
+                html += f"""
             <tr>
                 <td colspan="4" class="dataset-header">
                     {rif_metrics['_city'].capitalize()} | Size: {rif_metrics['_size']} vertices | Max Weight: {rif_metrics['_max_weight']}
                 </td>
             </tr>
 """
-            
-            # Информация о датасете (одинаковая для RIF и DIF)
-            for metric in dataset_info_metrics:
-                value = rif_metrics.get(metric, 'N/A')
-                if isinstance(value, float):
-                    value_str = f"{value:.2f}"
-                else:
-                    value_str = str(value)
                 
-                html += f"""
+                # Информация о датасете (одинаковая для RIF и DIF)
+                for metric in dataset_info_metrics:
+                    value = rif_metrics.get(metric, 'N/A')
+                    if isinstance(value, float):
+                        value_str = f"{value:.2f}"
+                    else:
+                        value_str = str(value)
+                    
+                    html += f"""
             <tr style="background-color: #f0f0f0;">
                 <td class="metric-name">{metric}</td>
                 <td colspan="3" class="number" style="text-align: center; font-style: italic;">{value_str} (dataset property)</td>
             </tr>
 """
-            
-            # Сравниваем каждую метрику
-            for metric in metrics_to_compare:
-                rif_val = rif_metrics.get(metric, 'N/A')
-                dif_val = dif_metrics.get(metric, 'N/A')
                 
-                # Вычисляем разницу в процентах
-                diff_pct = ''
-                if rif_val != 'N/A' and dif_val != 'N/A':
-                    try:
-                        rif_num = float(rif_val)
-                        dif_num = float(dif_val)
-                        if dif_num != 0:
-                            diff = ((rif_num - dif_num) / dif_num) * 100
-                            diff_pct = f"{diff:+.2f}%"
-                    except (ValueError, TypeError):
-                        pass
-                
-                # Определяем класс для подсветки
-                css_class = compare_metric(rif_val, dif_val, metric)
-                
-                # Форматируем значения
-                if isinstance(rif_val, float):
-                    rif_val_str = f"{rif_val:.4f}"
-                else:
-                    rif_val_str = str(rif_val)
-                
-                if isinstance(dif_val, float):
-                    dif_val_str = f"{dif_val:.4f}"
-                else:
-                    dif_val_str = str(dif_val)
-                
-                html += f"""
+                # Сравниваем каждую метрику
+                for metric in metrics_to_compare:
+                    rif_val = rif_metrics.get(metric, 'N/A')
+                    dif_val = dif_metrics.get(metric, 'N/A')
+                    
+                    # Вычисляем разницу в процентах
+                    diff_pct = ''
+                    if rif_val != 'N/A' and dif_val != 'N/A':
+                        try:
+                            rif_num = float(rif_val)
+                            dif_num = float(dif_val)
+                            if dif_num != 0:
+                                diff = ((rif_num - dif_num) / dif_num) * 100
+                                diff_pct = f"{diff:+.2f}%"
+                        except (ValueError, TypeError):
+                            pass
+                    
+                    # Определяем класс для подсветки
+                    css_class = compare_metric(rif_val, dif_val, metric)
+                    
+                    # Форматируем значения
+                    if isinstance(rif_val, float):
+                        rif_val_str = f"{rif_val:.4f}"
+                    else:
+                        rif_val_str = str(rif_val)
+                    
+                    if isinstance(dif_val, float):
+                        dif_val_str = f"{dif_val:.4f}"
+                    else:
+                        dif_val_str = str(dif_val)
+                    
+                    html += f"""
             <tr>
                 <td class="metric-name">{metric}</td>
                 <td class="number {css_class}">{rif_val_str}</td>
@@ -565,6 +694,12 @@ def main():
         default=None,
         help='Filter by experiment version (e.g., 2, 3). If not specified, latest version is used (default: None, auto-detect latest)'
     )
+    parser.add_argument(
+        '--length-priority',
+        type=str,
+        default=None,
+        help='Filter by LENGTH_PRIORITY value (e.g., 0.0, 0.5, 1.0). If not specified, all LENGTH_PRIORITY values will be shown with a picker (default: None)'
+    )
     
     args = parser.parse_args()
     
@@ -580,20 +715,26 @@ def main():
     
     size_filter_msg = f" (filtered by sizes: {', '.join(args.sizes)})" if args.sizes else ""
     version_msg = f" version {args.version}" if args.version else " (no version suffix)"
+    lp_filter_msg = f" (filtered by LENGTH_PRIORITY: {args.length_priority})" if args.length_priority else ""
     
-    print(f"Loading RIF data from {args.base_dir}{size_filter_msg}, {version_msg}...")
-    rif_data = load_experiment_data(args.base_dir, 'RIF', args.coef, args.sizes, args.version)
-    print(f"Found {sum(len(datasets) for datasets in rif_data.values())} RIF datasets across {len(rif_data)} coefficients")
+    print(f"Loading RIF data from {args.base_dir}{size_filter_msg}{lp_filter_msg}, {version_msg}...")
+    rif_data = load_experiment_data(args.base_dir, 'RIF', args.coef, getattr(args, 'length_priority', None), args.sizes, args.version)
     
-    print(f"Loading DIF data from {args.base_dir}{size_filter_msg}, {version_msg}...")
-    dif_data = load_experiment_data(args.base_dir, 'DIF', args.coef, args.sizes, args.version)
-    print(f"Found {sum(len(datasets) for datasets in dif_data.values())} DIF datasets across {len(dif_data)} coefficients")
+    # Подсчет общего количества датасетов (с учетом вложенной структуры)
+    rif_dataset_count = sum(len(lp_datasets) for coef_data in rif_data.values() for lp_datasets in coef_data.values())
+    print(f"Found {rif_dataset_count} RIF datasets across {len(rif_data)} coefficients")
+    
+    print(f"Loading DIF data from {args.base_dir}{size_filter_msg}{lp_filter_msg}, {version_msg}...")
+    dif_data = load_experiment_data(args.base_dir, 'DIF', args.coef, getattr(args, 'length_priority', None), args.sizes, args.version)
+    
+    dif_dataset_count = sum(len(lp_datasets) for coef_data in dif_data.values() for lp_datasets in coef_data.values())
+    print(f"Found {dif_dataset_count} DIF datasets across {len(dif_data)} coefficients")
     
     if not rif_data or not dif_data:
         print("Error: No data found for RIF or DIF", file=sys.stderr)
         return 1
     
-    generate_html_table(rif_data, dif_data, args.output, args.coef, args.version)
+    generate_html_table(rif_data, dif_data, args.output, args.coef, getattr(args, 'length_priority', None), args.version)
     return 0
 
 

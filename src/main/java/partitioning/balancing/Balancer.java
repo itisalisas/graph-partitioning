@@ -36,6 +36,7 @@ public class Balancer {
     String pathToResultDirectory;
     CoordinateConversion cc;
     boolean useReif;
+    double lengthPriority;
 
     public Balancer(
             Graph<PartitionGraphVertex> partitionGraph,
@@ -44,7 +45,8 @@ public class Balancer {
             int maxWeight,
             String pathToResultDirectory,
             CoordinateConversion cc,
-            boolean useReif
+            boolean useReif,
+            double lengthPriority
     ) {
         this.partitionGraph = partitionGraph;
         this.dualGraph = dualGraph;
@@ -53,6 +55,7 @@ public class Balancer {
         this.pathToResultDirectory = pathToResultDirectory;
         this.cc = cc;
         this.useReif = useReif;
+        this.lengthPriority = lengthPriority;
     }
 
     private boolean rebalanceSmallestRegion() {
@@ -87,7 +90,7 @@ public class Balancer {
                 Assertions.assertEquals(balancingVerticesSet.size(), regionsSubgraph.verticesNumber());
                 Assertions.assertTrue(regionsSubgraph.isConnected());
                 double coefficient = 1 - (double) maxWeight / (balancingVerticesSet.stream().mapToDouble(Vertex::getWeight).sum());
-                BalancedPartitioning bp = new BalancedPartitioning(new InertialFlowPartitioning(coefficient, useReif));
+                BalancedPartitioning bp = new BalancedPartitioning(new InertialFlowPartitioning(coefficient, useReif, lengthPriority));
                 List<Set<VertexOfDualGraph>> newPartition = bp.partition(startGraph, regionsSubgraph, maxWeight, cc);
                 if (newPartition.size() > 2) {
                     logger.error("partition size in balancer > 2, skip");

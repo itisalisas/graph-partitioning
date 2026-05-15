@@ -13,7 +13,8 @@ args = parser.parse_args()
 
 # Configuration
 algorithms = ['DIF', 'RIF']
-coefficients = ['0.1', '0.25']
+coefficients = ['0.1', '0.2', '0.3', '0.4']
+length_priorities = ['0.0', '0.25', '0.5', '0.75', '1.0']
 weights = ['10000', '20000']
 num_workers = args.workers
 
@@ -21,14 +22,15 @@ run_script = 'src/scripts/experiments/run_test_datasets.py'
 calc_stats_script = 'src/scripts/experiments/calculate_statistic.py'
 compare_script = 'src/scripts/experiments/compare_rif_dif.py'
 
-def run_experiment(algorithm, coef):
+def run_experiment(algorithm, coef, length_priority):
     """Run a single experiment with given parameters."""
     # NOTE: Change version suffix (_3) here if needed for new experiment runs
-    experiment_dir = f"{algorithm}_{coef.replace('.', '_')}"
+    lp_suffix = length_priority.replace('.', '_')
+    experiment_dir = f"{algorithm}_{coef.replace('.', '_')}_lp{lp_suffix}"
     
     print("\n" + "="*80)
     print(f"Starting experiment: {experiment_dir}")
-    print(f"Algorithm: {algorithm}, Coefficient: {coef}, Workers: {num_workers}")
+    print(f"Algorithm: {algorithm}, Coefficient: {coef}, LENGTH_PRIORITY: {length_priority}, Workers: {num_workers}")
     print(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("="*80 + "\n")
     
@@ -39,6 +41,7 @@ def run_experiment(algorithm, coef):
         experiment_dir,
         '--algorithm', algorithm,
         '--coef', coef,
+        '--length-priority', length_priority,
         '--workers', str(num_workers),
         '--weights'
     ] + weights
@@ -95,9 +98,10 @@ def main():
     print("\n" + "="*80)
     print("BATCH EXPERIMENT RUNNER")
     print("="*80)
-    print(f"Total experiments: {len(algorithms) * len(coefficients)}")
+    print(f"Total experiments: {len(algorithms) * len(coefficients) * len(length_priorities)}")
     print(f"Algorithms: {', '.join(algorithms)}")
     print(f"Coefficients: {', '.join(coefficients)}")
+    print(f"LENGTH_PRIORITY: {', '.join(length_priorities)}")
     print(f"Weights: {', '.join(weights)}")
     print(f"Parallel workers per experiment: {num_workers}")
     print("="*80)
@@ -108,11 +112,12 @@ def main():
     
     for algorithm in algorithms:
         for coef in coefficients:
-            experiment_name = f"{algorithm}_{coef.replace('.', '_')}"
-            success, exp_dir = run_experiment(algorithm, coef)
-            results.append((experiment_name, success))
-            if success:
-                experiment_dirs.append(exp_dir)
+            for length_priority in length_priorities:
+                experiment_name = f"{algorithm}_{coef.replace('.', '_')}_lp{length_priority.replace('.', '_')}"
+                success, exp_dir = run_experiment(algorithm, coef, length_priority)
+                results.append((experiment_name, success))
+                if success:
+                    experiment_dirs.append(exp_dir)
     
     end_time = datetime.now()
     duration = end_time - start_time
@@ -147,50 +152,55 @@ def main():
         print("="*80 + "\n")
         
         # Extract version from the first successful experiment directory name
-        version = None
+        version = ""  # Default to empty string (no version suffix)
         if experiment_dirs:
-            # Example: DIF_0_1_3 -> parts = ['DIF', '0', '1', '3'] -> version = '3'
-            parts = experiment_dirs[0].split('_')
-            if len(parts) >= 4 and parts[-1].isdigit():
-                version = parts[-1]
+            # Import and use the fixed version extraction function
+            import sys
+            sys.path.insert(0, 'src/scripts/experiments')
+            from compare_rif_dif import extract_version_from_exp_name
+            version = extract_version_from_exp_name(experiment_dirs[0])
         
+        # version is now either a version number string (e.g. "26") or empty string ""
         version_suffix = f"_v{version}" if version else ""
-        version_arg = ['--version', version] if version else []
-        version_msg = f" (version {version})" if version else ""
+        version_arg = ['--version', version]  # Always pass version (even if empty string)
+        version_msg = f" (version {version})" if version else " (no version suffix)"
         
-        print(f"Detected experiment version: {version if version else 'no version suffix'}\n")
+        print(f"Detected experiment version: {version if version else 'no version suffix'}")
         
-        # Generate comparison for each coefficient (only for sizes 1000 and 2000)
+        # Generate comparison for each coefficient and length_priority combination (only for sizes 1000 and 2000)
         for coef in coefficients:
-            output_file = f"src/main/output/comparison_coef_{coef.replace('.', '_')}{version_suffix}.html"
-            print(f"Generating comparison for coefficient {coef} (sizes: 1000, 2000){version_msg}...")
-            
-            compare_cmd = [
-                sys.executable,
-                compare_script,
-                '--base-dir', 'src/main/output',
-                '--output', output_file,
-                '--coef', coef,
-                '--sizes', '1000', '2000'
-            ] + version_arg
-            
-            try:
-                result = subprocess.run(
-                    compare_cmd,
-                    check=True,
-                    text=True,
-                    capture_output=True
-                )
-                print(result.stdout)
-                print(f"✓ Comparison table generated: {output_file}")
-            except subprocess.CalledProcessError as e:
-                print(f"✗ Failed to generate comparison for coefficient {coef}")
-                if e.stderr:
-                    print(f"Error: {e.stderr}")
+            for lp in length_priorities:
+                lp_suffix = lp.replace('.', '_')
+                output_file = f"src/main/output/comparison_coef_{coef.replace('.', '_')}_lp{lp_suffix}{version_suffix}.html"
+                print(f"Generating comparison for coefficient {coef}, LENGTH_PRIORITY {lp} (sizes: 1000, 2000){version_msg}...")
+                
+                compare_cmd = [
+                    sys.executable,
+                    compare_script,
+                    '--base-dir', 'src/main/output',
+                    '--output', output_file,
+                    '--coef', coef,
+                    '--length-priority', lp,
+                    '--sizes', '1000', '2000'
+                ] + version_arg
+                
+                try:
+                    result = subprocess.run(
+                        compare_cmd,
+                        check=True,
+                        text=True,
+                        capture_output=True
+                    )
+                    print(result.stdout)
+                    print(f"✓ Comparison table generated: {output_file}")
+                except subprocess.CalledProcessError as e:
+                    print(f"✗ Failed to generate comparison for coefficient {coef}, LENGTH_PRIORITY {lp}")
+                    if e.stderr:
+                        print(f"Error: {e.stderr}")
         
-        # Generate combined comparison with picker (all coefficients, only sizes 1000 and 2000)
+        # Generate combined comparison with pickers (all coefficients and length_priorities, only sizes 1000 and 2000)
         output_file = f"src/main/output/comparison_all{version_suffix}.html"
-        print(f"\nGenerating combined comparison with coefficient picker (sizes: 1000, 2000){version_msg}...")
+        print(f"\nGenerating combined comparison with coefficient and LENGTH_PRIORITY pickers (sizes: 1000, 2000){version_msg}...")
         
         compare_cmd = [
             sys.executable,
