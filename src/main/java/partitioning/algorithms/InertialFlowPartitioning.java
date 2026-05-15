@@ -37,11 +37,27 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
     private final double PARAMETER_SOURCE, PARAMETER_SINK;
     private final boolean USE_REIF;
+    private final double LENGTH_PRIORITY;
+
+    public InertialFlowPartitioning(boolean useReif) {
+        this.PARAMETER_SOURCE = 0.5;
+        this.PARAMETER_SINK = 0.5;
+        this.USE_REIF = useReif;
+        this.LENGTH_PRIORITY = 0.5;
+    }
 
     public InertialFlowPartitioning(double parameter, boolean useReif) {
         this.PARAMETER_SOURCE = parameter;
         this.PARAMETER_SINK = parameter;
         this.USE_REIF = useReif;
+        this.LENGTH_PRIORITY = 0.5;
+    }
+
+    public InertialFlowPartitioning(double parameter, boolean useReif, double lengthPriority) {
+        this.PARAMETER_SOURCE = parameter;
+        this.PARAMETER_SINK = parameter;
+        this.USE_REIF = useReif;
+        this.LENGTH_PRIORITY = lengthPriority;
     }
 
     private static class Vector2D {
@@ -185,7 +201,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
             MaxFlow maxFlow;
             if (USE_REIF) {
-                maxFlow = new MaxFlowReif(simpleGraph, copyGraph, source, sink, coordinateConversion, maxSumVerticesWeight);
+                maxFlow = new MaxFlowReif(simpleGraph, copyGraph, source, sink, coordinateConversion, maxSumVerticesWeight, LENGTH_PRIORITY);
             } else {
                 maxFlow = new MaxFlowDinic(copyGraph, source, sink);
             }

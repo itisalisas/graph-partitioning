@@ -18,3 +18,4 @@ src/scripts/.osmnx_cache/
 *.csv
 test-output/
 .venv
+*.log

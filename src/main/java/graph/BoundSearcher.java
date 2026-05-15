@@ -18,19 +18,21 @@ public class BoundSearcher {
         Vertex finalInitVertex = getInitVertex(vertices);
 
         vertices.sort((a, b) -> {
-
             Point coorDistA = finalInitVertex.coordinateDistance(a);
             Point coorDistB = finalInitVertex.coordinateDistance(b);
 
-            double crossProduct = coorDistA.x * coorDistB.y - coorDistA.y * coorDistB.x;
+            double angleA = Math.atan2(coorDistA.y, coorDistA.x);
+            double angleB = Math.atan2(coorDistB.y, coorDistB.x);
 
-            if (crossProduct == 0) {
-                double distanceA = coorDistA.module();
-                double distanceB = coorDistB.module();
-                return Double.compare(distanceA, distanceB);
-            }
+            int cmp = Double.compare(angleA, angleB);
+            if (cmp != 0) return cmp;
 
-            return -Double.compare(crossProduct, 0);
+            double distanceA = coorDistA.x * coorDistA.x + coorDistA.y * coorDistA.y;
+            double distanceB = coorDistB.x * coorDistB.x + coorDistB.y * coorDistB.y;
+            cmp = Double.compare(distanceA, distanceB);
+            if (cmp != 0) return cmp;
+
+            return Long.compare(a.name, b.name);
         });
 
         List<Vertex> hull = new ArrayList<>();
