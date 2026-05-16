@@ -5,29 +5,34 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import graph.*;
 import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import addingPoints.LocalizationPoints;
+import graph.BoundSearcher;
+import graph.Graph;
+import graph.PartitionGraphVertex;
+import graph.Point;
+import graph.Vertex;
+import graph.VertexOfDualGraph;
 import graphPreparation.GraphPreparation;
 import partitioning.BalancedPartitioning;
 import partitioning.balancing.Balancer;
 import partitioning.entities.Algorithm;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 import readWrite.CoordinateConversion;
 import readWrite.GraphReader;
 import readWrite.GraphWriter;
 import readWrite.PartitionWriter;
 import readWrite.PointsReader;
-
-import picocli.CommandLine;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
 
 @Command(name = "graph-partitioning", mixinStandardHelpOptions = true, version = "1.0",
         description = "Application for balanced partitioning of planar graphs")
@@ -59,11 +64,16 @@ public class Main implements Runnable {
             description = "Partition parameter (default: ${DEFAULT-VALUE})")
     private double partitionParameter;
 
+    @Option(names = {"-l", "--length-priority"}, defaultValue = "0.5",
+            description = "Length priority coefficient for Reif (default: ${DEFAULT-VALUE})")
+    private double lengthPriority;
+
     @Override
     public void run() throws RuntimeException {
         BalancedPartitioning partitioning = Algorithm.getBalancedPartitioningByAlgorithmName(
                 algorithmName,
-                partitionParameter
+                partitionParameter,
+                lengthPriority
         );
 
         Graph<Vertex> graph = new Graph<>();
@@ -90,7 +100,7 @@ public class Main implements Runnable {
 
         Graph<VertexOfDualGraph> preparedGraph;
         try {
-            preparedGraph = preparation.prepareGraph(graph, 1);
+            preparedGraph = preparation.prepareGraph(graph, 0.01, cc);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -105,7 +115,7 @@ public class Main implements Runnable {
         weightedVertices = pr.readWeightedPoints(RESOURCES_DIRECTORY + pathToPointsFile, true);
 
         LocalizationPoints lp = new LocalizationPoints(new HashSet<>(weightedVertices));
-        HashMap<VertexOfDualGraph, ArrayList<Vertex>> faceToVertices = lp.findFacesForPoints(preparedGraph);
+        Map<VertexOfDualGraph, List<Vertex>> faceToVertices = lp.findFacesForPoints(preparedGraph);
 
         for (VertexOfDualGraph v: preparedGraph.verticesArray()) {
             v.setWeight(0);
@@ -120,21 +130,22 @@ public class Main implements Runnable {
 
         long startTime = System.currentTimeMillis();
 
-        HashMap<Vertex, VertexOfDualGraph> comparisonForDualGraph = preparation.getComparisonForDualGraph();
-        List<Set<VertexOfDualGraph>> partitionResultForFaces = partitioning.partition(graph, comparisonForDualGraph, preparedGraph, maxSumVerticesWeight);
-        for (Set<VertexOfDualGraph> hs : partitionResultForFaces) {
-            for (VertexOfDualGraph v : hs) {
-                Assertions.assertNotNull(v.getVerticesOfFace());
-            }
-        }
+        List<Set<VertexOfDualGraph>> partitionResultForFaces = partitioning.partition(graph, preparedGraph, maxSumVerticesWeight, cc);
+
+        long time1 = System.currentTimeMillis();
+        logger.info("Partitioning without balancing time: " + (time1 - startTime) + " ms");
+
         HashMap<VertexOfDualGraph, Integer> dualVertexToPartNumber = partitioning.dualVertexToPartNumber();
-        for (Set<VertexOfDualGraph> hs : partitionResultForFaces) {
-            for (VertexOfDualGraph v : hs) {
-                Assertions.assertNotNull(v.getVerticesOfFace());
-            }
-        }
+
+        long time2 = System.currentTimeMillis();
+        logger.info("Partitioning dual vertex to part number time: " + (time2 - time1) + " ms");
+
         Graph<PartitionGraphVertex> partitionGraph = PartitionGraphVertex.buildPartitionGraph(preparedGraph, partitionResultForFaces, dualVertexToPartNumber);
-        Balancer balancer = new Balancer(partitionGraph, preparedGraph, graph, maxSumVerticesWeight, comparisonForDualGraph, OUTPUT_DIRECTORY + pathToResultDirectory);
+
+        long time3 = System.currentTimeMillis();
+        logger.info("Building partition graph time: " + (time3 - time2) + " ms");
+
+        Balancer balancer = new Balancer(partitionGraph, preparedGraph, graph, maxSumVerticesWeight, OUTPUT_DIRECTORY + pathToResultDirectory, cc, algorithmName.equals(Algorithm.RIF), lengthPriority);
         partitionResultForFaces = balancer.rebalancing();
         HashMap<VertexOfDualGraph, Integer> newDualVertexToPartNumber = new HashMap<>();
         for (int i = 0; i < partitionResultForFaces.size(); i++) {
@@ -160,12 +171,12 @@ public class Main implements Runnable {
         for (int i = 0; i < partitionResultForFaces.size(); i++) {
             partitionResult.add(new HashSet<>());
             for (VertexOfDualGraph face : partitionResultForFaces.get(i)) {
-                partitionResult.get(i).addAll(comparisonForDualGraph.get(face).getVerticesOfFace());
+                partitionResult.get(i).addAll(face.getVerticesOfFace());
             }
             if (BoundSearcher.findRadius(new ArrayList<>(partitionResult.get(i))) > maxRegionRadiusMeters) {
                 countPartsWithNonFittingRadius++;
             }
-            bounds.add(Map.entry(BoundSearcher.findBound(graph, partitionResultForFaces.get(i), comparisonForDualGraph), partitionResultForFaces.get(i).stream().mapToDouble(Vertex::getWeight).sum()));
+            bounds.add(Map.entry(BoundSearcher.findBound(graph, partitionResultForFaces.get(i)), partitionResultForFaces.get(i).stream().mapToDouble(Vertex::getWeight).sum()));
         }
 
         logger.info("Number of parts: {}, number of parts with radius > max: {}", partitionResultForFaces.size(), countPartsWithNonFittingRadius);
@@ -193,6 +204,8 @@ public class Main implements Runnable {
     }
 
     public static void main(String[] args) {
+        // Pin numeric formatting to dot-decimal so all outputs are locale-independent
+        Locale.setDefault(Locale.ROOT);
         int exitCode = new CommandLine(new Main()).execute(args);
         System.exit(exitCode);
     }

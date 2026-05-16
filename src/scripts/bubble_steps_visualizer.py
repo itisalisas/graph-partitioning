@@ -10,7 +10,7 @@ from natsort import natsorted
 def load_vertex_data(file_path):
     with open(file_path, 'r') as file:
         lines = file.readlines()
-        data = [[int(parts[0]), float(parts[1].replace(',', '.')), float(parts[2].replace(',', '.'))]
+        data = [[int(parts[0]), float(parts[1]), float(parts[2])]
                 for line in lines
                 for parts in [line.strip().split()]]
     return pd.DataFrame(data, columns=['id', 'longitude', 'latitude'])
@@ -78,8 +78,8 @@ def visualize_center(directory_name, map_osm):
             data = line.split()
 
             main_vertex_id = int(data[0])
-            main_x = float(data[1].replace(',', '.'))
-            main_y = float(data[2].replace(',', '.'))
+            main_x = float(data[1])
+            main_y = float(data[2])
             vertices.add_node(main_vertex_id, x=main_x, y=main_y)
 
     for node, data in vertices.nodes(data=True):
@@ -96,7 +96,25 @@ def visualize_center(directory_name, map_osm):
 
 def main(bounds_directory, output_file):
     # Сначала визуализируем граф
-    map_osm = folium.Map(location=(0, 0), zoom_start=15)
+    map_osm = folium.Map(location=(0, 0), zoom_start=15, tiles=None)
+    
+    # Добавляем пустой базовый слой
+    folium.TileLayer(
+        tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        name='No basemap',
+        attr='No basemap',
+        overlay=False,
+        control=True,
+        opacity=0
+    ).add_to(map_osm)
+    
+    # Добавляем OpenStreetMap как альтернативный базовый слой
+    folium.TileLayer(
+        tiles='openstreetmap',
+        name='OpenStreetMap',
+        overlay=False,
+        control=True
+    ).add_to(map_osm)
 
     # Накладываем границы
     visualize_bounds(bounds_directory, map_osm)
@@ -106,6 +124,10 @@ def main(bounds_directory, output_file):
     
     # Добавляем центры
     visualize_center(bounds_directory, map_osm)
+    
+    # Добавляем контроль слоев
+    folium.LayerControl(position='topright', collapsed=False).add_to(map_osm)
+    
     # Сохраняем финальную карту
     map_osm.save(os.path.join(directory_path, output_file))
     print(f"Map with boundaries saved to {output_file}")

@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Locale;
 
 public class Point {
 	
@@ -126,7 +127,7 @@ public class Point {
 
 	public void printPointToFile(File outFile) throws IOException {
 		FileWriter out = new FileWriter(outFile, true);
-		out.write(String.format("%f %f\n", this.x, this.y));
+		out.write(String.format(Locale.ROOT, "%f %f\n", this.x, this.y));
 		out.close();
 	}
 

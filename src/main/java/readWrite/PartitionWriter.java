@@ -127,6 +127,13 @@ public class PartitionWriter {
 
 		logger.info("Empty parts number: {}", balancedPartitioning.countEmptyParts(partitionResult));
 		logger.info("Graph weight after: {}", balancedPartitioning.countSumPartitioningWeight(partitionResult));
+		
+		// Информация о больших вершинах
+		if (!bp.bigVerticesPartitions.isEmpty()) {
+			double bigVerticesWeight = bp.bigVerticesPartitions.size() * balancedPartitioning.maxSumVerticesWeight;
+			logger.info("Big vertices partitions: {} (weight: {})", bp.bigVerticesPartitions.size(), bigVerticesWeight);
+			logger.info("Total regions (including big vertices): {}", partitionResult.size() + bp.bigVerticesPartitions.size());
+		}
 	}
 
 	private void printStat(
@@ -142,9 +149,15 @@ public class PartitionWriter {
             .toList();
 
 			List<Double> cutLengths = new ArrayList<>(balancedPartitioning.cutEdgesMap.values());
+			
+			// Вычисляем общий вес графа (включая оставшийся вес в вершинах)
 			double totalGraphWeight = bp.graph.verticesArray().stream()
 					.mapToDouble(VertexOfDualGraph::getWeight)
 					.sum();
+			
+			// Добавляем вес из bigVerticesPartitions (извлеченный "лишний" вес)
+			double bigVerticesWeight = bp.bigVerticesPartitions.size() * balancedPartitioning.maxSumVerticesWeight;
+			totalGraphWeight += bigVerticesWeight;
 			
 			List<Double> diameters = partitionResult.stream()
             .map(p -> BoundSearcher.findDiameter(p.stream().flatMap(v -> v.getVerticesOfFace().stream()).collect(Collectors.toList())))
@@ -183,10 +196,18 @@ public class PartitionWriter {
 			jsonData.put("partitionTime(s)", partitionTime);
 			jsonData.put("usedMemory(MB)", memory);
 			
-			jsonData.put("estimatorRegionNumber", partitionResult.size()/ Math.ceil(totalGraphWeight / balancedPartitioning.maxSumVerticesWeight));
+			// Информация о больших вершинах
+			jsonData.put("bigVerticesPartitions", bp.bigVerticesPartitions.size());
+			jsonData.put("bigVerticesWeight", bigVerticesWeight);
+			
+			// Общее количество регионов (включая bigVerticesPartitions)
+			int totalRegionCount = partitionResult.size() + bp.bigVerticesPartitions.size();
+			
+			jsonData.put("estimatorRegionNumber", totalRegionCount / Math.ceil(totalGraphWeight / balancedPartitioning.maxSumVerticesWeight));
     		jsonData.put("dualVertexNumber", bp.graph.verticesNumber());
    			jsonData.put("totalGraphWeight", totalGraphWeight);
-    		jsonData.put("regionCount", partitionResult.size());
+    		jsonData.put("regionCount", totalRegionCount);
+			jsonData.put("normalRegionCount", partitionResult.size());
 			jsonData.put("minRegionCountEstimate", (int) Math.ceil(totalGraphWeight / balancedPartitioning.maxSumVerticesWeight));
 			jsonData.put("minRegionWeight", Collections.min(weights));
     		jsonData.put("maxRegionWeight", Collections.max(weights));

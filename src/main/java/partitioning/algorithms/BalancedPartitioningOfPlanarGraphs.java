@@ -12,18 +12,22 @@ import org.junit.jupiter.api.Assertions;
 
 import graph.Graph;
 import graph.VertexOfDualGraph;
+import readWrite.CoordinateConversion;
 
 public abstract class BalancedPartitioningOfPlanarGraphs {
 
-	public List<Set<VertexOfDualGraph>> partition;
+	public List<Set<VertexOfDualGraph>> partition = new ArrayList<>();
+	
+	// Отдельное хранилище для "больших" вершин (извлеченных через extractBigVertices)
+	public List<Set<VertexOfDualGraph>> bigVerticesPartitions = new ArrayList<>();
 
 	public Graph<VertexOfDualGraph> graph;
 
 	public abstract void balancedPartitionAlgorithm(
             Graph<Vertex> simpleGraph,
-            Map<Vertex, VertexOfDualGraph> comparisonForDualGraph,
             Graph<VertexOfDualGraph> graph,
-            int maxSumVerticesWeight
+            int maxSumVerticesWeight,
+            CoordinateConversion coordinateConversion
     );
 
 	public List<Set<VertexOfDualGraph>> getPartition() {
@@ -38,6 +42,8 @@ public abstract class BalancedPartitioningOfPlanarGraphs {
 	public void extractBigVertices(Graph<VertexOfDualGraph> dualGraph, int maxSumVerticesWeight) {
 		for (VertexOfDualGraph v: dualGraph.verticesArray()) {
 			while (v.getWeight() >= maxSumVerticesWeight) {
+				// Добавляем в отдельное хранилище для больших вершин
+                bigVerticesPartitions.add(Set.of(v));
 				v.setWeight(v.getWeight() - maxSumVerticesWeight);
 			}
 		}

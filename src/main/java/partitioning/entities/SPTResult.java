@@ -5,8 +5,10 @@ import java.util.List;
 import graph.Vertex;
 
 public record SPTResult(
+        double score,
         double balanceWeight,
         double totalDistance,
-        List<Vertex> path
+        List<Vertex> path,
+        boolean isPositive
 ) {
 }

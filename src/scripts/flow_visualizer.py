@@ -350,7 +350,16 @@ def visualize_reif_flow(directory_name, output_file):
     sink_boundary = load_vertex_list(os.path.join(directory_path, "sink_boundary.txt"))
     st_path = load_vertex_list(os.path.join(directory_path, "st_path.txt"))
     best_path = load_vertex_list(os.path.join(directory_path, "best_path.txt"))
-    primal_vertices, primal_edges = load_primal_graph(os.path.join(directory_path, "primal_graph.txt"))
+    
+    # Загружаем оба графа - исходный и модифицированный
+    init_vertices, init_edges = load_primal_graph(os.path.join(directory_path, "init_graph.txt"))
+    modified_vertices, modified_edges = load_primal_graph(os.path.join(directory_path, "modified_graph.txt"))
+    
+    # Для обратной совместимости: если нет новых файлов, пробуем загрузить старый
+    if not init_vertices and not modified_vertices:
+        init_vertices, init_edges = load_primal_graph(os.path.join(directory_path, "primal_graph.txt"))
+        modified_vertices, modified_edges = init_vertices, init_edges
+    
     dual_vertices, dual_edges = load_dual_graph(os.path.join(directory_path, "dual_graph.txt"))
     
     # Load SPT data
@@ -359,21 +368,111 @@ def visualize_reif_flow(directory_name, output_file):
     
     # Собираем все точки для определения границ карты
     all_points = []
+    
+    # Добавляем точки из boundary файлов
+    boundary_points_count = 0
     for vertex_list in [external_boundary, source_boundary, sink_boundary, st_path, best_path]:
         for _, lat, lon in vertex_list:
             all_points.append((lat, lon))
+            boundary_points_count += 1
+    print(f"Loaded {boundary_points_count} points from boundary files")
+    if boundary_points_count > 0:
+        sample_lat, sample_lon = all_points[0]
+        print(f"  Sample boundary point: lat={sample_lat:.6f}, lon={sample_lon:.6f}")
+    
+    # Добавляем точки из графов (primal и dual)
+    init_count = 0
+    for lat, lon in init_vertices.values():
+        all_points.append((lat, lon))
+        init_count += 1
+    print(f"Loaded {init_count} points from init graph")
+    if init_count > 0:
+        sample_lat, sample_lon = list(init_vertices.values())[0]
+        print(f"  Sample init graph point: lat={sample_lat:.6f}, lon={sample_lon:.6f}")
+    
+    modified_count = 0
+    for lat, lon in modified_vertices.values():
+        all_points.append((lat, lon))
+        modified_count += 1
+    print(f"Loaded {modified_count} points from modified graph")
+    if modified_count > 0:
+        sample_lat, sample_lon = list(modified_vertices.values())[0]
+        print(f"  Sample modified graph point: lat={sample_lat:.6f}, lon={sample_lon:.6f}")
+    
+    dual_count = 0
+    for lat, lon, _ in dual_vertices.values():
+        all_points.append((lat, lon))
+        dual_count += 1
+    print(f"Loaded {dual_count} points from dual graph")
+    if dual_count > 0:
+        sample_lat, sample_lon, _ = list(dual_vertices.values())[0]
+        print(f"  Sample dual graph point: lat={sample_lat:.6f}, lon={sample_lon:.6f}")
+    
+    # Добавляем точки из SPT деревьев
+    spt1_count = 0
+    if spt1 and spt1['root']:
+        _, root_lat, root_lon = spt1['root']
+        all_points.append((root_lat, root_lon))
+        spt1_count += 1
+        for leaf_data in spt1['boundary_leaves']:
+            # Поддержка старого (4 поля) и нового (5 полей) формата
+            lat = leaf_data[1]
+            lon = leaf_data[2]
+            all_points.append((lat, lon))
+            spt1_count += 1
+    print(f"Loaded {spt1_count} points from SPT1")
+    if spt1_count > 0 and spt1['root']:
+        _, root_lat, root_lon = spt1['root']
+        print(f"  SPT1 root: lat={root_lat:.6f}, lon={root_lon:.6f}")
+    
+    spt2_count = 0
+    if spt2 and spt2['root']:
+        _, root_lat, root_lon = spt2['root']
+        all_points.append((root_lat, root_lon))
+        spt2_count += 1
+        for leaf_data in spt2['boundary_leaves']:
+            # Поддержка старого (4 поля) и нового (5 полей) формата
+            lat = leaf_data[1]
+            lon = leaf_data[2]
+            all_points.append((lat, lon))
+            spt2_count += 1
+    print(f"Loaded {spt2_count} points from SPT2")
+    if spt2_count > 0 and spt2['root']:
+        _, root_lat, root_lon = spt2['root']
+        print(f"  SPT2 root: lat={root_lat:.6f}, lon={root_lon:.6f}")
+    
+    print(f"\nTotal points collected: {len(all_points)}")
     
     if not all_points:
         print("No data to visualize")
         sys.exit(1)
     
-    # Создаем карту
+    # Создаем карту без базового слоя
     center_lat = sum(p[0] for p in all_points) / len(all_points)
     center_lon = sum(p[1] for p in all_points) / len(all_points)
-    map_osm = folium.Map(location=(center_lat, center_lon), zoom_start=15)
+    map_osm = folium.Map(location=(center_lat, center_lon), zoom_start=15, tiles=None)
+    
+    # Добавляем пустой базовый слой (белый фон)
+    folium.TileLayer(
+        tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        name='No basemap',
+        attr='No basemap',
+        overlay=False,
+        control=True,
+        opacity=0
+    ).add_to(map_osm)
+    
+    # Добавляем OpenStreetMap как альтернативный базовый слой
+    folium.TileLayer(
+        tiles='openstreetmap',
+        name='OpenStreetMap',
+        overlay=False,
+        control=True
+    ).add_to(map_osm)
     
     # Создаем слои (Feature Groups) для каждого типа данных
-    primal_graph_layer = folium.FeatureGroup(name='Primal Graph (Original)', show=False)
+    init_graph_layer = folium.FeatureGroup(name='Init Graph (Original)', show=False)
+    modified_graph_layer = folium.FeatureGroup(name='Modified Graph', show=True)
     dual_graph_layer = folium.FeatureGroup(name='Dual Graph', show=False)
     external_layer = folium.FeatureGroup(name='External Boundary', show=True)
     source_layer = folium.FeatureGroup(name='Source Boundary', show=True)
@@ -387,21 +486,21 @@ def visualize_reif_flow(directory_name, output_file):
     spt1_groups_layer = folium.FeatureGroup(name='SPT 1 Leaf Groups (Red→Green)', show=False)
     spt2_groups_layer = folium.FeatureGroup(name='SPT 2 Leaf Groups (Red→Green)', show=False)
     
-    # 0. Исходный (primal) граф
-    if primal_vertices and primal_edges:
-        print(f"Visualizing primal graph with {len(primal_vertices)} vertices and {len(primal_edges)} edges")
+    # 0. Исходный граф (до модификаций)
+    if init_vertices and init_edges:
+        print(f"Visualizing init graph with {len(init_vertices)} vertices and {len(init_edges)} edges")
         
         # Рисуем рёбра исходного графа
-        for edge in primal_edges:
+        for edge in init_edges:
             from_id = edge['from']
             to_id = edge['to']
             length = edge['length']
             
-            if from_id not in primal_vertices or to_id not in primal_vertices:
+            if from_id not in init_vertices or to_id not in init_vertices:
                 continue
             
-            from_lat, from_lon = primal_vertices[from_id]
-            to_lat, to_lon = primal_vertices[to_id]
+            from_lat, from_lon = init_vertices[from_id]
+            to_lat, to_lon = init_vertices[to_id]
             
             tooltip_text = f"Edge {from_id}↔{to_id}<br>Length: {length:.2f}m"
             
@@ -411,10 +510,10 @@ def visualize_reif_flow(directory_name, output_file):
                 weight=1.5,
                 opacity=0.6,
                 tooltip=tooltip_text
-            ).add_to(primal_graph_layer)
+            ).add_to(init_graph_layer)
         
         # Рисуем вершины исходного графа
-        for vertex_id, (lat, lon) in primal_vertices.items():
+        for vertex_id, (lat, lon) in init_vertices.items():
             folium.CircleMarker(
                 location=(lat, lon),
                 radius=2,
@@ -422,8 +521,46 @@ def visualize_reif_flow(directory_name, output_file):
                 fill=True,
                 fill_color='#144680',
                 fill_opacity=0.7,
-                tooltip=f"Vertex {vertex_id}"
-            ).add_to(primal_graph_layer)
+                tooltip=f"Init Vertex {vertex_id}"
+            ).add_to(init_graph_layer)
+    
+    # 0b. Модифицированный граф (после модификаций)
+    if modified_vertices and modified_edges:
+        print(f"Visualizing modified graph with {len(modified_vertices)} vertices and {len(modified_edges)} edges")
+        
+        # Рисуем рёбра модифицированного графа
+        for edge in modified_edges:
+            from_id = edge['from']
+            to_id = edge['to']
+            length = edge['length']
+            
+            if from_id not in modified_vertices or to_id not in modified_vertices:
+                continue
+            
+            from_lat, from_lon = modified_vertices[from_id]
+            to_lat, to_lon = modified_vertices[to_id]
+            
+            tooltip_text = f"Edge {from_id}↔{to_id}<br>Length: {length:.2f}m"
+            
+            folium.PolyLine(
+                locations=[(from_lat, from_lon), (to_lat, to_lon)],
+                color='#8B4513',  # Коричневый цвет для модифицированного графа
+                weight=1.5,
+                opacity=0.6,
+                tooltip=tooltip_text
+            ).add_to(modified_graph_layer)
+        
+        # Рисуем вершины модифицированного графа
+        for vertex_id, (lat, lon) in modified_vertices.items():
+            folium.CircleMarker(
+                location=(lat, lon),
+                radius=2,
+                color='#A0522D',
+                fill=True,
+                fill_color='#8B4513',
+                fill_opacity=0.7,
+                tooltip=f"Modified Vertex {vertex_id}"
+            ).add_to(modified_graph_layer)
     
     # 1. Двойственный граф
     if dual_vertices and dual_edges:
@@ -709,24 +846,24 @@ def visualize_reif_flow(directory_name, output_file):
                 tooltip=f"SPT vertex {vertex_id}<br>Distance from root: {distance:.2f}"
             ).add_to(layer)
     
-    # Visualize SPT 1 (purple/magenta scheme)
+    # Visualize SPT 1 (orange/coral scheme)
     if spt1:
         visualize_spt(spt1, spt1_layer, {
-            'edge': '#9932CC',      # Dark orchid
-            'root': '#8B008B',      # Dark magenta
-            'leaf': '#DA70D6',      # Orchid
-            'vertex': '#DDA0DD',    # Plum
-            'region_label': '#8B008B'  # Dark magenta for region labels
+            'edge': '#FF6600',      # Bright orange
+            'root': '#FF4500',      # Orange red
+            'leaf': '#FF4500',      # Orange red
+            'vertex': '#FF8C42',    # Light orange
+            'region_label': '#FF4500'  # Orange red for region labels
         }, 'SPT1')
     
-    # Visualize SPT 2 (teal/cyan scheme)
+    # Visualize SPT 2 (deep blue/indigo scheme)
     if spt2:
         visualize_spt(spt2, spt2_layer, {
-            'edge': '#008B8B',      # Dark cyan
-            'root': '#006666',      # Darker teal
-            'leaf': '#20B2AA',      # Light sea green
-            'vertex': '#66CDAA',    # Medium aquamarine
-            'region_label': '#006666'  # Darker teal for region labels
+            'edge': '#0066FF',      # Bright blue
+            'root': '#0047AB',      # Cobalt blue
+            'leaf': '#0047AB',      # Cobalt blue
+            'vertex': '#4169E1',    # Royal blue
+            'region_label': '#0047AB'  # Cobalt blue for region labels
         }, 'SPT2')
     
     # 7.3. Individual regions from SPT (red-to-green gradient)
@@ -1066,6 +1203,7 @@ def visualize_reif_flow(directory_name, output_file):
             print(f"Warning: Best path was a cycle, removed last vertex")
         
         best_coords = [(lat, lon) for _, lat, lon in cleaned_best_path]
+        '''
         folium.PolyLine(
             locations=best_coords,
             color='orange',
@@ -1073,6 +1211,7 @@ def visualize_reif_flow(directory_name, output_file):
             opacity=0.9,
             tooltip="Best Path (Final Result)"
         ).add_to(best_path_layer)
+        '''
         
         # Добавляем маркеры для каждой вершины в лучшем пути
         for i, (vertex_id, lat, lon) in enumerate(cleaned_best_path):
@@ -1103,7 +1242,8 @@ def visualize_reif_flow(directory_name, output_file):
             ).add_to(best_path_layer)
     
     # Добавляем все слои на карту
-    primal_graph_layer.add_to(map_osm)
+    init_graph_layer.add_to(map_osm)
+    modified_graph_layer.add_to(map_osm)
     dual_graph_layer.add_to(map_osm)
     external_layer.add_to(map_osm)
     source_layer.add_to(map_osm)
@@ -1120,12 +1260,14 @@ def visualize_reif_flow(directory_name, output_file):
     # Добавляем контроль слоев (переключатель в правом верхнем углу)
     folium.LayerControl(position='topright', collapsed=False).add_to(map_osm)
     
-    # Настраиваем границы карты
-    min_lat = min(p[0] for p in all_points)
-    max_lat = max(p[0] for p in all_points)
-    min_lon = min(p[1] for p in all_points)
-    max_lon = max(p[1] for p in all_points)
-    map_osm.fit_bounds([[min_lat, min_lon], [max_lat, max_lon]])
+    # Настраиваем границы карты на основе всех точек
+    if all_points:
+        min_lat = min(p[0] for p in all_points)
+        max_lat = max(p[0] for p in all_points)
+        min_lon = min(p[1] for p in all_points)
+        max_lon = max(p[1] for p in all_points)
+        map_osm.fit_bounds([[min_lat, min_lon], [max_lat, max_lon]])
+        print(f"Map bounds: lat [{min_lat:.6f}, {max_lat:.6f}], lon [{min_lon:.6f}, {max_lon:.6f}]")
 
     # Сохраняем карту
     output_path = os.path.join(directory_path, output_file)

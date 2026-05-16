@@ -8,11 +8,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.PriorityQueue;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import graph.Edge;
 import graph.Graph;
 import graph.Vertex;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import partitioning.entities.DijkstraResult;
 import partitioning.entities.VertexDistance;
 
@@ -46,7 +47,8 @@ public class Dijkstra {
             Graph<Vertex> graph,
             List<Vertex> sourceVertices,
             List<Vertex> targetBoundary,
-            CornerConstraints cornerConstraints) {
+            CornerConstraints cornerConstraints
+        ) {
 
         logDebugInfo(graph, sourceVertices, targetBoundary, cornerConstraints);
 
@@ -86,29 +88,6 @@ public class Dijkstra {
                 logger.debug("    {} -> {}", e.begin.name, e.end.name);
             }
         }
-
-        // logSourceVerticesInfo(graph, sourceVertices);
-    }
-
-    /**
-     * Логирует информацию об источниках
-     */
-    private static void logSourceVerticesInfo(Graph<Vertex> graph, List<Vertex> sourceVertices) {
-        for (Vertex src : sourceVertices) {
-            if (graph.getEdges().containsKey(src)) {
-                List<Long> neighborIds = graph.getEdges().get(src).keySet().stream()
-                        .limit(10)
-                        .map(Vertex::getName)
-                        .toList();
-
-
-                logger.debug("  Source vertex {} (isOnBoundary)= {} has {} neighbors: {}", 
-                        src.getName(), src.getIsOnBoundary(), graph.getEdges().get(src).size(), neighborIds);
-
-            } else {
-                logger.debug("  Source vertex {} NOT IN GRAPH!", src.getName());
-            }
-        }
     }
 
     /**
@@ -138,7 +117,8 @@ public class Dijkstra {
             DijkstraState state,
             Graph<Vertex> graph,
             List<Vertex> targetBoundary,
-            CornerConstraints cornerConstraints) {
+            CornerConstraints cornerConstraints
+        ) {
 
         while (!state.queue.isEmpty()) {
             VertexDistance current = state.queue.poll();
@@ -194,8 +174,8 @@ public class Dijkstra {
             DijkstraState state,
             Graph<Vertex> graph,
             VertexDistance current,
-            CornerConstraints cornerConstraints) {
-
+            CornerConstraints cornerConstraints
+        ) {
         Map<Vertex, Edge> neighbors = graph.getEdges().get(current.vertex());
         if (neighbors == null) {
             return;
@@ -207,6 +187,7 @@ public class Dijkstra {
             if (!cornerConstraints.isNeighborAllowed(current.vertex(), neighbor)) {
                 continue;
             }
+
             processNeighbor(state, current.vertex(), entry.getKey(), entry.getValue());
         }
     }

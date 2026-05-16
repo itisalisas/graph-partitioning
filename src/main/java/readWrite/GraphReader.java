@@ -6,8 +6,8 @@ import java.util.Scanner;
 
 import graph.Edge;
 import graph.Graph;
-import graph.Point;
 import graph.Vertex;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,10 +26,8 @@ public class GraphReader {
 
 	public Vertex readVertex(Graph<Vertex> graph, Scanner sc, boolean geodetic) {
 		long name = sc.nextLong();
-		String xStr = sc.next().replace(',', '.');
-		String yStr = sc.next().replace(',', '.');
-		double x = Double.parseDouble(xStr);
-		double y = Double.parseDouble(yStr);
+		double x = Double.parseDouble(sc.next());
+		double y = Double.parseDouble(sc.next());
 		Vertex ans = new Vertex(name, x, y);
 		if (geodetic) {
 			coordConver.toEuclidean(ans);
@@ -65,8 +63,7 @@ public class GraphReader {
 			ni = sc.nextInt();
 			for (int j = 0; j < ni && sc.hasNext(); j++) {
 				vj = readVertex(graph, sc, geodetic);
-				String lengthStr = sc.next().replace(',', '.');
-				length = Double.parseDouble(lengthStr);
+                length = Double.parseDouble(sc.next());
 				graph.getEdges().get(vi).put(vj, new Edge(length));
 			}
 		}
