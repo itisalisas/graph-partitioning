@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import graph.Edge;
 import graph.EdgeOfGraph;
 import graph.Graph;
 import graph.Vertex;
@@ -159,7 +160,8 @@ public class VertexSplitter {
             Graph<Vertex> splitGraph,
             Vertex vertex,
             Map<Vertex, Vertex> splitToOriginalMap,
-            Map<Long, NeighborSplit> neighborSplits) {
+            Map<Long, NeighborSplit> neighborSplits,
+            Graph<Vertex> originalGraph) {
 
         NeighborSplit split = neighborSplits.get(vertex.getName());
         Optional<Boolean> boundaryFlags = (split != null) ? split.firstPartOnBoundary() : Optional.empty();
@@ -173,7 +175,7 @@ public class VertexSplitter {
         }
 
         if (split != null) {
-            connectSplitVertices(splitGraph, vertexInGraph, splitVertices, split);
+            connectSplitVertices(splitGraph, vertexInGraph, splitVertices, split, originalGraph);
         } else {
             logger.warn("No split found for vertex {}", vertex.getName());
         }
@@ -573,13 +575,14 @@ public class VertexSplitter {
             Graph<Vertex> splitGraph,
             Vertex originalVertex,
             Map.Entry<Vertex, Vertex> splitVertices,
-            NeighborSplit split) {
+            NeighborSplit split,
+            Graph<Vertex> originalGraph) {
 
         Vertex splitVertex1 = splitVertices.getKey();
         Vertex splitVertex2 = splitVertices.getValue();
 
         int connectedPathNeighbors = connectPathNeighbors(
-                splitGraph, originalVertex, splitVertex1, splitVertex2, split);
+                splitGraph, originalVertex, splitVertex1, splitVertex2, split, originalGraph);
 
         connectNeighborsToSplitVertex(splitGraph, originalVertex,
                                       splitVertex1, split.leftNeighbors());
@@ -597,13 +600,14 @@ public class VertexSplitter {
             Vertex originalVertex,
             Vertex splitVertex1,
             Vertex splitVertex2,
-            NeighborSplit split) {
+            NeighborSplit split,
+            Graph<Vertex> originalGraph) {
 
         int count = 0;
 
         for (Vertex neighbor : split.pathNeighbors()) {
             connectSplitNeighbor(splitGraph, originalVertex,
-                                 splitVertex1, splitVertex2, neighbor);
+                                 splitVertex1, splitVertex2, neighbor, originalGraph);
             count++;
         }
 
@@ -618,18 +622,45 @@ public class VertexSplitter {
             Vertex originalVertex,
             Vertex splitVertex1,
             Vertex splitVertex2,
-            Vertex neighbor) {
+            Vertex neighbor,
+            Graph<Vertex> originalGraph) {
 
         Vertex splitNeighbor1 = findOrCreateVertex(splitGraph, neighbor.getName() * 1000 + 1, neighbor);
         Vertex splitNeighbor2 = findOrCreateVertex(splitGraph, neighbor.getName() * 1000 + 2, neighbor);
 
-        double edgeLength = calculateDistance(originalVertex, splitNeighbor1);
+        double edgeLength = lookupEdgeLength(originalGraph, originalVertex, neighbor);
 
         splitGraph.addEdge(splitVertex1, splitNeighbor1, edgeLength);
         splitGraph.addEdge(splitVertex2, splitNeighbor2, edgeLength);
 
         logger.debug("  Connected split vertices of {} with corresponding split versions of path neighbor {}",
                 originalVertex.getName(), neighbor.getName());
+    }
+
+    /**
+     * Looks up the edge length between two vertices in the given graph by name.
+     * Falls back to geometric distance if the edge is not found.
+     */
+    private static double lookupEdgeLength(Graph<Vertex> graph, Vertex from, Vertex to) {
+        if (graph == null) {
+            return calculateDistance(from, to);
+        }
+        // Find the actual vertex objects in the graph by name (original names, not split names)
+        long fromName = from.getName();
+        long toName   = to.getName();
+        for (Vertex u : graph.verticesArray()) {
+            if (u.getName() != fromName) continue;
+            Map<Vertex, Edge> neighbors = graph.getEdges().get(u);
+            if (neighbors == null) break;
+            for (Vertex v : neighbors.keySet()) {
+                if (v.getName() == toName) {
+                    return neighbors.get(v).length;
+                }
+            }
+            break;
+        }
+        logger.warn("Edge {}->{} not found in originalGraph, falling back to geometric distance", fromName, toName);
+        return calculateDistance(from, to);
     }
 
     /**

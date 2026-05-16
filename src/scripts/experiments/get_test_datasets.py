@@ -7,17 +7,17 @@ import traceback
 project_root = Path(__file__).resolve().parent.parent.parent
 
 cities = {
-    "novgorod": (58.52112, 31.27529),
-    "spb": (59.93893, 30.32268),
-    "krasnoyarsk": (56.00864, 92.8683),
-    "moscow": (55.75023, 37.61673),
-    "arkhangelsk": (64.543, 40.537),
-    "yaroslavl": (57.6269, 39.8945),
-    "vladivostok": (43.1156, 131.8831),
-    "khabarovsk": (48.4855, 135.0798)
+    #"novgorod": (58.52112, 31.27529),
+    "spb": (59.93893, 30.32268)
+    #"krasnoyarsk": (56.00864, 92.8683),
+    #"moscow": (55.75023, 37.61673),
+    #"arkhangelsk": (64.543, 40.537),
+    #"yaroslavl": (57.6269, 39.8945),
+    #"vladivostok": (43.1156, 131.8831),
+    #"khabarovsk": (48.4855, 135.0798)
 }
 
-sizes = [100, 500, 1000, 2000, 5000]
+sizes = [1000]
 
 scripts_dir = project_root / "scripts"
 data_root = project_root / "main" / "resources" / "data"

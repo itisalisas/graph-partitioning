@@ -1203,6 +1203,7 @@ def visualize_reif_flow(directory_name, output_file):
             print(f"Warning: Best path was a cycle, removed last vertex")
         
         best_coords = [(lat, lon) for _, lat, lon in cleaned_best_path]
+        '''
         folium.PolyLine(
             locations=best_coords,
             color='orange',
@@ -1210,6 +1211,7 @@ def visualize_reif_flow(directory_name, output_file):
             opacity=0.9,
             tooltip="Best Path (Final Result)"
         ).add_to(best_path_layer)
+        '''
         
         # Добавляем маркеры для каждой вершины в лучшем пути
         for i, (vertex_id, lat, lon) in enumerate(cleaned_best_path):

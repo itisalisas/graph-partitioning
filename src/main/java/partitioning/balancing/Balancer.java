@@ -88,7 +88,9 @@ public class Balancer {
                 Map<Set<VertexOfDualGraph>, Double> cutBefore = calculateCutWeights(regionsSubgraph, List.of(new HashSet<>(smallestVertex.vertices), new HashSet<>(biggestNeighbor.vertices)));
 
                 Assertions.assertEquals(balancingVerticesSet.size(), regionsSubgraph.verticesNumber());
-                Assertions.assertTrue(regionsSubgraph.isConnected());
+                if (!regionsSubgraph.isConnected()) {
+                    continue;
+                }
                 double coefficient = 1 - (double) maxWeight / (balancingVerticesSet.stream().mapToDouble(Vertex::getWeight).sum());
                 BalancedPartitioning bp = new BalancedPartitioning(new InertialFlowPartitioning(coefficient, useReif, lengthPriority));
                 List<Set<VertexOfDualGraph>> newPartition = bp.partition(startGraph, regionsSubgraph, maxWeight, cc);

@@ -202,7 +202,7 @@ for city in os.listdir(data_root):
         continue
     
     for size in os.listdir(city_path):
-        if size == '5000':
+        if size == '2000' or size == '5000':
             continue
         size_path = os.path.join(city_path, size)
         if not os.path.isdir(size_path):

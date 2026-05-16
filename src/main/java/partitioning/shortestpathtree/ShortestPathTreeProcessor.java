@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +51,7 @@ public class ShortestPathTreeProcessor {
         int n1 = result1.leafIndices().size();
         int n2 = result2.leafIndices().size();
         if (n1 == 0 || n2 == 0) {
+            logger.warn("! return fallback");
             return new SPTResult(
                     Double.MAX_VALUE,
                     Double.MIN_VALUE,
@@ -85,6 +87,7 @@ public class ShortestPathTreeProcessor {
         for (int i1 = 0; i1 < n1; i1++) {
             for (int i2 = 0; i2 < n2; i2++) {
                 int totalExternalCount = externalCounts1[i1] + externalCounts2[i2];
+                //logger.warn("i1 = {}, i2 = {}, externalCounts1[i1] = {}, externalCounts2[i2] = {}", i1, i2, externalCounts1[i1], externalCounts2[i2]);
                 if (!paths1.get(i1).isEmpty() && !paths2.get(i2).isEmpty()) {
                     Vertex root1 = paths1.get(i1).get(0);
                     Vertex root2 = paths2.get(i2).get(0);
@@ -92,6 +95,7 @@ public class ShortestPathTreeProcessor {
                         totalExternalCount--;
                     }
                 }
+                //logger.warn("! i1 = {}, i2 = {}, totalExternalCount = {}", i1, i2, totalExternalCount);
                 
                 ScoreResult score = leafScore(
                     result1, i1, 
@@ -101,6 +105,7 @@ public class ShortestPathTreeProcessor {
                     totalExternalCount,
                     alpha
                 );
+                // logger.warn("! i1 = {}, i2 = {}, leaf score = {}, weight balance = {}, length = {}, external vertices = {}", i1, i2, score.score, score.weightBalance, score.length, score.externalBoundaryCount);
                 
                 if (score.score < bestScore.score) {
                     bestScore = score;
@@ -122,13 +127,14 @@ public class ShortestPathTreeProcessor {
     }
 
     private int countExternalBoundaryVertices(List<Vertex> path, Set<Vertex> externalBoundary) {
+        Set<Long> externalBoundarySet = externalBoundary.stream().map(Vertex::getName).collect(Collectors.toSet());
         if (externalBoundary.isEmpty()) {
             return 0;
         }
         
         int count = 0;
         for (Vertex v : path) {
-            if (externalBoundary.contains(v)) {
+            if (externalBoundarySet.contains(v.name) || externalBoundarySet.contains(v.name / 1000)) {
                 count++;
             }
         }

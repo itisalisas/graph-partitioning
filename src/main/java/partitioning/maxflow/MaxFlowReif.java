@@ -179,7 +179,7 @@ public class MaxFlowReif implements MaxFlow {
         return new FlowResult(flow, dualGraph, source, sink, best.pathInOriginalGraph);
     }
 
-    private record BoundariesData(
+    public record BoundariesData(
             List<Vertex> sourceBoundary,
             List<Vertex> sinkBoundary,
             List<Vertex> externalBoundary
@@ -207,7 +207,7 @@ public class MaxFlowReif implements MaxFlow {
     /**
      * Вычисляет все границы
      */
-    private BoundariesData computeBoundaries(
+    public BoundariesData computeBoundaries(
             Set<VertexOfDualGraph> sourceNeighbors,
             Set<VertexOfDualGraph> sinkNeighbors
     ) {
@@ -322,7 +322,7 @@ public class MaxFlowReif implements MaxFlow {
 
         for (Vertex pathVertex : path) {
             Map.Entry<Vertex, Vertex> splitted = splitVertex(
-                    modifiedGraph, pathVertex, splitToOriginalMap, neighborSplits
+                    modifiedGraph, pathVertex, splitToOriginalMap, neighborSplits, initGraph
             );
             splitVertices.add(splitted);
         }
@@ -351,11 +351,14 @@ public class MaxFlowReif implements MaxFlow {
             if (i == 0 || i == splits.size() - 1) {
                 splitsToProcess.add(splits.get(i));
             } else {
-                if (edgeMap.get(splits.get(i).getKey()).size() > 2 && edgeMap.get(splits.get(i).getValue()).size() > 2) {
+                if (edgeMap.get(splits.get(i).getKey()).size() > 2 || edgeMap.get(splits.get(i).getValue()).size() > 2) {
                     splitsToProcess.add(splits.get(i));
                 }
             }
         }
+        if (splits.size() == 10) {
+        logger.warn("! splitsToProcess = {}", splitsToProcess.stream().map(e -> e.getKey().name + "-" + e.getValue().name + " ").collect(Collectors.toList()));
+    }   
         if (splitsToProcess.isEmpty()) return Optional.empty();
 
         // int lo = 0, hi = splitsToProcess.size() - 1;
@@ -370,7 +373,7 @@ public class MaxFlowReif implements MaxFlow {
                     continue;
                 }
                 if (bestPath.isEmpty() || bestPath.get().score() > midOpt.get().score()) {
-                    logger.info("New bestPath at vertex of path number {}, distance {}, diff in weight {}", i, midOpt.get().totalDistance(), midOpt.get().balanceWeight());
+                    logger.info("New bestPath at vertex of path number {}, distance {}, diff in weight {}, score = {}", i, midOpt.get().totalDistance(), midOpt.get().balanceWeight(), midOpt.get().score());
                     bestPath = midOpt;
                 }
         }
@@ -718,25 +721,25 @@ public class MaxFlowReif implements MaxFlow {
             Map<Vertex, Vertex> splitToOriginalMap) {
 
         // Отключено для производительности - раскомментировать для debug
-        // FlowWriter.dumpVisualizationData(
-        //         boundaries.externalBoundary(),
-        //         boundaries.sourceBoundary(),
-        //         boundaries.sinkBoundary(),
-        //         shortestPath, bestPath,
-        //         sourceNeighbors, sinkNeighbors, flow,
-        //         initGraph,
-        //         modifiedGraph, dualGraph, source, sink, conversion
-        // );
+        FlowWriter.dumpVisualizationData(
+                 boundaries.externalBoundary(),
+                 boundaries.sourceBoundary(),
+                 boundaries.sinkBoundary(),
+                 shortestPath, bestPath,
+                 sourceNeighbors, sinkNeighbors, flow,
+                 initGraph,
+                 modifiedGraph, dualGraph, source, sink, conversion
+         );
 
-        // FlowWriter.dumpSPTVisualizationData(
-        //         best.path1ToBoundary(),
-        //         best.path2ToBoundary(),
-        //         best.splitVertex1(),
-        //         best.splitVertex2(),
-        //         splitToOriginalMap,
-        //         sourceNeighbors, sinkNeighbors, flow, conversion,
-        //         initGraph
-        // );
+         FlowWriter.dumpSPTVisualizationData(
+                 best.path1ToBoundary(),
+                 best.path2ToBoundary(),
+                 best.splitVertex1(),
+                 best.splitVertex2(),
+                 splitToOriginalMap,
+                 sourceNeighbors, sinkNeighbors, flow, conversion,
+                 initGraph
+         );
     }
 
     private Optional<DijkstraResult> dijkstraSingleSourceWithRegionWeights(
@@ -764,12 +767,12 @@ public class MaxFlowReif implements MaxFlow {
                     List.of(sourceVertex),
                     0.0,
                     new HashMap<>(),
-                    new HashMap<>(),
+                    new HashMap<>(Map.of(sourceVertex, 0.0)),
                     List.of(sourceVertex),
                     List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
+                    List.of(0.0),
+                    List.of(0.0),
+                    List.of(0),
                     0.0
             ));
         }

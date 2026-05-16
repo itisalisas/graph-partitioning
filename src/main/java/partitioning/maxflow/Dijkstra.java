@@ -8,11 +8,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.PriorityQueue;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import graph.Edge;
 import graph.Graph;
 import graph.Vertex;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import partitioning.entities.DijkstraResult;
 import partitioning.entities.VertexDistance;
 

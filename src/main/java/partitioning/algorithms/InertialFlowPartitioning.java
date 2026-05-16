@@ -30,7 +30,9 @@ import partitioning.entities.FlowResult;
 import partitioning.maxflow.MaxFlow;
 import partitioning.maxflow.MaxFlowDinic;
 import partitioning.maxflow.MaxFlowReif;
+import partitioning.maxflow.MaxFlowReif.BoundariesData;
 import readWrite.CoordinateConversion;
+import readWrite.FlowWriter;
 
 public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs {
     private static final Logger logger = LoggerFactory.getLogger(InertialFlowPartitioning.class);
@@ -199,6 +201,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
             Assertions.assertEquals(currentGraph.verticesNumber() + 2, copyGraph.verticesNumber());
 
+            logger.info("! process graph with {} vertices, source size = {}, sink size = {}", copyGraph.verticesNumber(), sourceSet.size(), sinkSet.size());
             MaxFlow maxFlow;
             if (USE_REIF) {
                 maxFlow = new MaxFlowReif(simpleGraph, copyGraph, source, sink, coordinateConversion, maxSumVerticesWeight, LENGTH_PRIORITY);
@@ -209,6 +212,14 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             logger.debug("Flow size: {}", flowResult.flowSize());
             long time4 = System.currentTimeMillis();
             logger.info("Time for finding flow: {} seconds", (time4 - time3) / 1000.0);
+
+            // Extract cut path BEFORE partitionGraph mutates the graph (deletes source/sink)
+            List<Vertex> cutPath;
+            if (USE_REIF) {
+                cutPath = flowResult.pathInOriginalGraph();
+            } else {
+                cutPath = extractCutVerticesFromDinic(flowResult);
+            }
 
             List<Graph<VertexOfDualGraph>> subpartition;
             if (USE_REIF) {
@@ -237,8 +248,63 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             logger.debug("Subgraph 1 vertices: {}, weight: {}", subpartition.get(1).verticesNumber(), subpartition.get(1).verticesWeight());
             logger.debug("Original graph vertices: {}, weight: {}\n\n", currentGraph.verticesNumber(), currentGraph.verticesWeight());
 
+            // Логируем длину разреза и баланс частей
+            double cutLength = flowResult.flowSize();
+            double weight0 = subpartition.get(0).verticesWeight();
+            double weight1 = subpartition.get(1).verticesWeight();
+            double balanceRatio = weight0 / weight1;
+            double balancePercent0 = (weight0 / totalWeight) * 100;
+            double balancePercent1 = (weight1 / totalWeight) * 100;
+            
+            logger.info("Cut length: {}", cutLength);
+            logger.info("Partition balance: {} / {} ({}% / {}%), ratio: {}",
+                        weight0, weight1, balancePercent0, balancePercent1, balanceRatio);
+
+            // Логируем путь разреза в исходном (не двойственном) графе
+            if (cutPath != null && !cutPath.isEmpty()) {
+                logger.info("Cut path in original graph ({} vertices): {}",
+                        cutPath.size(),
+                        cutPath.stream()
+                               .map(v -> v.getName() + "(" + coordinateConversion.fromEuclidean(v).x + "," + coordinateConversion.fromEuclidean(v).y + ")")
+                               .collect(Collectors.joining(" -> ")));
+                if (cutLength > 245 && cutLength < 246) {
+                var sourceNeighbors = new HashSet<VertexOfDualGraph>();
+                var sinkNeighbors = new HashSet<VertexOfDualGraph>();
+                for (var v: sourceSet) {
+                    if (!v.equals(source)) {
+                        sourceNeighbors.add(v);
+                    }
+                }
+                for (var v: sinkSet) {
+                    if (!v.equals(sink)) {
+                        sinkNeighbors.add(v);
+                    }
+                }
+                var mf = new MaxFlowReif(simpleGraph, copyGraph, source, sink, coordinateConversion, maxSumVerticesWeight, LENGTH_PRIORITY);
+                BoundariesData boundaries = mf.computeBoundaries(sourceNeighbors, sinkNeighbors);
+                
+                FlowWriter.dumpVisualizationData(
+                 boundaries.externalBoundary(),
+                 boundaries.sourceBoundary(),
+                 boundaries.sinkBoundary(),
+                 List.of(), cutPath,
+                 sourceNeighbors, sinkNeighbors, flowResult.flowSize(),
+                 simpleGraph,
+                 simpleGraph, graph, source, sink, coordinateConversion);
+                }
+            } else {
+                logger.info("Cut path in original graph: not available");
+            }
+
             for (Graph<VertexOfDualGraph> subgraph : subpartition) {
-                stack.push(subgraph);
+                var components = subgraph.splitForConnectedComponents();
+                if (components.size() > 1) {
+                    for (var component : components) {
+                        stack.push(subgraph.createSubgraph(component));
+                    }
+                } else {
+                    stack.push(subgraph);
+                }
             }
         }
         long endTime = System.currentTimeMillis();
@@ -491,6 +557,9 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
         Assertions.assertEquals(graphWithFlow.verticesNumber(), subpartition.get(0).verticesNumber() + subpartition.get(1).verticesNumber());
 
+        if (subpartition.get(0).verticesSumWeight() < subpartition.get(1).verticesSumWeight()) {
+            return new ArrayList<>(Arrays.asList(subpartition.get(1), subpartition.get(0)));
+        }
         return subpartition;
     }
 
@@ -599,8 +668,93 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             }
             
             subpartition.set(0, flow.graphWithFlow().createSubgraph(components.get(0)));
+            }
+
+            if (subpartition.get(0).verticesSumWeight() < subpartition.get(1).verticesSumWeight()) {
+                return new ArrayList<>(Arrays.asList(subpartition.get(1), subpartition.get(0)));
+            }
+            
+            return subpartition;
         }
-        
-        return subpartition;
+    
+        /**
+         * For Dinic flow: reconstructs the cut as a list of primal-graph vertices.
+         * Finds all saturated dual edges that cross the min-cut (i.e., one endpoint is
+         * reachable from source in the residual graph, the other is not), then collects
+         * the shared primal vertices of each such pair of adjacent faces.
+         */
+    private List<Vertex> extractCutVerticesFromDinic(FlowResult flow) {
+        Graph<VertexOfDualGraph> graphWithFlow = flow.graphWithFlow();
+        if (graphWithFlow == null) {
+            logger.debug("extractCutVerticesFromDinic: graphWithFlow is null");
+            return List.of();
+        }
+
+        VertexOfDualGraph source = flow.source();
+        VertexOfDualGraph sink = flow.sink();
+        if (source == null || sink == null) {
+            logger.debug("extractCutVerticesFromDinic: source or sink is null");
+            return List.of();
+        }
+
+        // Find the actual source vertex object in the graph (identity may differ after clone)
+        VertexOfDualGraph actualSource = null;
+        for (VertexOfDualGraph v : graphWithFlow.verticesArray()) {
+            if (v.equals(source)) {
+                actualSource = v;
+                break;
+            }
+        }
+        if (actualSource == null) {
+            logger.debug("extractCutVerticesFromDinic: source not found in graph vertices (name={})", source.getName());
+            return List.of();
+        }
+
+        logger.debug("extractCutVerticesFromDinic: graph has {} vertices, source={}, sink={}",
+                graphWithFlow.verticesNumber(), source.getName(), sink.getName());
+
+        // BFS on residual graph from source to find reachable set
+        Set<VertexOfDualGraph> reachable = new HashSet<>();
+        Queue<VertexOfDualGraph> queue = new LinkedList<>();
+        reachable.add(actualSource);
+        queue.add(actualSource);
+        while (!queue.isEmpty()) {
+            VertexOfDualGraph cur = queue.poll();
+            Map<VertexOfDualGraph, Edge> edges = graphWithFlow.getEdges().get(cur);
+            if (edges == null) continue;
+            for (Map.Entry<VertexOfDualGraph, Edge> entry : edges.entrySet()) {
+                VertexOfDualGraph neighbor = entry.getKey();
+                Edge edge = entry.getValue();
+                if (!reachable.contains(neighbor) && edge.flow < edge.getBandwidth()) {
+                    reachable.add(neighbor);
+                    queue.add(neighbor);
+                }
+            }
+        }
+
+        logger.debug("extractCutVerticesFromDinic: reachable set size={}", reachable.size());
+
+        // Collect shared primal vertices for each saturated cut edge (reachable -> non-reachable)
+        Set<Vertex> cutVertices = new HashSet<>();
+        for (VertexOfDualGraph u : reachable) {
+            Map<VertexOfDualGraph, Edge> edges = graphWithFlow.getEdges().get(u);
+            if (edges == null) continue;
+            for (Map.Entry<VertexOfDualGraph, Edge> entry : edges.entrySet()) {
+                VertexOfDualGraph v = entry.getKey();
+                if (!reachable.contains(v) && !v.equals(sink)) {
+                    // u and v are adjacent faces in the dual graph; find their shared primal vertices
+                    ArrayList<Vertex> faceU = u.getVerticesOfFace();
+                    ArrayList<Vertex> faceV = v.getVerticesOfFace();
+                    if (faceU != null && faceV != null && !faceU.isEmpty() && !faceV.isEmpty()) {
+                        Set<Vertex> shared = new HashSet<>(faceU);
+                        shared.retainAll(new HashSet<>(faceV));
+                        cutVertices.addAll(shared);
+                    }
+                }
+            }
+        }
+
+        logger.debug("extractCutVerticesFromDinic: cut vertices found={}", cutVertices.size());
+        return new ArrayList<>(cutVertices);
     }
-}
+    }
