@@ -17,8 +17,8 @@ def visualize_graph(file_name):
             data = line.split()
 
             main_vertex_id = int(data[0])
-            main_x = float(data[1].replace(',', '.'))
-            main_y = float(data[2].replace(',', '.'))
+            main_x = float(data[1])
+            main_y = float(data[2])
             G.add_node(main_vertex_id, x=main_x, y=main_y)
 
             num_edges = int(data[3])
@@ -26,9 +26,9 @@ def visualize_graph(file_name):
             idx = 4
             for _ in range(num_edges):
                 neighbor_id = int(data[idx])
-                neighbor_x = float(data[idx + 1].replace(',', '.'))
-                neighbor_y = float(data[idx + 2].replace(',', '.'))
-                length = float(data[idx + 3].replace(',', '.'))
+                neighbor_x = float(data[idx + 1])
+                neighbor_y = float(data[idx + 2])
+                length = float(data[idx + 3])
 
                 if neighbor_id not in G.nodes:
                     G.add_node(neighbor_id, x=neighbor_x, y=neighbor_y)
@@ -41,7 +41,25 @@ def visualize_graph(file_name):
     y_coords = [G.nodes[node]["y"] for node in G]
     center = (sum(y_coords) / len(y_coords), sum(x_coords) / len(x_coords))
 
-    map_osm = folium.Map(location=center, zoom_start=15)
+    map_osm = folium.Map(location=center, zoom_start=15, tiles=None)
+    
+    # Добавляем пустой базовый слой
+    folium.TileLayer(
+        tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        name='No basemap',
+        attr='No basemap',
+        overlay=False,
+        control=True,
+        opacity=0
+    ).add_to(map_osm)
+    
+    # Добавляем OpenStreetMap как альтернативный базовый слой
+    folium.TileLayer(
+        tiles='openstreetmap',
+        name='OpenStreetMap',
+        overlay=False,
+        control=True
+    ).add_to(map_osm)
 
     for node, data in G.nodes(data=True):
         folium.CircleMarker(
@@ -63,6 +81,9 @@ def visualize_graph(file_name):
             weight=2.5,
             tooltip=f"Length: {data['length']}"
         ).add_to(map_osm)
+
+    # Добавляем контроль слоев
+    folium.LayerControl(position='topright', collapsed=False).add_to(map_osm)
 
     return map_osm
 

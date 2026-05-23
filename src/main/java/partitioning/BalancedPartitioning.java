@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import partitioning.algorithms.BalancedPartitioningOfPlanarGraphs;
+import readWrite.CoordinateConversion;
 
 public class BalancedPartitioning {
 	private static final Logger logger = LoggerFactory.getLogger(BalancedPartitioning.class);
@@ -27,42 +28,44 @@ public class BalancedPartitioning {
 
 	public List<Set<VertexOfDualGraph>> partition(
             Graph<Vertex> simpleGraph,
-            Map<Vertex, VertexOfDualGraph> comparisonForDualGraph,
             Graph<VertexOfDualGraph> graph,
-            int maxSumVerticesWeight
+            int maxSumVerticesWeight,
+            CoordinateConversion coordinateConversion
     ) {
-		bp.partition = new ArrayList<>();
 		this.maxSumVerticesWeight = maxSumVerticesWeight;
-		bp.balancedPartitionAlgorithm(simpleGraph, comparisonForDualGraph, graph, maxSumVerticesWeight);
+		bp.balancedPartitionAlgorithm(simpleGraph, graph, maxSumVerticesWeight, coordinateConversion);
 		List<Set<VertexOfDualGraph>> partitionResult = bp.getPartition();
 		calculateCutWeights(bp.graph, partitionResult);
 		return partitionResult;
 	}
 
-	private void calculateCutWeights(Graph<VertexOfDualGraph> graph, List<Set<VertexOfDualGraph>> partitions) {
-		cutEdgesMap = new HashMap<>();
-		if (graph == null) {
-			logger.warn("graph is null (check 1)");
-		}
-		for (Set<VertexOfDualGraph> partition : partitions) {
-			double cutEdgesWeightSum = 0;
-			if (graph == null) {
-				logger.warn("graph is null (check 2)");
-			}
-			for (EdgeOfGraph<VertexOfDualGraph> edge : graph.edgesArray()) {
-				VertexOfDualGraph u = edge.begin;
-				VertexOfDualGraph v = edge.end;
-				double weight = edge.getBandwidth();
+    private void calculateCutWeights(Graph<VertexOfDualGraph> graph, List<Set<VertexOfDualGraph>> partitions) {
+        cutEdgesMap = new HashMap<>();
 
-				if (partition.contains(u) && !partition.contains(v)) {
-					cutEdgesWeightSum += weight;
-				}
-			}
+        for (Set<VertexOfDualGraph> partition : partitions) {
+            cutEdgesMap.put(partition, 0.0);
+        }
 
-			cutEdgesMap.put(partition, cutEdgesWeightSum);
-		}
+        Map<VertexOfDualGraph, Set<VertexOfDualGraph>> vertexToPartition = new HashMap<>();
+        for (Set<VertexOfDualGraph> partition : partitions) {
+            for (VertexOfDualGraph vertex : partition) {
+                vertexToPartition.put(vertex, partition);
+            }
+        }
 
-	}
+        for (EdgeOfGraph<VertexOfDualGraph> edge : graph.edgesArray()) {
+            VertexOfDualGraph u = edge.begin;
+            VertexOfDualGraph v = edge.end;
+
+            Set<VertexOfDualGraph> partitionU = vertexToPartition.get(u);
+            Set<VertexOfDualGraph> partitionV = vertexToPartition.get(v);
+
+            if (partitionU != null && partitionV != null && partitionU != partitionV) {
+                double weight = edge.getBandwidth();
+                cutEdgesMap.put(partitionU, cutEdgesMap.get(partitionU) + weight);
+            }
+        }
+    }
 
 	public double calculateTotalCutEdgesLength() {
 		return cutEdgesMap.values().stream().mapToDouble(Double::doubleValue).sum() / 2;

@@ -22,10 +22,8 @@ public class PointsReader {
 	// TODO - fix order x - y
 	public Vertex readVertex(Scanner sc, boolean geodetic) {
 		long name = sc.nextLong();
-		String xStr = sc.next().replace(',', '.');
-		String yStr = sc.next().replace(',', '.');
-		double y = Double.parseDouble(xStr);
-		double x = Double.parseDouble(yStr);
+        double y = Double.parseDouble(sc.next());
+        double x = Double.parseDouble(sc.next());
 		int length = sc.nextInt();
 		int width = sc.nextInt();
 		double vertexWeight = length * width / 10.0;

@@ -34,8 +34,8 @@ with open(file_path, "r") as file:
 
         main_vertex_id = int(data[0])
         main_part_num = int(data[1])
-        main_x = float(data[2].replace(',', '.'))
-        main_y = float(data[3].replace(',', '.'))
+        main_x = float(data[2])
+        main_y = float(data[3])
         G.add_node(main_vertex_id, x=main_x, y=main_y)
         vertex_part_map[main_vertex_id] = main_part_num
 
@@ -44,9 +44,9 @@ with open(file_path, "r") as file:
         idx = 5
         for _ in range(num_edges):
             neighbor_id = int(data[idx])
-            neighbor_x = float(data[idx + 1].replace(',', '.'))
-            neighbor_y = float(data[idx + 2].replace(',', '.'))
-            length = float(data[idx + 3].replace(',', '.'))
+            neighbor_x = float(data[idx + 1])
+            neighbor_y = float(data[idx + 2])
+            length = float(data[idx + 3])
 
             if neighbor_id not in G.nodes:
                 G.add_node(neighbor_id, x=neighbor_x, y=neighbor_y)
@@ -59,7 +59,25 @@ x_coords = [G.nodes[node]["x"] for node in G]
 y_coords = [G.nodes[node]["y"] for node in G]
 center = (sum(y_coords) / len(y_coords), sum(x_coords) / len(x_coords))
 
-map_osm = folium.Map(location=center, zoom_start=15)
+map_osm = folium.Map(location=center, zoom_start=15, tiles=None)
+
+# Добавляем пустой базовый слой
+folium.TileLayer(
+    tiles='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    name='No basemap',
+    attr='No basemap',
+    overlay=False,
+    control=True,
+    opacity=0
+).add_to(map_osm)
+
+# Добавляем OpenStreetMap как альтернативный базовый слой
+folium.TileLayer(
+    tiles='openstreetmap',
+    name='OpenStreetMap',
+    overlay=False,
+    control=True
+).add_to(map_osm)
 
 colors = generate_colors(parts_number)
 
@@ -85,5 +103,8 @@ for node, data in G.nodes(data=True):
         fill_color=color,
         tooltip=f"Part: {vertex_part_map[node]}\nVertex: {node}"
     ).add_to(map_osm)
+
+# Добавляем контроль слоев
+folium.LayerControl(position='topright', collapsed=False).add_to(map_osm)
 
 map_osm.save(os.path.join(script_dir, '..', 'main', 'output', file_name, output_file))

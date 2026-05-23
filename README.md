@@ -88,6 +88,15 @@ Example:
 
 ## Scripts
 
+### Requirements
+
+This project requires Python 3.8 or higher. 
+To install the required packages, run the following command:
+
+```bash
+pip install -r requirements.txt
+```
+
 ### AdjacencyListFromOSM
 
 This is a script for getting the adjacency list of a graph from OpenStreetMaps. 

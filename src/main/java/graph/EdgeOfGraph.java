@@ -69,7 +69,10 @@ public class EdgeOfGraph<T extends Vertex> extends Edge {
 			begin2x = end2x;
 			end2x = tmp;
 		}
-		return Math.max(begin1x, begin2x) < Math.min(end1x, end2x);
+		// Используем <= вместо <, чтобы корректно обрабатывать горизонтальные (beginY == endY) 
+		// и вертикальные (beginX == endX) отрезки.
+		// Добавляем небольшую погрешность для чисел с плавающей точкой
+		return Math.max(begin1x, begin2x) <= Math.min(end1x, end2x) + 1e-9;
 	}
 	
 	

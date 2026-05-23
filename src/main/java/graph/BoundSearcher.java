@@ -18,19 +18,21 @@ public class BoundSearcher {
         Vertex finalInitVertex = getInitVertex(vertices);
 
         vertices.sort((a, b) -> {
-
             Point coorDistA = finalInitVertex.coordinateDistance(a);
             Point coorDistB = finalInitVertex.coordinateDistance(b);
 
-            double crossProduct = coorDistA.x * coorDistB.y - coorDistA.y * coorDistB.x;
+            double angleA = Math.atan2(coorDistA.y, coorDistA.x);
+            double angleB = Math.atan2(coorDistB.y, coorDistB.x);
 
-            if (crossProduct == 0) {
-                double distanceA = coorDistA.module();
-                double distanceB = coorDistB.module();
-                return Double.compare(distanceA, distanceB);
-            }
+            int cmp = Double.compare(angleA, angleB);
+            if (cmp != 0) return cmp;
 
-            return -Double.compare(crossProduct, 0);
+            double distanceA = coorDistA.x * coorDistA.x + coorDistA.y * coorDistA.y;
+            double distanceB = coorDistB.x * coorDistB.x + coorDistB.y * coorDistB.y;
+            cmp = Double.compare(distanceA, distanceB);
+            if (cmp != 0) return cmp;
+
+            return Long.compare(a.name, b.name);
         });
 
         List<Vertex> hull = new ArrayList<>();
@@ -79,9 +81,10 @@ public class BoundSearcher {
         return lastVec.x * newVec.y - lastVec.y * newVec.x;
     }
 
-    public static List<Vertex> findBound(Graph<Vertex> graph,
-                                         Set<VertexOfDualGraph> part,
-                                         Map<Vertex, VertexOfDualGraph> comparisonForDualGraph) {
+    public static List<Vertex> findBound(
+            Graph<Vertex> graph,
+            Set<VertexOfDualGraph> part
+    ) {
 
         final int partSize = part.size();
         final int estimatedVertices = partSize * 4;
@@ -94,7 +97,7 @@ public class BoundSearcher {
         Set<Vertex> allVertices = new HashSet<>(estimatedVertices);
 
         for (int i = 0; i < partSize; i++) {
-            List<Vertex> faceVertices = comparisonForDualGraph.get(orderedFaces.get(i)).getVerticesOfFace();
+            List<Vertex> faceVertices = orderedFaces.get(i).getVerticesOfFace();
             verticesByFaces.add(faceVertices);
 
             final int faceSize = faceVertices.size();
@@ -153,8 +156,9 @@ public class BoundSearcher {
     }
 
     private static long computeEdgeKey(Vertex v1, Vertex v2) {
-        String s = v1.name + "_" + v2.name;
-        return s.hashCode();
+        long a = v1.name;
+        long b = v2.name;
+        return ((a + b) * (a + b + 1) / 2) + b;
     }
 
     private static int findCommonFaceFast(Vertex v1, Vertex v2,

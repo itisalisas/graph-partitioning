@@ -13,7 +13,6 @@ import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
 import partitioning.entities.DijkstraResult;
-import partitioning.entities.NeighborSplit;
 
 public class FlowWriter {
     private static final Logger logger = LoggerFactory.getLogger(FlowWriter.class);
@@ -23,7 +22,8 @@ public class FlowWriter {
                                                   HashSet<VertexOfDualGraph> sourceNeighbors,
                                                   HashSet<VertexOfDualGraph> sinkNeighbors,
                                                   double size,
-                                                  Graph<Vertex> graph,
+                                                  Graph<Vertex> initGraph,
+                                                  Graph<Vertex> modifiedGraph,
                                                   Graph<VertexOfDualGraph> dualGraph,
                                                   VertexOfDualGraph source,
                                                   VertexOfDualGraph sink,
@@ -48,7 +48,10 @@ public class FlowWriter {
             }
 
             writeDualGraph(outputDir + "dual_graph.txt", dualGraph, source, sink, coordConversion);
-            writePrimalGraph(outputDir + "primal_graph.txt", graph, sourceNeighbors, sinkNeighbors, coordConversion);
+            
+            // Сохраняем оба графа - исходный и модифицированный
+            writePrimalGraph(outputDir + "init_graph.txt", initGraph, sourceNeighbors, sinkNeighbors, coordConversion);
+            writePrimalGraph(outputDir + "modified_graph.txt", modifiedGraph, sourceNeighbors, sinkNeighbors, coordConversion);
 
             logger.info("Visualization data saved to {}", outputDir);
         } catch (Exception e) {
@@ -175,8 +178,8 @@ public class FlowWriter {
             HashSet<VertexOfDualGraph> sinkNeighbors,
             double size,
             CoordinateConversion coordConversion,
-            Graph<Vertex> initGraph,
-            Map<Vertex, VertexOfDualGraph> comparisonForDualGraph) {
+            Graph<Vertex> initGraph
+    ) {
         try {
             String subDirName = String.format("flow_%d_%d_%f", sourceNeighbors.size(), sinkNeighbors.size(), size);
             String baseDir = "src/main/output/reif_flow_debug/";
@@ -191,13 +194,13 @@ public class FlowWriter {
 
             // Dump SPT 1 (from splitVertex1)
             writeSPTToFile(outputDir + "spt1.txt", spt1, root1, splitToOriginalMap, "SPT1",
-                    coordConversion, initGraph, comparisonForDualGraph);
+                    coordConversion, initGraph);
             long time1 = System.currentTimeMillis();
             logger.info("SPT1 saved in {} ms", time1 - time0);
 
             // Dump SPT 2 (from splitVertex2)
             writeSPTToFile(outputDir + "spt2.txt", spt2, root2, splitToOriginalMap, "SPT2",
-                    coordConversion, initGraph, comparisonForDualGraph);
+                    coordConversion, initGraph);
             long time2 = System.currentTimeMillis();
             logger.info("SPT2 saved in {} ms", time2 - time1);
 
@@ -210,8 +213,8 @@ public class FlowWriter {
     private static void writeSPTToFile(String filename, DijkstraResult spt, Vertex root,
                                 Map<Vertex, Vertex> splitToOriginalMap, String sptName,
                                 CoordinateConversion coordConversion,
-                                Graph<Vertex> initGraph,
-                                Map<Vertex, VertexOfDualGraph> comparisonForDualGraph) throws java.io.IOException {
+                                Graph<Vertex> initGraph
+    ) throws java.io.IOException {
         try (java.io.FileWriter writer = new java.io.FileWriter(filename)) {
             // Header with metadata
             writer.write("# " + sptName + " - Shortest Path Tree with Region Weights\n");
@@ -321,7 +324,7 @@ public class FlowWriter {
             writer.write("# lon lat (for each vertex)\n");
             writer.write("# ---\n");
             
-            if (initGraph != null && comparisonForDualGraph != null && spt.regions() != null) {
+            if (initGraph != null && spt.regions() != null) {
                 logger.debug("Writing {} region boundaries for {}", numRegions, sptName);
                 
                 int successCount = 0;
@@ -336,7 +339,7 @@ public class FlowWriter {
                     singleFaceSet.add(regionVertex);
                     
                     try {
-                        List<Vertex> boundary = BoundSearcher.findBound(initGraph, singleFaceSet, comparisonForDualGraph);
+                        List<Vertex> boundary = BoundSearcher.findBound(initGraph, singleFaceSet);
                         if (boundary != null && boundary.size() >= 3) {
                             writer.write(String.format("%d %d %d\n", regionIdx, regionVertexId, boundary.size()));
                             for (Vertex v : boundary) {
@@ -374,8 +377,7 @@ public class FlowWriter {
             writer.write("# lon lat (for each vertex)\n");
             writer.write("# ---\n");
 
-            if (initGraph != null && comparisonForDualGraph != null
-                    && spt.leafIndices() != null && spt.regions() != null) {
+            if (initGraph != null && spt.regions() != null && numLeaves > 0) {
                 int numRegionsTotal = spt.regions().size();
                 // N leaves => N+1 linear groups (no wrap-around):
                 //   Group 0: before leaf 0          → regions [0 .. leafIndices[0]]
@@ -419,12 +421,8 @@ public class FlowWriter {
                 }
 
                 // Count faces not assigned to any group
-                int totalDualFaces = 0;
-                if (comparisonForDualGraph != null) {
-                    totalDualFaces = comparisonForDualGraph.size();
-                }
-                logger.debug("Leaf group stats for {}: {} leaves, {} groups, {} total region entries, {} unique faces assigned, total dual faces: {}", 
-                        sptName, numLeaves, numGroups, numRegionsTotal, faceToGroup.size(), totalDualFaces);
+                logger.debug("Leaf group stats for {}: {} leaves, {} groups, {} total region entries, {} unique faces assigned",
+                        sptName, numLeaves, numGroups, numRegionsTotal, faceToGroup.size());
 
                 int emptyGroups = 0;
                 int failedGroups = 0;
@@ -449,7 +447,7 @@ public class FlowWriter {
                     }
 
                     try {
-                        List<Vertex> boundary = BoundSearcher.findBound(initGraph, groupFaces, comparisonForDualGraph);
+                        List<Vertex> boundary = BoundSearcher.findBound(initGraph, groupFaces);
                         writer.write(String.format("%d %.6f %d\n", groupIdx, groupWeight, boundary.size()));
                         for (Vertex v : boundary) {
                             Vertex originalV = splitToOriginalMap.getOrDefault(v, v);

@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
+import readWrite.CoordinateConversion;
 
 public class BubblePartitioning extends BalancedPartitioningOfPlanarGraphs {
     private static final Logger logger = LoggerFactory.getLogger(BubblePartitioning.class);
@@ -27,9 +28,9 @@ public class BubblePartitioning extends BalancedPartitioningOfPlanarGraphs {
     @Override
     public void balancedPartitionAlgorithm(
             Graph<Vertex> simpleGraph,
-            Map<Vertex, VertexOfDualGraph> comparisonForDualGraph,
             Graph<VertexOfDualGraph> graph,
-            int maxSumVerticesWeight
+            int maxSumVerticesWeight,
+            CoordinateConversion coordinateConversion
     ) {
         this.graph = graph;
         //find initial seeds
