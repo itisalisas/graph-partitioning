@@ -72,6 +72,10 @@ public class Main implements Runnable {
             description = "Use binary search for Reif (default: ${DEFAULT-VALUE})")
     private boolean useBinarySearch;
 
+    @Option(names = {"-c", "--cutted-reif"}, defaultValue = "false",
+            description = "Use cutted Reif algorithm (single SPT from boundary segment) (default: ${DEFAULT-VALUE})")
+    private boolean useCuttedReif;
+
     @Option(names = {"--no-post-processing"}, defaultValue = "false",
             description = "Disable post-processing/rebalancing stage for DIF/RIF")
     private boolean noPostProcessing;
@@ -82,7 +86,8 @@ public class Main implements Runnable {
                 algorithmName,
                 partitionParameter,
                 lengthPriority,
-                useBinarySearch
+                useBinarySearch,
+                useCuttedReif
         );
 
         Graph<Vertex> graph = new Graph<>();

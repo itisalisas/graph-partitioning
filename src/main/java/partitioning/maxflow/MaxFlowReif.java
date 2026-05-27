@@ -961,7 +961,6 @@ public class MaxFlowReif implements MaxFlow {
         return neighbors;
     }
 
-    // множественные пересечения с external boundary???
     private List<Vertex> findIntersections(List<Vertex> externalBoundary, List<Vertex> targetBoundary) {
         Set<Long> targetBoundaryNames = targetBoundary.stream()
                 .map(Vertex::getName)

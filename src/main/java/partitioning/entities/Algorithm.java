@@ -17,7 +17,8 @@ public enum Algorithm {
             Algorithm algorithmName,
             double partitionParameter,
             double lengthPriority,
-            boolean useBinarySearch) {
+            boolean useBinarySearch,
+            boolean useCuttedReif) {
         return switch (algorithmName) {
             case IF -> new BalancedPartitioning(
                 new OriginalInertialFlowPartitioning(partitionParameter)
@@ -26,7 +27,7 @@ public enum Algorithm {
                 new InertialFlowPartitioning(partitionParameter, false)
             );
             case RIF -> new BalancedPartitioning(
-                new InertialFlowPartitioning(partitionParameter, true, lengthPriority, useBinarySearch)
+                new InertialFlowPartitioning(partitionParameter, true, lengthPriority, useBinarySearch, useCuttedReif)
             );
             case BUP -> new BalancedPartitioning(
                 new BubblePartitioning()
