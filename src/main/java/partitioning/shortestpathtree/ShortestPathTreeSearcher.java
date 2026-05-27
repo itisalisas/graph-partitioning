@@ -1,16 +1,22 @@
 package partitioning.shortestpathtree;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import graph.EdgeOfGraph;
 import graph.Graph;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import partitioning.entities.SPTWithRegionWeights;
-import partitioning.maxflow.CornerConstraints;
 import readWrite.CoordinateConversion;
 
 public class ShortestPathTreeSearcher {
@@ -302,7 +308,44 @@ public class ShortestPathTreeSearcher {
             var splittedVertex = new Vertex(start.name / 1000, start);
             for (int i = 0; i < path.size(); i++) {
                 if (path.get(i).equals(start) || path.get(i).equals(splittedVertex)) {
-                    Vertex nextVertex = isFirstSide ? path.get((i + 1) % path.size()) : path.get((i - 1 + path.size()) % path.size());
+                    Vertex nextVertex = null;
+                    if (isFirstSide) {
+                        if (i == path.size() - 1 && path.size() > 1) {
+                            for (var e: edges) {
+                                if (e.end.name == path.get(path.size() - 2).name || e.end.name / 1000 == path.get(path.size() - 2).name) {
+                                    var edge = edges.lower(e);
+                                    if (edge == null) {
+                                        nextVertex = edges.last().end;
+                                    } else {
+                                        nextVertex = edge.end;
+                                    }
+                                    break;
+                                }
+                            }
+                        } else {
+                            nextVertex = path.get((i + 1) % path.size());
+                        }
+                    } else {
+                        if (i == 0 && path.size() > 1) {
+                            for (var e: edges) {
+                                logger.warn("! current i = {}, vertex = {}, edge = {}->{}", i, path.get(i).getName(), e.begin.getName(), e.end.getName());
+                                if (e.end.name == path.get(1).name || e.end.name / 1000 == path.get(1).name) {
+                                    var edge = edges.lower(e);
+                                    if (edge == null) {
+                                        nextVertex = edges.last().end;
+                                    } else {
+                                        nextVertex = edge.end;
+                                    }
+                                    break;
+                                }
+                            }
+                        } else {
+                            nextVertex = path.get((i - 1 + path.size()) % path.size());
+                        }
+                    }
+                    if (start.name == 1631189497 || start.name / 1000 == 1631189497) {
+                        logger.warn("! frame.vertex.name == {}, next.name == {}", start.getName(), nextVertex.getName());
+                    }
                     startIdx = findParentIndex(edges, nextVertex);
                 }
             }
@@ -348,6 +391,10 @@ public class ShortestPathTreeSearcher {
                 context.attemptedNonTreeEdges.add(Map.entry(current, neighbor));
             }
             return false;
+        }
+
+        if (context.addedRegions.contains(face)) {
+            return true;
         }
 
         context.cumulativeWeight += face.getWeight();
@@ -471,7 +518,7 @@ public class ShortestPathTreeSearcher {
 
         List<EdgeOfGraph<Vertex>> edgesList = new ArrayList<>(edgesFromCurrent);
         for (int i = 0; i < edgesList.size(); i++) {
-            if (edgesList.get(i).end.getName() == parent.getName()) {
+            if (edgesList.get(i).end.getName() == parent.getName() || edgesList.get(i).end.getName() / 1000 == parent.getName()) {
                 return i;
             }
         }

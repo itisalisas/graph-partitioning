@@ -7,6 +7,7 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import graph.BoundSearcher;
 import graph.Edge;
 import graph.Graph;
@@ -408,8 +409,10 @@ public class FlowWriter {
                         from = Math.max(spt.leafIndices().get(numLeaves - 1) + 1, 0);
                         to = numRegionsTotal - 1;
                     }
+                    if (!spt.regions().isEmpty()) {
                     for (int r = from; r <= to; r++) {
                         faceToGroup.putIfAbsent(spt.regions().get(r), groupIdx);
+                    }
                     }
                 }
 

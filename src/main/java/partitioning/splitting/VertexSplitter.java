@@ -390,14 +390,16 @@ public class VertexSplitter {
         var orderedEdges = graph.arrangeByAngle();
         var edgesList = orderedEdges.get(context.current()).stream().toList();
 
-        int pathEdgeIdx = findPathEdgeIndex(edgesList, pathVertexNames);
+        Vertex explicitPathNeighbor = context.isFirst() ? context.next() : context.previous();
+        int pathEdgeIdx = findExplicitPathEdgeIndex(edgesList, explicitPathNeighbor);
         if (pathEdgeIdx == -1) {
             logger.warn("No path edge found for boundary vertex {}", context.current().getName());
             return NeighborLists.empty();
         }
 
         return partitionEndVertexNeighbors(
-                edgesList, pathEdgeIdx, pathVertexNames, boundaryNames, context.current(), context.isFirst);
+                edgesList, pathEdgeIdx, pathVertexNames, boundaryNames,
+                context.current(), context.isFirst(), explicitPathNeighbor);
     }
 
     /**
@@ -415,6 +417,21 @@ public class VertexSplitter {
         return -1;
     }
 
+    private static int findExplicitPathEdgeIndex(
+            List<EdgeOfGraph<Vertex>> edges,
+            Vertex explicitPathNeighbor) {
+
+        if (explicitPathNeighbor == null) {
+            return -1;
+        }
+        for (int i = 0; i < edges.size(); i++) {
+            if (explicitPathNeighbor.equals(edges.get(i).end)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     /**
      * Разделяет соседей концевой вершины
      */
@@ -424,9 +441,13 @@ public class VertexSplitter {
             Set<Long> pathVertexNames,
             Set<Long> boundaryNames,
             Vertex currentVertex,
-            boolean isSourceSide) {
+            boolean isSourceSide,
+            Vertex explicitPathNeighbor) {
 
         List<Vertex> pathNeighbors = new ArrayList<>();
+        if (explicitPathNeighbor != null) {
+            pathNeighbors.add(explicitPathNeighbor);
+        }
         List<Vertex> leftNeighbors = new ArrayList<>();
         List<Vertex> rightNeighbors = new ArrayList<>();
 
@@ -445,7 +466,9 @@ public class VertexSplitter {
 
             // Нашли другой конец пути
             if (pathVertexNames.contains(neighbor.getName())) {
-                pathNeighbors.add(neighbor);
+                if (explicitPathNeighbor == null || !explicitPathNeighbor.equals(neighbor)) {
+                    pathNeighbors.add(neighbor);
+                }
                 break;
             }
 
