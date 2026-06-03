@@ -45,6 +45,7 @@ public class MaxFlowReif implements MaxFlow {
     CoordinateConversion conversion;
     int maxSumVerticesWeight;
     double lengthPriority;
+    boolean useBinarySearch;
 
     private record PathCandidate(
             Vertex splitVertex1,
@@ -65,7 +66,8 @@ public class MaxFlowReif implements MaxFlow {
                        VertexOfDualGraph sink,
                        CoordinateConversion conversion,
                        int maxSumVerticesWeight,
-                       double lengthPriority
+                       double lengthPriority,
+                       boolean useBinarySearch
     ) {
         this.initGraph = initGraph;
         this.dualGraph = dualGraph;
@@ -74,6 +76,7 @@ public class MaxFlowReif implements MaxFlow {
         this.conversion = conversion;
         this.maxSumVerticesWeight = maxSumVerticesWeight;
         this.lengthPriority = lengthPriority;
+        this.useBinarySearch = useBinarySearch;
     }
 
     public MaxFlowReif(Graph<Vertex> initGraph,
@@ -83,7 +86,7 @@ public class MaxFlowReif implements MaxFlow {
                        CoordinateConversion conversion,
                        int maxSumVerticesWeight
     ) {
-        this(initGraph, dualGraph, source, sink, conversion, maxSumVerticesWeight, 0.5);
+        this(initGraph, dualGraph, source, sink, conversion, maxSumVerticesWeight, 0.5, false);
     }
 
     @Override
@@ -150,6 +153,7 @@ public class MaxFlowReif implements MaxFlow {
         IntersectionsData intersections = findAllIntersections(boundaries);
         logger.debug("Found {} source intersections and {} sink intersections on external boundary",
                 intersections.sourceIntersections.size(), intersections.sinkIntersections.size());
+
         Optional<PathCandidate> bestCandidate = findBestPathThroughSplits(
                 splitData, modifiedGraph, boundaries,
                 intersections, dualGraph, shortestPathResult.path(),
@@ -171,15 +175,16 @@ public class MaxFlowReif implements MaxFlow {
         logger.info("Time for filling flow in dual graph: {} seconds", (time7 - time6) / 1000.0);
 
         // Визуализация
-        dumpVisualization(boundaries, shortestPathResult.path(),
-                          best.pathInOriginalGraph(),
-                          sourceNeighbors, sinkNeighbors, modifiedGraph,
-                          best, splitData.splitToOriginalMap());
+        //dumpVisualization(boundaries, shortestPathResult.path(),
+        //                  best.pathInOriginalGraph(),
+        //                  sourceNeighbors, sinkNeighbors, modifiedGraph,
+        //                  best, splitData.splitToOriginalMap()
+        //);
 
         return new FlowResult(flow, dualGraph, source, sink, best.pathInOriginalGraph);
     }
 
-    private record BoundariesData(
+    public record BoundariesData(
             List<Vertex> sourceBoundary,
             List<Vertex> sinkBoundary,
             List<Vertex> externalBoundary
@@ -207,7 +212,7 @@ public class MaxFlowReif implements MaxFlow {
     /**
      * Вычисляет все границы
      */
-    private BoundariesData computeBoundaries(
+    public BoundariesData computeBoundaries(
             Set<VertexOfDualGraph> sourceNeighbors,
             Set<VertexOfDualGraph> sinkNeighbors
     ) {
@@ -322,7 +327,7 @@ public class MaxFlowReif implements MaxFlow {
 
         for (Vertex pathVertex : path) {
             Map.Entry<Vertex, Vertex> splitted = splitVertex(
-                    modifiedGraph, pathVertex, splitToOriginalMap, neighborSplits
+                    modifiedGraph, pathVertex, splitToOriginalMap, neighborSplits, initGraph
             );
             splitVertices.add(splitted);
         }
@@ -351,35 +356,94 @@ public class MaxFlowReif implements MaxFlow {
             if (i == 0 || i == splits.size() - 1) {
                 splitsToProcess.add(splits.get(i));
             } else {
-                if (edgeMap.get(splits.get(i).getKey()).size() > 2 && edgeMap.get(splits.get(i).getValue()).size() > 2) {
+                if (edgeMap.get(splits.get(i).getKey()).size() > 2 || edgeMap.get(splits.get(i).getValue()).size() > 2) {
                     splitsToProcess.add(splits.get(i));
                 }
             }
-        }
+        } 
         if (splitsToProcess.isEmpty()) return Optional.empty();
 
-        // int lo = 0, hi = splitsToProcess.size() - 1;
-        Optional<PathCandidate> bestPath = Optional.empty();
-
-        for (int i = 0; i < splitsToProcess.size(); i++) {
-            Optional<PathCandidate> midOpt = evalAt(i, splitsToProcess, splitData,
-                    modifiedGraph, boundaries, intersections, dualGraph, path, sourceNeighbors, sinkNeighbors
-                );
-                if (midOpt.isEmpty()) {
-                    logger.error("midOpt is empty");
-                    continue;
-                }
-                if (bestPath.isEmpty() || bestPath.get().score() > midOpt.get().score()) {
-                    logger.info("New bestPath at vertex of path number {}, distance {}, diff in weight {}", i, midOpt.get().totalDistance(), midOpt.get().balanceWeight());
-                    bestPath = midOpt;
-                }
+        if (useBinarySearch) {
+            return binarySearchBestPath(splitsToProcess, splitData, modifiedGraph, boundaries, intersections, dualGraph, path, sourceNeighbors, sinkNeighbors);
+        } else {
+            return linearSearchBestPath(splitsToProcess, splitData, modifiedGraph, boundaries, intersections, dualGraph, path, sourceNeighbors, sinkNeighbors);
         }
-        /* 
+    }
+
+    private Optional<PathCandidate> linearSearchBestPath(
+            List<Map.Entry<Vertex, Vertex>> splits,
+            SplitVerticesData splitData,
+            Graph<Vertex> modifiedGraph,
+            BoundariesData boundaries,
+            IntersectionsData intersections,
+            Graph<VertexOfDualGraph> dualGraph,
+            List<Vertex> path,
+            Set<VertexOfDualGraph> sourceNeighbors,
+            Set<VertexOfDualGraph> sinkNeighbors
+        ) {
+        Optional<PathCandidate> bestPath = Optional.empty();
+        double alpha = ShortestPathTreeProcessor.calculateAlpha(dualGraph.verticesWeight(), maxSumVerticesWeight);
+
+        for (int i = 0; i < splits.size(); i++) {
+            Optional<PathCandidate> midOpt = evaluateSplitVertex(
+                splits.get(i),
+                modifiedGraph,
+                boundaries,
+                dualGraph,
+                intersections.sourceIntersections(),
+                intersections.sinkIntersections(),
+                splitData.splitToOriginalMap(),
+                path,
+                sourceNeighbors,
+                sinkNeighbors,
+                alpha
+            );
+
+            if (midOpt.isEmpty()) {
+                logger.error("midOpt is empty");
+                continue;
+            }
+
+            if (bestPath.isEmpty() || bestPath.get().score() > midOpt.get().score()) {
+                logger.info("New bestPath at vertex of path number {}, distance {}, diff in weight {}, score = {}", i, midOpt.get().totalDistance(), midOpt.get().balanceWeight(), midOpt.get().score());
+                bestPath = midOpt;
+            }
+        }
+
+        return bestPath;
+    }
+
+    private Optional<PathCandidate> binarySearchBestPath(
+            List<Map.Entry<Vertex, Vertex>> splits,
+            SplitVerticesData splitData,
+            Graph<Vertex> modifiedGraph,
+            BoundariesData boundaries,
+            IntersectionsData intersections,
+            Graph<VertexOfDualGraph> dualGraph,
+            List<Vertex> path,
+            Set<VertexOfDualGraph> sourceNeighbors,
+            Set<VertexOfDualGraph> sinkNeighbors
+    ) {
+        int lo = 0, hi = splits.size() - 1;
+        Optional<PathCandidate> bestPath = Optional.empty();
+        double alpha = ShortestPathTreeProcessor.calculateAlpha(dualGraph.verticesWeight(), maxSumVerticesWeight);
 
         while (lo < hi) {
             int mid = (lo + hi) / 2;
-            Optional<PathCandidate> midOpt = evalAt(mid, splitsToProcess, splitData,
-                    modifiedGraph, boundaries, intersections, dualGraph, path);
+            Optional<PathCandidate> midOpt = evaluateSplitVertex(
+                splits.get(mid),
+                modifiedGraph,
+                boundaries,
+                dualGraph,
+                intersections.sourceIntersections(),
+                intersections.sinkIntersections(),
+                splitData.splitToOriginalMap(),
+                path,
+                sourceNeighbors,
+                sinkNeighbors,
+                alpha
+            );
+
             if (midOpt.isEmpty()) {
                 logger.error("midOpt is empty");
                 lo = mid + 1;
@@ -397,37 +461,8 @@ public class MaxFlowReif implements MaxFlow {
             }
         }
 
-        Optional<PathCandidate> atLo = evalAt(lo, splitsToProcess, splitData,
-                modifiedGraph, boundaries, intersections, dualGraph, path);
-        Optional<PathCandidate> atPrev = lo > 0
-                ? evalAt(lo - 1, splitsToProcess, splitData, modifiedGraph, boundaries, intersections, dualGraph, path)
-                : Optional.empty();
-
-            if (!atLo.isEmpty() && (bestPath.isEmpty() || bestPath.get().score() > atLo.get().score())) {
-                bestPath = atLo;
-            }
-            if (!atPrev.isEmpty() && (bestPath.isEmpty() || bestPath.get().score() > atPrev.get().score())) {
-                bestPath = atPrev;
-            }
-                */
-
-        return bestPath;
-    }
-
-    private Optional<PathCandidate> evalAt(
-            int idx,
-            List<Map.Entry<Vertex, Vertex>> splits,
-            SplitVerticesData splitData,
-            Graph<Vertex> modifiedGraph,
-            BoundariesData boundaries,
-            IntersectionsData intersections,
-            Graph<VertexOfDualGraph> dualGraph,
-            List<Vertex> path,
-            Set<VertexOfDualGraph> sourceNeighbors,
-            Set<VertexOfDualGraph> sinkNeighbors
-    ) {
-        return evaluateSplitVertex(
-                splits.get(idx),
+        Optional<PathCandidate> atLo = evaluateSplitVertex(
+                splits.get(lo),
                 modifiedGraph,
                 boundaries,
                 dualGraph,
@@ -436,9 +471,33 @@ public class MaxFlowReif implements MaxFlow {
                 splitData.splitToOriginalMap(),
                 path,
                 sourceNeighbors,
-                sinkNeighbors
+                sinkNeighbors,
+                alpha
         );
+        Optional<PathCandidate> atPrev = lo > 0 ? evaluateSplitVertex(
+                splits.get(lo - 1),
+                modifiedGraph,
+                boundaries,
+                dualGraph,
+                intersections.sourceIntersections(),
+                intersections.sinkIntersections(),
+                splitData.splitToOriginalMap(),
+                path,
+                sourceNeighbors,
+                sinkNeighbors,
+                alpha
+            ) : Optional.empty();
+
+            if (!atLo.isEmpty() && (bestPath.isEmpty() || bestPath.get().score() > atLo.get().score())) {
+                bestPath = atLo;
+            }
+            if (!atPrev.isEmpty() && (bestPath.isEmpty() || bestPath.get().score() > atPrev.get().score())) {
+                bestPath = atPrev;
+            }
+
+        return bestPath;
     }
+
     /**
      * Оценивает одну split-вершину и возвращает кандидата на лучший путь
      */
@@ -452,7 +511,8 @@ public class MaxFlowReif implements MaxFlow {
             Map<Vertex, Vertex> splitToOriginalMap,
             List<Vertex> path,
             Set<VertexOfDualGraph> sourceNeighbors,
-            Set<VertexOfDualGraph> sinkNeighbors
+            Set<VertexOfDualGraph> sinkNeighbors,
+            double alpha
         ) {
 
         Vertex splitVertex1 = splitVertex.getKey();
@@ -506,8 +566,9 @@ public class MaxFlowReif implements MaxFlow {
         DijkstraResult path1ToBoundary = path1ToBoundaryOpt.get();
         DijkstraResult path2ToBoundary = path2ToBoundaryOpt.get();
 
-        ShortestPathTreeProcessor sptProcessor = new ShortestPathTreeProcessor(lengthPriority);
         double totalWeight = dualGraph.verticesWeight();
+        ShortestPathTreeProcessor sptProcessor = new ShortestPathTreeProcessor(lengthPriority, alpha);
+        
         SPTResult result = sptProcessor.findBestPath(
             path1ToBoundary, 
             path2ToBoundary, 
@@ -515,8 +576,7 @@ public class MaxFlowReif implements MaxFlow {
             sinkNeighbors.stream().mapToDouble(VertexOfDualGraph::getWeight).sum(),
             boundaryLength, 
             boundaries.externalBoundary(), 
-            totalWeight, 
-            maxSumVerticesWeight
+            totalWeight
         );
         long time3 = System.currentTimeMillis();
         logger.info("Time for find best path in spt: {} seconds", (time3 - time2) / 1000.0);
@@ -718,25 +778,25 @@ public class MaxFlowReif implements MaxFlow {
             Map<Vertex, Vertex> splitToOriginalMap) {
 
         // Отключено для производительности - раскомментировать для debug
-        // FlowWriter.dumpVisualizationData(
-        //         boundaries.externalBoundary(),
-        //         boundaries.sourceBoundary(),
-        //         boundaries.sinkBoundary(),
-        //         shortestPath, bestPath,
-        //         sourceNeighbors, sinkNeighbors, flow,
-        //         initGraph,
-        //         modifiedGraph, dualGraph, source, sink, conversion
-        // );
+        FlowWriter.dumpVisualizationData(
+                 boundaries.externalBoundary(),
+                 boundaries.sourceBoundary(),
+                 boundaries.sinkBoundary(),
+                 shortestPath, bestPath,
+                 sourceNeighbors, sinkNeighbors, flow,
+                 initGraph,
+                 modifiedGraph, dualGraph, source, sink, conversion
+         );
 
-        // FlowWriter.dumpSPTVisualizationData(
-        //         best.path1ToBoundary(),
-        //         best.path2ToBoundary(),
-        //         best.splitVertex1(),
-        //         best.splitVertex2(),
-        //         splitToOriginalMap,
-        //         sourceNeighbors, sinkNeighbors, flow, conversion,
-        //         initGraph
-        // );
+         FlowWriter.dumpSPTVisualizationData(
+                 best.path1ToBoundary(),
+                 best.path2ToBoundary(),
+                 best.splitVertex1(),
+                 best.splitVertex2(),
+                 splitToOriginalMap,
+                 sourceNeighbors, sinkNeighbors, flow, conversion,
+                 initGraph
+         );
     }
 
     private Optional<DijkstraResult> dijkstraSingleSourceWithRegionWeights(
@@ -764,26 +824,25 @@ public class MaxFlowReif implements MaxFlow {
                     List.of(sourceVertex),
                     0.0,
                     new HashMap<>(),
-                    new HashMap<>(),
+                    new HashMap<>(Map.of(sourceVertex, 0.0)),
                     List.of(sourceVertex),
                     List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
+                    List.of(0.0),
+                    List.of(0.0),
+                    List.of(0),
                     0.0
             ));
         }
 
         // Проверяем, пересекаются ли source и sink на границе
-        Set<Long> sourceIntersectionNames = sourceIntersections.stream()
-                .map(Vertex::getName)
+        Set<Vertex> sourceIntersectionsSet = sourceIntersections.stream()
                 .collect(Collectors.toSet());
-        Set<Long> sinkIntersectionNames = sinkIntersections.stream()
-                .map(Vertex::getName)
+        Set<Vertex> sinkIntersectionsSet = sinkIntersections.stream()
                 .collect(Collectors.toSet());
         
-        Set<Long> commonIntersections = new HashSet<>(sourceIntersectionNames);
-        commonIntersections.retainAll(sinkIntersectionNames);
+        Set<Vertex> commonIntersections = new HashSet<>(sourceIntersectionsSet);
+        commonIntersections.retainAll(sinkIntersectionsSet);
+        commonIntersections.retainAll(targetSegment);
         
         CornerConstraints cornerConstraints;
         
@@ -901,7 +960,6 @@ public class MaxFlowReif implements MaxFlow {
         return neighbors;
     }
 
-    // множественные пересечения с external boundary???
     private List<Vertex> findIntersections(List<Vertex> externalBoundary, List<Vertex> targetBoundary) {
         Set<Long> targetBoundaryNames = targetBoundary.stream()
                 .map(Vertex::getName)
@@ -974,6 +1032,8 @@ public class MaxFlowReif implements MaxFlow {
         Set<Vertex> sinkFaceVertices = collectFaceVertices(sinkNeighbors);
         Set<Map.Entry<Vertex, Vertex>> sinkInnerEdges = collectFaceEdges(sinkNeighbors);
         Set<Map.Entry<Vertex, Vertex>> sourceInnerEdges = collectFaceEdges(sourceNeighbors);
+        Set<Map.Entry<Vertex, Vertex>> joinedSourceSinkInnerEdges = new HashSet<>(sourceInnerEdges);
+        joinedSourceSinkInnerEdges.addAll(sinkInnerEdges);
         Set<Map.Entry<Vertex, Vertex>> innerEdges = collectFaceEdges(dualGraph.verticesArray());
 
         Set<Vertex> sourceBoundarySet = new HashSet<>(sourceBoundary);
@@ -981,9 +1041,35 @@ public class MaxFlowReif implements MaxFlow {
         Set<Vertex> externalBoundarySet = new HashSet<>(externalBoundary);
 
         // Добавляем границы
-        modifiedGraph.addBoundEdgesWithConstraints(sourceBoundary, initGraph, sourceInnerEdges, externalBoundarySet);
-        modifiedGraph.addBoundEdgesWithConstraints(sinkBoundary, initGraph, sinkInnerEdges, externalBoundarySet);
+        modifiedGraph.addBoundEdgesWithConstraints(sourceBoundary, initGraph, joinedSourceSinkInnerEdges, externalBoundarySet);
+        modifiedGraph.addBoundEdgesWithConstraints(sinkBoundary, initGraph, joinedSourceSinkInnerEdges, externalBoundarySet);
         modifiedGraph.addBoundEdges(externalBoundary, initGraph);
+
+        for (Vertex sourceVertex : sourceBoundary) {
+            Map<Vertex, Edge> neighbors = initGraph.getEdges().get(sourceVertex);
+            if (neighbors == null) {
+                continue;
+            }
+            for (Vertex sinkVertex : sinkBoundary) {
+                if (externalBoundarySet.contains(sourceVertex) && externalBoundarySet.contains(sinkVertex)) {
+                    continue;
+                }
+                if (sourceInnerEdges.contains(Map.entry(sourceVertex, sinkVertex))
+                        || sourceInnerEdges.contains(Map.entry(sinkVertex, sourceVertex))) {
+                    continue;
+                }
+                if (sinkInnerEdges.contains(Map.entry(sourceVertex, sinkVertex))
+                        || sinkInnerEdges.contains(Map.entry(sinkVertex, sourceVertex))) {
+                    continue;
+                }
+                Edge edge = neighbors.get(sinkVertex);
+                if (edge != null) {
+                    modifiedGraph.addVertex(sourceVertex);
+                    modifiedGraph.addVertex(sinkVertex);
+                    modifiedGraph.addEdge(sourceVertex, sinkVertex, edge.length);
+                }
+            }
+        }
 
         // Добавляем внутренние вершины
         for (Vertex v : initGraph.verticesArray()) {
@@ -1051,12 +1137,14 @@ public class MaxFlowReif implements MaxFlow {
      */
     private CornerConstraints buildCornerConstraintsForIntersection(
             Graph<Vertex> graph,
-            Set<Long> commonIntersections,
+            Set<Vertex> commonIntersections,
             BoundariesData boundaries,
             List<Vertex> sourceIntersections,
             List<Vertex> sinkIntersections
     ) {
-        Set<Long> cornerVertices = new HashSet<>(commonIntersections);
+        Set<Long> cornerVertices = commonIntersections.stream()
+                .map(Vertex::getName)
+                .collect(Collectors.toSet());
         Map<Long, List<EdgeOfGraph<Vertex>>> allowedEdgesForCorner = new HashMap<>();
         
         Set<Long> externalBoundaryNames = boundaries.externalBoundary().stream()
@@ -1071,28 +1159,19 @@ public class MaxFlowReif implements MaxFlow {
         
         Map<Vertex, TreeSet<EdgeOfGraph<Vertex>>> sortedEdgesByVertex = graph.arrangeByAngle();
         
-        for (Long intersectionName : commonIntersections) {
-            Vertex intersectionVertex = findVertexByNameInList(sourceIntersections, intersectionName);
-            if (intersectionVertex == null) {
-                intersectionVertex = findVertexByNameInList(sinkIntersections, intersectionName);
-            }
-            
-            if (intersectionVertex == null) {
-                logger.warn("Intersection vertex {} not found", intersectionName);
-                continue;
-            }
+        for (Vertex intersectionVertex : commonIntersections) {
 
             TreeSet<EdgeOfGraph<Vertex>> allEdges = sortedEdgesByVertex.get(intersectionVertex);
             if (allEdges == null || allEdges.isEmpty()) {
                 // Пробуем найти split-вершины
-                Vertex split1 = new Vertex(intersectionName * 1000 + 1, intersectionVertex);
-                Vertex split2 = new Vertex(intersectionName * 1000 + 2, intersectionVertex);
+                Vertex split1 = new Vertex(intersectionVertex.name * 1000 + 1, intersectionVertex);
+                Vertex split2 = new Vertex(intersectionVertex.name * 1000 + 2, intersectionVertex);
                 allEdges = new TreeSet<>(sortedEdgesByVertex.getOrDefault(split1, new TreeSet<>()));
                 allEdges.addAll(sortedEdgesByVertex.getOrDefault(split2, new TreeSet<>()));
             }
             
             if (allEdges == null || allEdges.isEmpty()) {
-                logger.warn("No edges found for intersection vertex {}", intersectionName);
+                logger.warn("No edges found for intersection vertex {}", intersectionVertex.name);
                 continue;
             }
             
@@ -1100,7 +1179,7 @@ public class MaxFlowReif implements MaxFlow {
             // НЕ в externalBoundary И (в sourceBoundary ИЛИ в sinkBoundary)
             List<EdgeOfGraph<Vertex>> allowedEdges = new ArrayList<>();
             for (EdgeOfGraph<Vertex> edge : allEdges) {
-                logger.debug("Intersection {}: edge to {}", intersectionName, edge.end.getName());
+                logger.debug("Intersection {}: edge to {}", intersectionVertex.name, edge.end.getName());
                 long targetName = edge.end.getName();
                 long originalTargetName = targetName / 1000;
                 
@@ -1113,14 +1192,14 @@ public class MaxFlowReif implements MaxFlow {
                         && (sinkBoundaryNames.contains(targetName)
                         || sinkBoundaryNames.contains(originalTargetName)
                 ) && (
-                        sinkBoundaryNames.contains(intersectionName)
-                        || sinkBoundaryNames.contains(intersectionName * 1000 + 1)
-                        || sinkBoundaryNames.contains(intersectionName * 1000 + 2)
+                        sinkBoundaryNames.contains(intersectionVertex.name)
+                        || sinkBoundaryNames.contains(intersectionVertex.name * 1000 + 1)
+                        || sinkBoundaryNames.contains(intersectionVertex.name * 1000 + 2)
                         )
                     && (
-                        sourceBoundaryNames.contains(intersectionName)
-                        || sourceBoundaryNames.contains(intersectionName * 1000 + 1)
-                        || sourceBoundaryNames.contains(intersectionName * 1000 + 2)
+                        sourceBoundaryNames.contains(intersectionVertex.name)
+                        || sourceBoundaryNames.contains(intersectionVertex.name * 1000 + 1)
+                        || sourceBoundaryNames.contains(intersectionVertex.name * 1000 + 2)
                         );
                 boolean inSourceOrSink = sourceBoundaryNames.contains(targetName) 
                         || sourceBoundaryNames.contains(originalTargetName)
@@ -1129,22 +1208,15 @@ public class MaxFlowReif implements MaxFlow {
 
                 if ((notInExternal || bothVerticesInSourceOrSink) && inSourceOrSink) {
                     allowedEdges.add(edge);
-                    logger.debug("Intersection {}: allowed edge to {}", intersectionName, targetName);
+                    logger.debug("Intersection {}: allowed edge to {}", intersectionVertex.name, targetName);
                 }
             }
             
-            allowedEdgesForCorner.put(intersectionName, allowedEdges);
-            logger.debug("Intersection vertex {} has {} allowed edges", intersectionName, allowedEdges.size());
+            allowedEdgesForCorner.put(intersectionVertex.name, allowedEdges);
+            logger.debug("Intersection vertex {} has {} allowed edges", intersectionVertex.name, allowedEdges.size());
         }
         
         return new CornerConstraints(cornerVertices, allowedEdgesForCorner);
-    }
-    
-    private Vertex findVertexByNameInList(List<Vertex> vertices, long name) {
-        return vertices.stream()
-                .filter(v -> v.getName() == name)
-                .findFirst()
-                .orElse(null);
     }
 
     /**

@@ -17,7 +17,7 @@ cities = {
     "khabarovsk": (48.4855, 135.0798)
 }
 
-sizes = [100, 500, 1000, 2000, 5000]
+sizes = [1000, 1500, 2000]
 
 scripts_dir = project_root / "scripts"
 data_root = project_root / "main" / "resources" / "data"

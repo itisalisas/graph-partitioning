@@ -53,4 +53,23 @@ public class CornerConstraints {
     public static CornerConstraints empty() {
         return new CornerConstraints(Set.of(), Map.of());
     }
+
+    public static CornerConstraints merge(CornerConstraints a, CornerConstraints b) {
+        Set<Long> mergedCorners = new HashSet<>(a.cornerVertices);
+        mergedCorners.addAll(b.cornerVertices);
+
+        Map<Long, List<EdgeOfGraph<Vertex>>> mergedEdges = new HashMap<>(a.allowedEdgesForCorner);
+        for (Map.Entry<Long, List<EdgeOfGraph<Vertex>>> entry : b.allowedEdgesForCorner.entrySet()) {
+            mergedEdges.merge(entry.getKey(), entry.getValue(), (existing, incoming) -> {
+                Set<Long> seen = new HashSet<>();
+                List<EdgeOfGraph<Vertex>> combined = new ArrayList<>(existing);
+                for (EdgeOfGraph<Vertex> e : existing) seen.add(e.end.getName());
+                for (EdgeOfGraph<Vertex> e : incoming) {
+                    if (seen.add(e.end.getName())) combined.add(e);
+                }
+                return combined;
+            });
+        }
+        return new CornerConstraints(mergedCorners, mergedEdges);
+    }
 }

@@ -60,7 +60,7 @@ public class Main implements Runnable {
     @Parameters(index = "5", description = "Output directory name")
     private String pathToResultDirectory;
 
-    @Option(names = {"-p", "--param"}, defaultValue = "0.25",
+    @Option(names = {"-s", "--starting-weight-ratio"}, defaultValue = "0.25",
             description = "Partition parameter (default: ${DEFAULT-VALUE})")
     private double partitionParameter;
 
@@ -68,12 +68,26 @@ public class Main implements Runnable {
             description = "Length priority coefficient for Reif (default: ${DEFAULT-VALUE})")
     private double lengthPriority;
 
+    @Option(names = {"-b", "--binary"}, defaultValue = "false",
+            description = "Use binary search for Reif (default: ${DEFAULT-VALUE})")
+    private boolean useBinarySearch;
+
+    @Option(names = {"-c", "--cutted-reif"}, defaultValue = "false",
+            description = "Use cutted Reif algorithm (single SPT from boundary segment) (default: ${DEFAULT-VALUE})")
+    private boolean useCuttedReif;
+
+    @Option(names = {"--no-post-processing"}, defaultValue = "false",
+            description = "Disable post-processing/rebalancing stage for DIF/RIF")
+    private boolean noPostProcessing;
+
     @Override
     public void run() throws RuntimeException {
         BalancedPartitioning partitioning = Algorithm.getBalancedPartitioningByAlgorithmName(
                 algorithmName,
                 partitionParameter,
-                lengthPriority
+                lengthPriority,
+                useBinarySearch,
+                useCuttedReif
         );
 
         Graph<Vertex> graph = new Graph<>();
@@ -145,8 +159,20 @@ public class Main implements Runnable {
         long time3 = System.currentTimeMillis();
         logger.info("Building partition graph time: " + (time3 - time2) + " ms");
 
-        Balancer balancer = new Balancer(partitionGraph, preparedGraph, graph, maxSumVerticesWeight, OUTPUT_DIRECTORY + pathToResultDirectory, cc, algorithmName.equals(Algorithm.RIF), lengthPriority);
-        partitionResultForFaces = balancer.rebalancing();
+        Balancer balancer = new Balancer(
+            partitionGraph, 
+            preparedGraph, 
+            graph, 
+            maxSumVerticesWeight, 
+            OUTPUT_DIRECTORY + pathToResultDirectory, 
+            cc, 
+            algorithmName.equals(Algorithm.RIF), 
+            lengthPriority, 
+            useBinarySearch
+        );
+        if (!noPostProcessing && (algorithmName.equals(Algorithm.RIF) || algorithmName.equals(Algorithm.DIF))) {
+            partitionResultForFaces = balancer.rebalancing();
+        }
         HashMap<VertexOfDualGraph, Integer> newDualVertexToPartNumber = new HashMap<>();
         for (int i = 0; i < partitionResultForFaces.size(); i++) {
             for (VertexOfDualGraph vertex : partitionResultForFaces.get(i)) {

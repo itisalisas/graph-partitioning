@@ -37,6 +37,7 @@ public class Balancer {
     CoordinateConversion cc;
     boolean useReif;
     double lengthPriority;
+    boolean useBinarySearch;
 
     public Balancer(
             Graph<PartitionGraphVertex> partitionGraph,
@@ -46,7 +47,8 @@ public class Balancer {
             String pathToResultDirectory,
             CoordinateConversion cc,
             boolean useReif,
-            double lengthPriority
+            double lengthPriority,
+            boolean useBinarySearch
     ) {
         this.partitionGraph = partitionGraph;
         this.dualGraph = dualGraph;
@@ -56,6 +58,7 @@ public class Balancer {
         this.cc = cc;
         this.useReif = useReif;
         this.lengthPriority = lengthPriority;
+        this.useBinarySearch = useBinarySearch;
     }
 
     private boolean rebalanceSmallestRegion() {
@@ -88,9 +91,11 @@ public class Balancer {
                 Map<Set<VertexOfDualGraph>, Double> cutBefore = calculateCutWeights(regionsSubgraph, List.of(new HashSet<>(smallestVertex.vertices), new HashSet<>(biggestNeighbor.vertices)));
 
                 Assertions.assertEquals(balancingVerticesSet.size(), regionsSubgraph.verticesNumber());
-                Assertions.assertTrue(regionsSubgraph.isConnected());
+                if (!regionsSubgraph.isConnected()) {
+                    continue;
+                }
                 double coefficient = 1 - (double) maxWeight / (balancingVerticesSet.stream().mapToDouble(Vertex::getWeight).sum());
-                BalancedPartitioning bp = new BalancedPartitioning(new InertialFlowPartitioning(coefficient, useReif, lengthPriority));
+                BalancedPartitioning bp = new BalancedPartitioning(new InertialFlowPartitioning(coefficient, useReif, lengthPriority, useBinarySearch));
                 List<Set<VertexOfDualGraph>> newPartition = bp.partition(startGraph, regionsSubgraph, maxWeight, cc);
                 if (newPartition.size() > 2) {
                     logger.error("partition size in balancer > 2, skip");

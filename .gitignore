@@ -19,3 +19,4 @@ src/scripts/.osmnx_cache/
 test-output/
 .venv
 *.log
+*.DS_Store

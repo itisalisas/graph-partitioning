@@ -7,6 +7,7 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import graph.BoundSearcher;
 import graph.Edge;
 import graph.Graph;
@@ -199,10 +200,12 @@ public class FlowWriter {
             logger.info("SPT1 saved in {} ms", time1 - time0);
 
             // Dump SPT 2 (from splitVertex2)
-            writeSPTToFile(outputDir + "spt2.txt", spt2, root2, splitToOriginalMap, "SPT2",
-                    coordConversion, initGraph);
-            long time2 = System.currentTimeMillis();
-            logger.info("SPT2 saved in {} ms", time2 - time1);
+            if (spt2 != null && root2 != null) {
+                writeSPTToFile(outputDir + "spt2.txt", spt2, root2, splitToOriginalMap, "SPT2",
+                        coordConversion, initGraph);
+                long time2 = System.currentTimeMillis();
+                logger.info("SPT2 saved in {} ms", time2 - time1);
+            }
 
             logger.info("SPT visualization data saved to {}", outputDir);
         } catch (Exception e) {
@@ -408,8 +411,10 @@ public class FlowWriter {
                         from = Math.max(spt.leafIndices().get(numLeaves - 1) + 1, 0);
                         to = numRegionsTotal - 1;
                     }
+                    if (!spt.regions().isEmpty()) {
                     for (int r = from; r <= to; r++) {
                         faceToGroup.putIfAbsent(spt.regions().get(r), groupIdx);
+                    }
                     }
                 }
 

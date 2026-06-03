@@ -28,6 +28,7 @@ import graph.Vertex;
 import graph.VertexOfDualGraph;
 import partitioning.entities.FlowResult;
 import partitioning.maxflow.MaxFlow;
+import partitioning.maxflow.MaxFlowCuttedReif;
 import partitioning.maxflow.MaxFlowDinic;
 import partitioning.maxflow.MaxFlowReif;
 import readWrite.CoordinateConversion;
@@ -36,7 +37,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
     private static final Logger logger = LoggerFactory.getLogger(InertialFlowPartitioning.class);
 
     private final double PARAMETER_SOURCE, PARAMETER_SINK;
-    private final boolean USE_REIF;
+    private final boolean USE_REIF, USE_BINARY_SEARCH, USE_CUTTED_REIF;
     private final double LENGTH_PRIORITY;
 
     public InertialFlowPartitioning(boolean useReif) {
@@ -44,6 +45,8 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
         this.PARAMETER_SINK = 0.5;
         this.USE_REIF = useReif;
         this.LENGTH_PRIORITY = 0.5;
+        this.USE_BINARY_SEARCH = false;
+        this.USE_CUTTED_REIF = false;
     }
 
     public InertialFlowPartitioning(double parameter, boolean useReif) {
@@ -51,13 +54,26 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
         this.PARAMETER_SINK = parameter;
         this.USE_REIF = useReif;
         this.LENGTH_PRIORITY = 0.5;
+        this.USE_BINARY_SEARCH = false;
+        this.USE_CUTTED_REIF = false;
     }
 
-    public InertialFlowPartitioning(double parameter, boolean useReif, double lengthPriority) {
+    public InertialFlowPartitioning(double parameter, boolean useReif, double lengthPriority, boolean useBinarySearch) {
         this.PARAMETER_SOURCE = parameter;
         this.PARAMETER_SINK = parameter;
         this.USE_REIF = useReif;
         this.LENGTH_PRIORITY = lengthPriority;
+        this.USE_BINARY_SEARCH = useBinarySearch;
+        this.USE_CUTTED_REIF = false;
+    }
+
+    public InertialFlowPartitioning(double parameter, boolean useReif, double lengthPriority, boolean useBinarySearch, boolean useCuttedReif) {
+        this.PARAMETER_SOURCE = parameter;
+        this.PARAMETER_SINK = parameter;
+        this.USE_REIF = useReif;
+        this.LENGTH_PRIORITY = lengthPriority;
+        this.USE_BINARY_SEARCH = useBinarySearch;
+        this.USE_CUTTED_REIF = useCuttedReif;
     }
 
     private static class Vector2D {
@@ -169,8 +185,8 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
             long time1 = System.currentTimeMillis();
 
-            VertexOfDualGraph source = new VertexOfDualGraph(maxIndex + 1);
-            VertexOfDualGraph sink = new VertexOfDualGraph(maxIndex + 2);
+            VertexOfDualGraph source = new VertexOfDualGraph(maxIndex + 1, 0, 0, 0);
+            VertexOfDualGraph sink = new VertexOfDualGraph(maxIndex + 2, 0, 0, 0);
 
             int sourceInitIndex = vertices.indexOf(sourceInitVertex);
             int sinkInitIndex = vertices.indexOf(sinkInitVertex);
@@ -199,10 +215,18 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
             Assertions.assertEquals(currentGraph.verticesNumber() + 2, copyGraph.verticesNumber());
 
+            logger.debug("process graph with {} vertices, source size = {}, sink size = {}", copyGraph.verticesNumber(), sourceSet.size(), sinkSet.size());
             MaxFlow maxFlow;
             if (USE_REIF) {
-                maxFlow = new MaxFlowReif(simpleGraph, copyGraph, source, sink, coordinateConversion, maxSumVerticesWeight, LENGTH_PRIORITY);
+                if (USE_CUTTED_REIF) {
+                    logger.info("Using MaxFlowCuttedReif algorithm");
+                    maxFlow = new MaxFlowCuttedReif(simpleGraph, copyGraph, source, sink, coordinateConversion, maxSumVerticesWeight, LENGTH_PRIORITY);
+                } else {
+                    logger.info("Using MaxFlowReif algorithm");
+                    maxFlow = new MaxFlowReif(simpleGraph, copyGraph, source, sink, coordinateConversion, maxSumVerticesWeight, LENGTH_PRIORITY, USE_BINARY_SEARCH);
+                }
             } else {
+                logger.info("Using MaxFlowDinic algorithm");
                 maxFlow = new MaxFlowDinic(copyGraph, source, sink);
             }
             FlowResult flowResult = maxFlow.findFlow();
@@ -216,26 +240,26 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             } else {
                 subpartition = partitionGraph(flowResult);
             }
-            for (Graph<VertexOfDualGraph> subgraph : subpartition) {
-                if (!subgraph.isConnected()) {
-                    logger.warn("Subgraph is not connected");
-                    CoordinateConversion cc = new CoordinateConversion();
-                    for (var s : subgraph.splitForConnectedComponents()) {
-                        logger.warn("Part: {}", s.stream().map(Vertex::getName).collect(Collectors.toList()));
-                        if (s.size() == 1) {
-                            var vertex = s.iterator().next();
-                            logger.warn("Vertex: {} ({} {}), neighbors: {}", vertex.name, cc.fromEuclidean(vertex).y, cc.fromEuclidean(vertex).x, subgraph.getEdges().get(vertex).keySet().stream().map(Vertex::getName).collect(Collectors.toList()));
-                        }
-                    }
-                    // TODO - странный путь, когда станет понятно почему, пролемы быть не должно
-                }
-            }
+
             long time5 = System.currentTimeMillis();
             logger.info("Time for partitioning graph: {} seconds", (time5 - time4) / 1000.0);
             logger.debug("SUBPARTITION SIZE: {}", subpartition.size());
             logger.debug("Subgraph 0 vertices: {}, weight: {}", subpartition.get(0).verticesNumber(), subpartition.get(0).verticesWeight());
             logger.debug("Subgraph 1 vertices: {}, weight: {}", subpartition.get(1).verticesNumber(), subpartition.get(1).verticesWeight());
             logger.debug("Original graph vertices: {}, weight: {}\n\n", currentGraph.verticesNumber(), currentGraph.verticesWeight());
+
+            // Логируем длину разреза и баланс частей
+            double cutLength = flowResult.flowSize();
+            double weight0 = subpartition.get(0).verticesWeight();
+            double weight1 = subpartition.get(1).verticesWeight();
+            double balanceRatio = weight0 / weight1;
+            double balancePercent0 = (weight0 / totalWeight) * 100;
+            double balancePercent1 = (weight1 / totalWeight) * 100;
+            
+            logger.info("Cut length: {}", cutLength);
+            logger.info("Partition balance: {} / {} ({}% / {}%), ratio: {}",
+                        weight0, weight1, balancePercent0, balancePercent1, balanceRatio);
+
 
             for (Graph<VertexOfDualGraph> subgraph : subpartition) {
                 stack.push(subgraph);
@@ -491,6 +515,9 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
         Assertions.assertEquals(graphWithFlow.verticesNumber(), subpartition.get(0).verticesNumber() + subpartition.get(1).verticesNumber());
 
+        if (subpartition.get(0).verticesSumWeight() < subpartition.get(1).verticesSumWeight()) {
+            return new ArrayList<>(Arrays.asList(subpartition.get(1), subpartition.get(0)));
+        }
         return subpartition;
     }
 
@@ -599,6 +626,10 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             }
             
             subpartition.set(0, flow.graphWithFlow().createSubgraph(components.get(0)));
+            }
+
+        if (subpartition.get(0).verticesSumWeight() < subpartition.get(1).verticesSumWeight()) {
+            return new ArrayList<>(Arrays.asList(subpartition.get(1), subpartition.get(0)));
         }
         
         return subpartition;

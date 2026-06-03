@@ -6,12 +6,14 @@ import java.io.IOException;
 import static java.lang.Math.sqrt;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.gson.GsonBuilder;
 
@@ -19,8 +21,6 @@ import graph.BoundSearcher;
 import graph.Point;
 import graph.Vertex;
 import graph.VertexOfDualGraph;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import partitioning.BalancedPartitioning;
 import partitioning.algorithms.BalancedPartitioningOfPlanarGraphs;
 
@@ -175,6 +175,11 @@ public class PartitionWriter {
 					.average()
 					.orElse(0.0);
 
+			double wMeanAbsoluteDeviation = weights.stream()
+					.mapToDouble(weight -> Math.abs(weight - wMean))
+					.average()
+					.orElse(0.0);
+
 			double cutMean = balancedPartitioning.cutEdgesMap.values()
 					.stream()
 					.mapToDouble(Double::doubleValue)
@@ -214,6 +219,9 @@ public class PartitionWriter {
     		jsonData.put("totalBoundaryLength", balancedPartitioning.calculateTotalCutEdgesLength());
 			jsonData.put("averageWeight", wMean);
 			jsonData.put("weightVariance", sqrt(wVariance));
+			jsonData.put("weightStandardDeviation", sqrt(wVariance));
+			jsonData.put("weightMeanAbsoluteDeviation", wMeanAbsoluteDeviation);
+			jsonData.put("relativeWeightMeanAbsoluteDeviation", totalGraphWeight > 0 ? wMeanAbsoluteDeviation / totalGraphWeight : null);
 			
 			jsonData.put("averageBoundary", cutMean);
 			jsonData.put("boundaryVariance", sqrt(cutVariance));
