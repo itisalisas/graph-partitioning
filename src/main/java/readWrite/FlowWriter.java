@@ -200,10 +200,12 @@ public class FlowWriter {
             logger.info("SPT1 saved in {} ms", time1 - time0);
 
             // Dump SPT 2 (from splitVertex2)
-            writeSPTToFile(outputDir + "spt2.txt", spt2, root2, splitToOriginalMap, "SPT2",
-                    coordConversion, initGraph);
-            long time2 = System.currentTimeMillis();
-            logger.info("SPT2 saved in {} ms", time2 - time1);
+            if (spt2 != null && root2 != null) {
+                writeSPTToFile(outputDir + "spt2.txt", spt2, root2, splitToOriginalMap, "SPT2",
+                        coordConversion, initGraph);
+                long time2 = System.currentTimeMillis();
+                logger.info("SPT2 saved in {} ms", time2 - time1);
+            }
 
             logger.info("SPT visualization data saved to {}", outputDir);
         } catch (Exception e) {

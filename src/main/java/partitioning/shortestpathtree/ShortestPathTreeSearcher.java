@@ -328,7 +328,6 @@ public class ShortestPathTreeSearcher {
                     } else {
                         if (i == 0 && path.size() > 1) {
                             for (var e: edges) {
-                                logger.warn("! current i = {}, vertex = {}, edge = {}->{}", i, path.get(i).getName(), e.begin.getName(), e.end.getName());
                                 if (e.end.name == path.get(1).name || e.end.name / 1000 == path.get(1).name) {
                                     var edge = edges.lower(e);
                                     if (edge == null) {
@@ -342,9 +341,6 @@ public class ShortestPathTreeSearcher {
                         } else {
                             nextVertex = path.get((i - 1 + path.size()) % path.size());
                         }
-                    }
-                    if (start.name == 1631189497 || start.name / 1000 == 1631189497) {
-                        logger.warn("! frame.vertex.name == {}, next.name == {}", start.getName(), nextVertex.getName());
                     }
                     startIdx = findParentIndex(edges, nextVertex);
                 }

@@ -59,16 +59,16 @@ DEFAULT_BINARY = False
 # ---------------------------------------------------------------------------
 # Parameter matrix per algorithm
 # ---------------------------------------------------------------------------
-# Each entry: (algorithm, starting_weight_ratio, length_priority, use_binary)
+# Each entry: (algorithm, starting_weight_ratio, length_priority, use_binary, use_cutted_reif)
 def build_experiment_matrix():
     combos = []
 
     # BUP — single run with all defaults
-    combos.append(('BUS', DEFAULT_STARTING_WEIGHT_RATIO, DEFAULT_LENGTH_PRIORITY, False))
+    #combos.append(('BUS', DEFAULT_STARTING_WEIGHT_RATIO, DEFAULT_LENGTH_PRIORITY, False))
 
     # DIF — sweep starting-weight-ratio only
-    for swr in ['0.1', '0.2', '0.3', '0.4']:
-        combos.append(('DIF', swr, DEFAULT_LENGTH_PRIORITY, False))
+    #for swr in ['0.1', '0.2', '0.3', '0.4']:
+    #    combos.append(('DIF', swr, DEFAULT_LENGTH_PRIORITY, False))
 
     #for swr in ['0.1', '0.2', '0.3', '0.4']:
     #    combos.append(('IF', swr, DEFAULT_LENGTH_PRIORITY, False))
@@ -77,7 +77,7 @@ def build_experiment_matrix():
     for swr, lp, binary in product(
         ['0.1', '0.2', '0.3', '0.4'],
         ['0.0', '0.25', '0.5', '0.75', '1.0'],
-        [True, False],
+        [True, False]
     ):
         combos.append(('RIF', swr, lp, binary))
 

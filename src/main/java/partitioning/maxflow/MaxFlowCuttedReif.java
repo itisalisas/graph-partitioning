@@ -24,6 +24,8 @@ import partitioning.entities.FlowResult;
 import partitioning.entities.SPTWithRegionWeights;
 import partitioning.shortestpathtree.ShortestPathTreeProcessor;
 import partitioning.shortestpathtree.ShortestPathTreeSearcher;
+import readWrite.CoordinateConversion;
+import readWrite.FlowWriter;
 
 public class MaxFlowCuttedReif implements MaxFlow {
     private static final Logger logger = LoggerFactory.getLogger(MaxFlowReif.class);
@@ -33,6 +35,7 @@ public class MaxFlowCuttedReif implements MaxFlow {
     VertexOfDualGraph sink;
     double flow;
     double boundaryLength;
+    CoordinateConversion conversion;
     int maxSumVerticesWeight;
     double lengthPriority;
 
@@ -41,6 +44,7 @@ public class MaxFlowCuttedReif implements MaxFlow {
         Graph<VertexOfDualGraph> dualGraph,
         VertexOfDualGraph source,
         VertexOfDualGraph sink,
+        CoordinateConversion conversion,
         int maxSumVerticesWeight,
         double lengthPriority
     ) {
@@ -48,6 +52,7 @@ public class MaxFlowCuttedReif implements MaxFlow {
         this.dualGraph = dualGraph;
         this.source = source;
         this.sink = sink;
+        this.conversion = conversion;
         this.maxSumVerticesWeight = maxSumVerticesWeight;
         this.lengthPriority = lengthPriority;
     }
@@ -79,7 +84,7 @@ public class MaxFlowCuttedReif implements MaxFlow {
         List<Vertex> targetSegment1 = extractBoundarySegment(
                 boundaries.externalBoundary, intersections.sourceIntersections, intersections.sinkIntersections, true);
         List<Vertex> targetSegment2 = extractBoundarySegment(
-                boundaries.externalBoundary, intersections.sourceIntersections, intersections.sinkIntersections, false);
+                boundaries.externalBoundary, intersections.sourceIntersections, intersections.sinkIntersections, false).reversed();
 
         Set<Long> sourceIntersectionNames = intersections.sourceIntersections.stream()
                 .map(Vertex::getName)
@@ -100,13 +105,19 @@ public class MaxFlowCuttedReif implements MaxFlow {
                     modifiedGraph, commonIntersections, boundaries, intersections.sourceIntersections, intersections.sinkIntersections
             );
         } else {
-            // Стандартный случай - находим две ключевые угловые вершины
-            TwoKeyVertices keyVertices = findTwoKeyVerticesForConstraints(
+            TwoKeyVertices keyVertices1 = findTwoKeyVerticesForConstraints(
                     intersections.sourceIntersections, intersections.sinkIntersections, true
             );
-            cornerConstraints = buildCornerConstraintsForKeyVertices(
-                    modifiedGraph, keyVertices, boundaries, true
+            CornerConstraints constraints1 = buildCornerConstraintsForKeyVertices(
+                    modifiedGraph, keyVertices1, boundaries, true
             );
+            TwoKeyVertices keyVertices2 = findTwoKeyVerticesForConstraints(
+                    intersections.sourceIntersections, intersections.sinkIntersections, false
+            );
+            CornerConstraints constraints2 = buildCornerConstraintsForKeyVertices(
+                    modifiedGraph, keyVertices2, boundaries, false
+            );
+            cornerConstraints = CornerConstraints.merge(constraints1, constraints2);
         }
 
         for (var key: cornerConstraints.getAllowedEdgesForCorner().keySet()) {
@@ -141,46 +152,35 @@ public class MaxFlowCuttedReif implements MaxFlow {
         double sourceWeight = sourceNeighbors.stream().mapToDouble(VertexOfDualGraph::getWeight).sum();
         double sinkWeight = sinkNeighbors.stream().mapToDouble(VertexOfDualGraph::getWeight).sum();
 
-        PathResult bestPathResult = null;
-        
-        logger.info("Trying {} different roots from segment 1", targetSegment2.size());
-        for (int rootIdx = 0; rootIdx < targetSegment2.size(); rootIdx++) {
-            Vertex root = targetSegment2.get(rootIdx);
-            logger.debug("Processing SPT with root vertex: {}", root.getName());
-            
-            SPTWithRegionWeights spt = ShortestPathTreeSearcher.buildSPTWithRegionWeights(
-                    modifiedGraph, sptResult.previous(), root,
-                    targetSegment1, dualGraph, true, targetSegment2
-            );
+        Vertex root = targetSegment2.get(targetSegment2.size() - 1);
+        logger.debug("Processing SPT with root vertex: {}", root.getName());
 
-            DijkstraResult sptWithWeights = new DijkstraResult(
-                    sptResult.path(),
-                    sptResult.distance(),
-                    sptResult.previous(),
-                    sptResult.dijkstraDistances(),
-                    spt.boundaryLeaves(),
-                    spt.faces(),
-                    spt.regionWeights(),
-                    spt.distances(),
-                    spt.leafIndices(),
-                    spt.totalRegionWeight()
-            );
+        SPTWithRegionWeights spt = ShortestPathTreeSearcher.buildSPTWithRegionWeights(
+                modifiedGraph, sptResult.previous(), root,
+                targetSegment1, dualGraph, true, targetSegment2
+        );
 
-            logger.debug("SPT from root {}: {} leaves, {} regions, total weight {}",
-                    root.getName(), sptWithWeights.boundaryLeaves().size(), 
-                    sptWithWeights.regions().size(), sptWithWeights.totalRegionWeight());
+        DijkstraResult sptWithWeights = new DijkstraResult(
+                sptResult.path(),
+                sptResult.distance(),
+                sptResult.previous(),
+                sptResult.dijkstraDistances(),
+                spt.boundaryLeaves(),
+                spt.faces(),
+                spt.regionWeights(),
+                spt.distances(),
+                spt.leafIndices(),
+                spt.totalRegionWeight()
+        );
 
-            PathResult candidateResult = findBestLeafInSPT(
-                    sptWithWeights, alpha, totalWeight, sourceWeight, sinkWeight, boundaryLength,
-                    boundaries.externalBoundary()
-            );
+        logger.debug("SPT from root {}: {} leaves, {} regions, total weight {}",
+                root.getName(), sptWithWeights.boundaryLeaves().size(),
+                sptWithWeights.regions().size(), sptWithWeights.totalRegionWeight());
 
-            if (bestPathResult == null || candidateResult.score < bestPathResult.score) {
-                bestPathResult = candidateResult;
-                logger.info("New best path from root {}: score={}, distance={}, balance={}",
-                        root.getName(), candidateResult.score, candidateResult.totalDistance, candidateResult.balanceWeight);
-            }
-        }
+        PathResult bestPathResult = findBestLeafInSPT(
+                sptWithWeights, alpha, totalWeight, sourceWeight, sinkWeight, boundaryLength,
+                boundaries.externalBoundary()
+        );
         
         long time5 = System.currentTimeMillis();
         logger.info("Time for finding best path across all roots: {} seconds", (time5 - time4) / 1000.0);
@@ -196,6 +196,8 @@ public class MaxFlowCuttedReif implements MaxFlow {
         flow = fillFlowInDualGraph(bestPathResult.path, dualGraph);
         long time6 = System.currentTimeMillis();
         logger.info("Time for filling flow in dual graph: {} seconds", (time6 - time5) / 1000.0);
+
+        dumpVisualization(boundaries, bestPathResult.path, sourceNeighbors, sinkNeighbors, modifiedGraph, sptWithWeights, root);
 
         return new FlowResult(flow, dualGraph, source, sink, bestPathResult.path);
     }
@@ -227,26 +229,19 @@ public class MaxFlowCuttedReif implements MaxFlow {
             distances.put(v, Double.MAX_VALUE);
         }
 
-        double cumulativeDistance = 0.0;
         for (int i = 0; i < initialPath.size(); i++) {
             Vertex current = initialPath.get(i);
-            distances.put(current, cumulativeDistance);
-            queue.add(new partitioning.entities.VertexDistance(current, cumulativeDistance));
+            distances.put(current, 0.0);
+            queue.add(new partitioning.entities.VertexDistance(current, 0.0));
 
             if (i > 0) {
-                Vertex prev = initialPath.get(i - 1);
-                previous.put(current, prev);
-                
-                Map<Vertex, Edge> neighbors = graph.getEdges().get(prev);
-                if (neighbors != null && neighbors.containsKey(current)) {
-                    cumulativeDistance += neighbors.get(current).length;
-                }
+                previous.put(current, initialPath.get(i - 1));
             }
 
-            logger.debug("Initial path vertex {}: distance={}", current.getName(), distances.get(current));
+            logger.debug("Initial path vertex {}: distance=0", current.getName());
         }
 
-        logger.info("Initialized SPT with path of {} vertices, total length: {}", initialPath.size(), cumulativeDistance);
+        logger.info("Initialized SPT with path of {} vertices, all at distance 0", initialPath.size());
 
         Vertex targetVertex = null;
         double minDistance = Double.MAX_VALUE;
@@ -470,6 +465,32 @@ public class MaxFlowCuttedReif implements MaxFlow {
         }
 
         return bandwidth;
+    }
+
+    private void dumpVisualization(
+            BoundariesData boundaries,
+            List<Vertex> bestPath,
+            HashSet<VertexOfDualGraph> sourceNeighbors,
+            HashSet<VertexOfDualGraph> sinkNeighbors,
+            Graph<Vertex> modifiedGraph,
+            DijkstraResult sptWithWeights,
+            Vertex root) {
+
+        FlowWriter.dumpVisualizationData(
+                boundaries.externalBoundary(),
+                boundaries.sourceBoundary(),
+                boundaries.sinkBoundary(),
+                List.of(), bestPath,
+                sourceNeighbors, sinkNeighbors, flow,
+                initGraph, modifiedGraph, dualGraph, source, sink, conversion
+        );
+
+        FlowWriter.dumpSPTVisualizationData(
+                sptWithWeights, null,
+                root, null,
+                Map.of(),
+                sourceNeighbors, sinkNeighbors, flow, conversion, initGraph
+        );
     }
 
     // === Вспомогательные методы ===

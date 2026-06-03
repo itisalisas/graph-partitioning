@@ -185,8 +185,8 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
 
             long time1 = System.currentTimeMillis();
 
-            VertexOfDualGraph source = new VertexOfDualGraph(maxIndex + 1);
-            VertexOfDualGraph sink = new VertexOfDualGraph(maxIndex + 2);
+            VertexOfDualGraph source = new VertexOfDualGraph(maxIndex + 1, 0, 0, 0);
+            VertexOfDualGraph sink = new VertexOfDualGraph(maxIndex + 2, 0, 0, 0);
 
             int sourceInitIndex = vertices.indexOf(sourceInitVertex);
             int sinkInitIndex = vertices.indexOf(sinkInitVertex);
@@ -220,7 +220,7 @@ public class InertialFlowPartitioning extends BalancedPartitioningOfPlanarGraphs
             if (USE_REIF) {
                 if (USE_CUTTED_REIF) {
                     logger.info("Using MaxFlowCuttedReif algorithm");
-                    maxFlow = new MaxFlowCuttedReif(simpleGraph, copyGraph, source, sink, maxSumVerticesWeight, LENGTH_PRIORITY);
+                    maxFlow = new MaxFlowCuttedReif(simpleGraph, copyGraph, source, sink, coordinateConversion, maxSumVerticesWeight, LENGTH_PRIORITY);
                 } else {
                     logger.info("Using MaxFlowReif algorithm");
                     maxFlow = new MaxFlowReif(simpleGraph, copyGraph, source, sink, coordinateConversion, maxSumVerticesWeight, LENGTH_PRIORITY, USE_BINARY_SEARCH);

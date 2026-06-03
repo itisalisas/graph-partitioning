@@ -835,19 +835,18 @@ public class MaxFlowReif implements MaxFlow {
         }
 
         // Проверяем, пересекаются ли source и sink на границе
-        Set<Long> sourceIntersectionNames = sourceIntersections.stream()
-                .map(Vertex::getName)
+        Set<Vertex> sourceIntersectionsSet = sourceIntersections.stream()
                 .collect(Collectors.toSet());
-        Set<Long> sinkIntersectionNames = sinkIntersections.stream()
-                .map(Vertex::getName)
+        Set<Vertex> sinkIntersectionsSet = sinkIntersections.stream()
                 .collect(Collectors.toSet());
         
-        Set<Long> commonIntersections = new HashSet<>(sourceIntersectionNames);
-        commonIntersections.retainAll(sinkIntersectionNames);
+        Set<Vertex> commonIntersections = new HashSet<>(sourceIntersectionsSet);
+        commonIntersections.retainAll(sinkIntersectionsSet);
+        commonIntersections.retainAll(targetSegment);
         
         CornerConstraints cornerConstraints;
         
-        if (!commonIntersections.isEmpty() && !(commonIntersections.contains(sourceVertex.getName()) || commonIntersections.contains(sourceVertex.getName() / 1000))) {
+        if (!commonIntersections.isEmpty()) {
             // Source и sink пересекаются на границе - создаем ограничения для вершины пересечения
             logger.debug("Source and sink intersect on boundary at vertices: {}", commonIntersections);
             cornerConstraints = buildCornerConstraintsForIntersection(
@@ -1138,12 +1137,14 @@ public class MaxFlowReif implements MaxFlow {
      */
     private CornerConstraints buildCornerConstraintsForIntersection(
             Graph<Vertex> graph,
-            Set<Long> commonIntersections,
+            Set<Vertex> commonIntersections,
             BoundariesData boundaries,
             List<Vertex> sourceIntersections,
             List<Vertex> sinkIntersections
     ) {
-        Set<Long> cornerVertices = new HashSet<>(commonIntersections);
+        Set<Long> cornerVertices = commonIntersections.stream()
+                .map(Vertex::getName)
+                .collect(Collectors.toSet());
         Map<Long, List<EdgeOfGraph<Vertex>>> allowedEdgesForCorner = new HashMap<>();
         
         Set<Long> externalBoundaryNames = boundaries.externalBoundary().stream()
@@ -1158,28 +1159,19 @@ public class MaxFlowReif implements MaxFlow {
         
         Map<Vertex, TreeSet<EdgeOfGraph<Vertex>>> sortedEdgesByVertex = graph.arrangeByAngle();
         
-        for (Long intersectionName : commonIntersections) {
-            Vertex intersectionVertex = findVertexByNameInList(sourceIntersections, intersectionName);
-            if (intersectionVertex == null) {
-                intersectionVertex = findVertexByNameInList(sinkIntersections, intersectionName);
-            }
-            
-            if (intersectionVertex == null) {
-                logger.warn("Intersection vertex {} not found", intersectionName);
-                continue;
-            }
+        for (Vertex intersectionVertex : commonIntersections) {
 
             TreeSet<EdgeOfGraph<Vertex>> allEdges = sortedEdgesByVertex.get(intersectionVertex);
             if (allEdges == null || allEdges.isEmpty()) {
                 // Пробуем найти split-вершины
-                Vertex split1 = new Vertex(intersectionName * 1000 + 1, intersectionVertex);
-                Vertex split2 = new Vertex(intersectionName * 1000 + 2, intersectionVertex);
+                Vertex split1 = new Vertex(intersectionVertex.name * 1000 + 1, intersectionVertex);
+                Vertex split2 = new Vertex(intersectionVertex.name * 1000 + 2, intersectionVertex);
                 allEdges = new TreeSet<>(sortedEdgesByVertex.getOrDefault(split1, new TreeSet<>()));
                 allEdges.addAll(sortedEdgesByVertex.getOrDefault(split2, new TreeSet<>()));
             }
             
             if (allEdges == null || allEdges.isEmpty()) {
-                logger.warn("No edges found for intersection vertex {}", intersectionName);
+                logger.warn("No edges found for intersection vertex {}", intersectionVertex.name);
                 continue;
             }
             
@@ -1187,7 +1179,7 @@ public class MaxFlowReif implements MaxFlow {
             // НЕ в externalBoundary И (в sourceBoundary ИЛИ в sinkBoundary)
             List<EdgeOfGraph<Vertex>> allowedEdges = new ArrayList<>();
             for (EdgeOfGraph<Vertex> edge : allEdges) {
-                logger.debug("Intersection {}: edge to {}", intersectionName, edge.end.getName());
+                logger.debug("Intersection {}: edge to {}", intersectionVertex.name, edge.end.getName());
                 long targetName = edge.end.getName();
                 long originalTargetName = targetName / 1000;
                 
@@ -1200,14 +1192,14 @@ public class MaxFlowReif implements MaxFlow {
                         && (sinkBoundaryNames.contains(targetName)
                         || sinkBoundaryNames.contains(originalTargetName)
                 ) && (
-                        sinkBoundaryNames.contains(intersectionName)
-                        || sinkBoundaryNames.contains(intersectionName * 1000 + 1)
-                        || sinkBoundaryNames.contains(intersectionName * 1000 + 2)
+                        sinkBoundaryNames.contains(intersectionVertex.name)
+                        || sinkBoundaryNames.contains(intersectionVertex.name * 1000 + 1)
+                        || sinkBoundaryNames.contains(intersectionVertex.name * 1000 + 2)
                         )
                     && (
-                        sourceBoundaryNames.contains(intersectionName)
-                        || sourceBoundaryNames.contains(intersectionName * 1000 + 1)
-                        || sourceBoundaryNames.contains(intersectionName * 1000 + 2)
+                        sourceBoundaryNames.contains(intersectionVertex.name)
+                        || sourceBoundaryNames.contains(intersectionVertex.name * 1000 + 1)
+                        || sourceBoundaryNames.contains(intersectionVertex.name * 1000 + 2)
                         );
                 boolean inSourceOrSink = sourceBoundaryNames.contains(targetName) 
                         || sourceBoundaryNames.contains(originalTargetName)
@@ -1216,22 +1208,15 @@ public class MaxFlowReif implements MaxFlow {
 
                 if ((notInExternal || bothVerticesInSourceOrSink) && inSourceOrSink) {
                     allowedEdges.add(edge);
-                    logger.debug("Intersection {}: allowed edge to {}", intersectionName, targetName);
+                    logger.debug("Intersection {}: allowed edge to {}", intersectionVertex.name, targetName);
                 }
             }
             
-            allowedEdgesForCorner.put(intersectionName, allowedEdges);
-            logger.debug("Intersection vertex {} has {} allowed edges", intersectionName, allowedEdges.size());
+            allowedEdgesForCorner.put(intersectionVertex.name, allowedEdges);
+            logger.debug("Intersection vertex {} has {} allowed edges", intersectionVertex.name, allowedEdges.size());
         }
         
         return new CornerConstraints(cornerVertices, allowedEdgesForCorner);
-    }
-    
-    private Vertex findVertexByNameInList(List<Vertex> vertices, long name) {
-        return vertices.stream()
-                .filter(v -> v.getName() == name)
-                .findFirst()
-                .orElse(null);
     }
 
     /**

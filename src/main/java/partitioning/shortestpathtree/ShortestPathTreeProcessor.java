@@ -177,9 +177,7 @@ public class ShortestPathTreeProcessor {
         double leftWeight = res2Weight + leftRes1Weight + sourceWeight;
 
         double balance = Math.abs(alpha * totalWeight - leftWeight);
-        if (Math.abs((1 - alpha) * totalWeight - leftWeight) < balance) {
-            balance = Math.abs(alpha * totalWeight - leftWeight);
-        }
+
         double normalizedLength = length / boundaryLength;
         double normalizedBalance = balance / totalWeight;
         
@@ -190,7 +188,7 @@ public class ShortestPathTreeProcessor {
              double penalty = (externalVerticesCount - 2) * EXTERNAL_BOUNDARY_PENALTY;
              penalizedScore = score + penalty;
         }
-        
+
         logger.debug("Length: {}, normalized length: {}, balance: {}, normalized balance: {}, score: {}, penalized score: {}", 
             length, normalizedLength, balance, normalizedBalance, score, penalizedScore);
         

@@ -20,6 +20,8 @@ parser.add_argument('--length-priority', type=str, default='0.5',
                     help='LENGTH_PRIORITY parameter (default: 0.5)')
 parser.add_argument('--binary', action='store_true', default=False,
                     help='Use binary search (flag, default: false)')
+parser.add_argument('--cutted-reif', action='store_true', default=False,
+                    help='Use cutted Reif algorithm (single SPT from boundary segment, flag, default: false)')
 parser.add_argument('--workers', type=int, default=1,
                     help='Number of parallel workers (default: 1)')
 parser.add_argument('--no-post-processing', action='store_true', default=False,
@@ -39,6 +41,7 @@ max_sum_vertices_weight = args.weights
 coef = args.coef
 length_priority = args.length_priority
 use_binary = args.binary
+use_cutted_reif = args.cutted_reif
 num_workers = args.workers
 no_post_processing = args.no_post_processing
 
@@ -89,6 +92,7 @@ def leaf_dir_name(city: str, size: str, weight: str) -> str:
     """Return the leaf directory name for one city/size/weight combination."""
     if use_new_naming:
         binary_str = 'true' if use_binary else 'false'
+        cutted_str = 'true' if use_cutted_reif else 'false'
         return f"{city}_{size}_{weight}_{coef}_{length_priority}_{binary_str}"
     else:
         # Legacy naming kept for backward compatibility
@@ -161,6 +165,7 @@ def run_single_experiment(task):
 
     # Build Java argument string
     binary_flag = " --binary" if use_binary else ""
+    cutted_reif_flag = " --cutted-reif" if use_cutted_reif else ""
     java_args = (
         f"{algorithm} "
         f"{graph_path} "
@@ -171,6 +176,7 @@ def run_single_experiment(task):
         f"-s {coef} "
         f"-l {length_priority}"
         f"{binary_flag}"
+        f"{cutted_reif_flag}"
         f"{' --no-post-processing' if no_post_processing else ''}"
     )
 
@@ -193,7 +199,7 @@ def run_single_experiment(task):
                 stderr=subprocess.STDOUT,
                 text=True,
                 check=False,
-                timeout=1200
+                timeout=600
             )
 
             if result.returncode == 0:
@@ -280,6 +286,8 @@ for city in os.listdir(data_root):
         continue
 
     for size in os.listdir(city_path):
+        if size == '5000':
+            continue
         size_path = os.path.join(city_path, size)
         if not os.path.isdir(size_path):
             continue
@@ -308,12 +316,14 @@ for city in os.listdir(data_root):
 # Print summary
 # ---------------------------------------------------------------------------
 binary_str = 'true' if use_binary else 'false'
+cutted_reif_str = 'true' if use_cutted_reif else 'false'
 safe_print("\n" + "=" * 80)
 safe_print(f"Output base      : {full_output_base}")
 safe_print(f"Algorithm        : {algorithm}")
 safe_print(f"starting-weight-ratio : {coef}")
 safe_print(f"length-priority  : {length_priority}")
 safe_print(f"binary           : {binary_str}")
+safe_print(f"cutted-reif      : {cutted_reif_str}")
 safe_print(f"post-processing  : {'disabled' if no_post_processing else 'enabled'}")
 safe_print(f"Workers          : {num_workers}")
 safe_print(f"Total tasks      : {len(tasks)}")
